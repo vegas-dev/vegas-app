@@ -1,0 +1,123 @@
+/*!*****************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./app/_utils/scss/default.scss ***!
+  \*****************************************************************************************************************************************************************/
+.vg-btn-close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  border: none;
+  background: transparent;
+}
+.vg-btn-close svg {
+  width: 24px;
+  height: 24px;
+}
+/*!********************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./app/sidebar/scss/vgsidebar.scss ***!
+  \********************************************************************************************************************************************************************/
+@charset "UTF-8";
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGSidebar
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE.md
+*--------------------------------------------------------------------------
+**/
+:root {
+  --vg-sidebar-horizontal-width: 400px ;
+  --vg-sidebar-horizontal-height: 100vh ;
+  --vg-sidebar-vertical-width: 100vw ;
+  --vg-sidebar-vertical-height: 30vh ;
+  --vg-sidebar-backdrop-bg: rgb(0, 0, 0) ;
+  --vg-sidebar-backdrop-opacity: 0.4 ;
+  --vg-sidebar-backdrop-z-index: 999 ;
+  --vg-sidebar-bg-color: #fff ;
+  --vg-sidebar-color: #000000 ;
+  --vg-sidebar-box-shadow: 0 8px 14px 5px rgba(0, 0, 0, 0.2) ;
+  --vg-sidebar-header-height: 60px ;
+  --vg-sidebar-footer-height: 70px ;
+  --vg-sidebar-padding: 1rem ;
+  --vg-sidebar-border: 1px solid rgba(0, 0, 0, 0.2) ;
+  --vg-sidebar-transition: all 0.5s ease-in-out ;
+  --vg-sidebar-z-index: 1040 ;
+}
+
+.vg-sidebar {
+  position: fixed;
+  width: auto;
+  height: auto;
+  transition: var(--vg-sidebar-transition);
+  z-index: var(--vg-sidebar-z-index);
+  background: var(--vg-sidebar-bg-color);
+  color: var(--vg-sidebar-color);
+  box-shadow: var(--vg-sidebar-box-shadow);
+}
+.vg-sidebar.left, .vg-sidebar.right {
+  width: var(--vg-sidebar-horizontal-width);
+  height: var(--vg-sidebar-horizontal-height);
+  top: 0;
+}
+.vg-sidebar.left {
+  left: -105%;
+}
+.vg-sidebar.left.show {
+  left: 0;
+}
+.vg-sidebar.right {
+  right: -105%;
+}
+.vg-sidebar.right.show {
+  right: 0;
+}
+.vg-sidebar.top, .vg-sidebar.bottom {
+  height: var(--vg-sidebar-vertical-height);
+  width: var(--vg-sidebar-vertical-width);
+  left: 0;
+}
+.vg-sidebar.top {
+  top: -105%;
+}
+.vg-sidebar.top.show {
+  top: 0;
+}
+.vg-sidebar.bottom {
+  bottom: -105%;
+}
+.vg-sidebar.bottom.show {
+  bottom: 0;
+}
+.vg-sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--vg-sidebar-backdrop-bg);
+  transition: var(--vg-sidebar-transition);
+  opacity: 0;
+  z-index: var(--vg-sidebar-backdrop-z-index);
+}
+.vg-sidebar-backdrop.fade {
+  opacity: var(--vg-sidebar-backdrop-opacity);
+}
+.vg-sidebar-header {
+  height: var(--vg-sidebar-header-height);
+  z-index: 10;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--vg-sidebar-padding);
+  border-bottom: var(--vg-sidebar-border);
+}
+.vg-sidebar-body {
+  height: calc(100% - var(--vg-sidebar-header-height) - var(--vg-sidebar-footer-height));
+  overflow-y: auto;
+  padding: var(--vg-sidebar-padding);
+}
+.vg-sidebar-footer {
+  height: var(--vg-sidebar-footer-height);
+  padding: var(--vg-sidebar-padding);
+  border-top: var(--vg-sidebar-border);
+}
+
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidmdhcHAuY3NzIiwibWFwcGluZ3MiOiI7OztBQUFBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7Ozs7QUNWQTtBQUFBOzs7Ozs7QUFBQTtBQWFBO0FDVEE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFHQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QURrQkE7O0FBUkE7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBV0E7QUFUQTtBQUNBO0FBQ0E7QUFDQTtBQVdBO0FBUkE7QUFDQTtBQVVBO0FBUkE7QUFDQTtBQVVBO0FBTkE7QUFDQTtBQVFBO0FBTkE7QUFDQTtBQVFBO0FBSkE7QUFDQTtBQUNBO0FBQ0E7QUFNQTtBQUhBO0FBQ0E7QUFLQTtBQUhBO0FBQ0E7QUFLQTtBQURBO0FBQ0E7QUFHQTtBQURBO0FBQ0E7QUFHQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFHQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBREE7QUFJQTtBQUNBO0FBQ0E7QUFDQTtBQUZBO0FBS0E7QUFDQTtBQUNBO0FBQ0E7QUFIQSIsInNvdXJjZXMiOlsid2VicGFjazovL3ZnLy4vYXBwL191dGlscy9zY3NzL2RlZmF1bHQuc2NzcyIsIndlYnBhY2s6Ly92Zy8uL2FwcC9zaWRlYmFyL3Njc3MvdmdzaWRlYmFyLnNjc3MiLCJ3ZWJwYWNrOi8vdmcvLi9hcHAvX3V0aWxzL3Njc3MvbWl4aW4uc2NzcyJdLCJuYW1lcyI6W10sInNvdXJjZVJvb3QiOiIifQ==*/

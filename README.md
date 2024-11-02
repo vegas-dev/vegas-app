@@ -1,1 +1,1 @@
-# vgapp
+# VEGAS APP

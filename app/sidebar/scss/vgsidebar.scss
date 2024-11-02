@@ -1,0 +1,109 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGSidebar
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE.md
+*--------------------------------------------------------------------------
+**/
+
+@import "../../_utils/scss/functions";
+@import "../../_utils/scss/mixin";
+@import "../../_utils/scss/variables";
+@import "variables";
+
+:root {
+	@include mix-vars('sidebar', $sidebar-map);
+}
+
+.vg-sidebar {
+	position: fixed;
+	width: auto;
+	height: auto;
+	transition: var(--vg-sidebar-transition);
+	z-index: var(--vg-sidebar-z-index);
+	background: var(--vg-sidebar-bg-color);
+	color: var(--vg-sidebar-color);
+	box-shadow: var(--vg-sidebar-box-shadow);
+
+	&.left, &.right {
+		width: var(--vg-sidebar-horizontal-width);
+		height: var(--vg-sidebar-horizontal-height);
+		top: 0;
+	}
+
+	&.left {
+		left: -105%;
+
+		&.show {
+			left: 0;
+		}
+	}
+
+	&.right {
+		right: -105%;
+
+		&.show {
+			right: 0;
+		}
+	}
+
+	&.top, &.bottom {
+		height: var(--vg-sidebar-vertical-height);
+		width: var(--vg-sidebar-vertical-width);
+		left: 0;
+	}
+
+	&.top {
+		top: -105%;
+
+		&.show {
+			top: 0;
+		}
+	}
+
+	&.bottom {
+		bottom: -105%;
+
+		&.show {
+			bottom: 0;
+		}
+	}
+
+	&-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		background: var(--vg-sidebar-backdrop-bg);
+		transition: var(--vg-sidebar-transition);
+		opacity: 0;
+		z-index: var(--vg-sidebar-backdrop-z-index);
+
+		&.fade {
+			opacity: var(--vg-sidebar-backdrop-opacity);
+		}
+	}
+
+	&-header {
+		height: var(--vg-sidebar-header-height);
+		z-index: 10;
+		position: relative;
+		display: flex;
+		align-items: center;
+		padding: var(--vg-sidebar-padding);
+		border-bottom: var(--vg-sidebar-border);
+	}
+
+	&-body {
+		height: calc(100% - var(--vg-sidebar-header-height) - var(--vg-sidebar-footer-height));
+		overflow-y: auto;
+		padding: var(--vg-sidebar-padding);
+	}
+
+	&-footer {
+		height: var(--vg-sidebar-footer-height);
+		padding: var(--vg-sidebar-padding);
+		border-top: var(--vg-sidebar-border);
+	}
+}

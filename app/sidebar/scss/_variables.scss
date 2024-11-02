@@ -1,0 +1,24 @@
+$sidebar-map: (
+		horizontal: (
+				width: 400px,
+				height: 100vh,
+		),
+		vertical: (
+				width: 100vw,
+				height: 30vh,
+		),
+		backdrop: (
+				bg:       $backdrop-bg,
+				opacity:  $backdrop-opacity,
+				z-index:  $backdrop-index
+		),
+		bg-color:                  $bg-color,
+		color:                     $color,
+		box-shadow:                $box-shadow,
+		header-height:             60px,
+		footer-height:             70px,
+		padding:                   1rem,
+		border:                    1px solid #{$border-color},
+		transition:                $transition-base,
+		z-index:                   $sidebar-index
+);
