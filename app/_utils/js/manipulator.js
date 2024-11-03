@@ -36,6 +36,41 @@ function mergeDeepObject(...objects) {
 }
 
 /**
+ * Подготавливаем и объединяем параметры
+ * @param arg
+ * @param pDefault
+ * @returns {*}
+ */
+function mergeParams(arg, pDefault) {
+	let mParams = mergeDeepObject(arg, pDefault);
+
+	if (isObject(mParams) && !isEmptyObj(mParams)) {
+		for (const datum in mParams) {
+			let value = normalizeData(mParams[datum]);
+
+			if (datum !== 'params') {
+				if (!(datum in pDefault)) {
+					let p = datum.split('-');
+
+					if (p[1] in pDefault[p[0]]) {
+						pDefault[p[0]][p[1]] = value;
+					}
+
+					delete mParams[datum];
+				} else {
+					mParams[datum] = value;
+				}
+			} else {
+				mParams = mergeDeepObject(mParams, value)
+				delete mParams[datum];
+			}
+		}
+	}
+
+	return mParams
+}
+
+/**
  * Если что-нибудь в объекте
  * @param obj
  * @returns {boolean}
@@ -160,4 +195,4 @@ const eventHandler = {
 	}
 }
 
-export {Manipulator, eventHandler, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData}
+export {Manipulator, eventHandler, isObject, isEmptyObj, mergeDeepObject, mergeParams, removeElementArray, normalizeData}

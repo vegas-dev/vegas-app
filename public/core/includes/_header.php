@@ -39,6 +39,9 @@
 								<li class="active">
 									<a href="/?module=sidebar">VGSidebar</a>
 								</li>
+								<li>
+									<a href="/?module=dropdown">VGDropdown</a>
+								</li>
 							</ul>
 						</nav>
 					</div>

@@ -1,5 +1,5 @@
 <?php global $content, $bodyClass;
-	include('./core/server.php') ?>
+	include('./core/route.php') ?>
 
 <!DOCTYPE html>
 <html lang="ru">
