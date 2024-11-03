@@ -30,6 +30,47 @@ class BaseModule {
 			this._params = mergeDeepObject(params, attrs);
 		}
 	}
+
+	_backdrop() {
+		let _this = this,
+			backdrop = document.querySelector('.vg-sidebar-backdrop');
+
+		if (!_this.params.backdrop) return;
+
+		if (backdrop) {
+			backdrop.remove();
+		} else {
+			backdrop = document.createElement('div');
+			backdrop.classList.add('vg-sidebar-backdrop');
+
+			document.body.append(backdrop);
+
+			setTimeout(() => {
+				backdrop.classList.add('fade')
+			}, 50)
+		}
+	}
+
+	_overflow(isShown) {
+		const _this = this;
+
+		if (!_this.params.overflow) {
+			return;
+		}
+
+		if (!isShown) {
+			document.body.style.overflow = '';
+			document.body.style.paddingRight = '';
+		} else {
+			document.body.style.paddingRight = getWidth() + 'px';
+			document.body.style.overflow = 'hidden';
+		}
+
+		function getWidth() {
+			const documentWidth = document.documentElement.clientWidth
+			return Math.abs(window.innerWidth - documentWidth)
+		}
+	}
 }
 
 export default BaseModule;

@@ -1,5 +1,6 @@
 <div class="container">
 	<h1 class="mb-3 mt-3">VGSidebar</h1>
+	<hr class="mb-4">
 	
 	<div class="row">
 		<div class="col-lg-3">
@@ -9,6 +10,10 @@
 				<li class="list-group-item"><button class="btn btn-primary" data-vg-target="#sidebar-top" data-vg-toggle="sidebar" data-ajax-route="/core/server.php?sidebar=top" data-ajax-target="#sidebar-contents">Открыть панель сверху</button></li>
 				<li class="list-group-item"><a href="#sidebar-bottom" data-vg-toggle="sidebar">Открыть панель снизу</a></li>
 			</ul>
+		</div>
+		<div class="col-lg-9">
+			<h3>Как это работает</h3>
+			
 		</div>
 	</div>
 </div>
@@ -27,7 +32,7 @@
 	<div class="vg-sidebar-footer"></div>
 </div>
 
-<div class="vg-sidebar right" id="sidebar-right">
+<div class="vg-sidebar right" id="sidebar-right" data-backdrop="false" data-overflow="false">
 	<div class="vg-sidebar-header">
 		<div class="vg-sidebar-header--title">Панель справа</div>
 		<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" aria-label="Close"></button>

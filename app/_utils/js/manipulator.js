@@ -42,7 +42,7 @@ function mergeDeepObject(...objects) {
  * @returns {*}
  */
 function mergeParams(arg, pDefault) {
-	let mParams = mergeDeepObject(arg, pDefault);
+	let mParams = mergeDeepObject(pDefault, arg);
 
 	if (isObject(mParams) && !isEmptyObj(mParams)) {
 		for (const datum in mParams) {

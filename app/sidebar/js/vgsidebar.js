@@ -17,9 +17,11 @@ class VGSidebar extends BaseModule{
 	constructor(element, arg = {}) {
 		super();
 		this.paramsDefault = {
+			button: null,
 			backdrop: true,
 			overflow: true,
-			keyboard: true,
+			keyboard: false, // todo not done
+			scroll: false, // todo not done
 			ajax: {
 				route: '',
 				target: ''
@@ -39,7 +41,7 @@ class VGSidebar extends BaseModule{
 			if (!svg) cross.insertAdjacentHTML('beforeend', _this._cross);
 		}
 
-		this.element.vgSidebar = this;
+		_this.element.vgSidebar = this;
 	}
 
 	toggle() {
@@ -55,7 +57,7 @@ class VGSidebar extends BaseModule{
 		eventHandler.on(_this.element, EVENT_KEY_SHOW);
 
 		_this._backdrop();
-		_this._overflow();
+		_this._overflow(_isShown);
 		_this.element.classList.add('show');
 
 		setTimeout(() => {
@@ -75,7 +77,7 @@ class VGSidebar extends BaseModule{
 		eventHandler.on(_this.element, EVENT_KEY_HIDE);
 
 		_this._backdrop();
-		_this._overflow();
+		_this._overflow(_isShown);
 		_this.element.classList.remove('show');
 
 		setTimeout(() => {
@@ -94,6 +96,7 @@ class VGSidebar extends BaseModule{
 				target = arg.target || btn.getAttribute('href') || null;
 
 			if (target && typeof target === 'string') {
+				arg.button = btn;
 				delete arg['target'];
 				delete arg['toggle'];
 
@@ -103,47 +106,6 @@ class VGSidebar extends BaseModule{
 
 			return false;
 		});
-	}
-
-	_backdrop() {
-		let _this = this,
-			backdrop = document.querySelector('.vg-sidebar-backdrop');
-
-		if (!_this.params.backdrop) return;
-
-		if (backdrop) {
-			backdrop.remove();
-		} else {
-			backdrop = document.createElement('div');
-			backdrop.classList.add('vg-sidebar-backdrop');
-
-			document.body.append(backdrop);
-
-			setTimeout(() => {
-				backdrop.classList.add('fade')
-			}, 50)
-		}
-	}
-
-	_overflow() {
-		const _this = this;
-
-		if (!_this.params.overflow) {
-			return;
-		}
-
-		if (!_isShown) {
-			document.body.style.overflow = '';
-			document.body.style.paddingRight = '';
-		} else {
-			document.body.style.paddingRight = getWidth() + 'px';
-			document.body.style.overflow = 'hidden';
-		}
-
-		function getWidth() {
-			const documentWidth = document.documentElement.clientWidth
-			return Math.abs(window.innerWidth - documentWidth)
-		}
 	}
 
 	_addEventListener() {

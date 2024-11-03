@@ -16,5 +16,10 @@
 }
 
 .vg-dropdown {
+	position: relative;
 
+	&-content {
+		position: absolute;
+		inset: 0;
+	}
 }

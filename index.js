@@ -17,7 +17,7 @@ function onReady() {
 
 	// dropdowns
 	[...document.querySelectorAll('[data-vg-toggle="dropdown"]')].forEach(function (btn) {
-
+		VGDropdown.makeInit(btn);
 	});
 }
 
