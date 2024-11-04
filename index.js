@@ -5,11 +5,10 @@ import "./app/_utils/scss/default.scss";
 import "./app/sidebar/scss/vgsidebar.scss";
 import VGSidebar from "./app/sidebar/js/vgsidebar";
 
-// vgdropdown
-import "./app/dropdown/scss/vgdropdown.scss";
-import VGDropdown from "./app/dropdown/js/vgdropdown";*/
+// vgdropdown*/
+import "./app/modules/dropdown/scss/vgdropdown.scss";
+import VGDropdown from "./app/modules/dropdown/js/vgdropdown";
 
-import {isElement} from "./app/_utils/functions";
 
 function onReady() {
 
@@ -20,7 +19,7 @@ function onReady() {
 
 	// dropdowns
 	[...document.querySelectorAll('[data-vg-toggle="dropdown"]')].forEach(function (btn) {
-
+		VGDropdown.makeInit(btn);
 	});
 }
 

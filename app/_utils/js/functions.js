@@ -27,6 +27,27 @@ const isElement = object => {
 }
 
 /**
+ * isDisabled
+ * @param element
+ * @returns {boolean}
+ */
+const isDisabled = element => {
+	if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+		return true
+	}
+
+	if (element.classList.contains('disabled')) {
+		return true
+	}
+
+	if (typeof element.disabled !== 'undefined') {
+		return element.disabled
+	}
+
+	return element.hasAttribute('disabled') && element.getAttribute('disabled') !== 'false'
+}
+
+/**
  * isObject
  * @param obj
  * @returns {boolean}
@@ -105,4 +126,4 @@ function mergeDeepObject(...objects) {
 	}, {});
 }
 
-export {isElement, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData}
+export {isElement, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData}

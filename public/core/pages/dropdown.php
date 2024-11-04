@@ -9,7 +9,7 @@
 		<div class="col-lg-9">
 			<h3>Как это работает</h3>
 			<div class="vg-dropdown mt-5">
-				<a href="#" class="btn btn-primary" data-vg-toggle="dropdown">Открыть дроп</a>
+				<a href="#" class="btn btn-primary" data-vg-toggle="dropdown" data-over="true" data-keyboard="true" data-params='{"ajax": {"route": "#", "target": "#drop-content"}}'>Открыть дроп</a>
 				<div class="vg-dropdown-content">
 					<ul class="list-group">
 						<li class="list-group-item"><a href="#">Главная</a></li>
