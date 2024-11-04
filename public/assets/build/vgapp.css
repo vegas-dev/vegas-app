@@ -1,3 +1,123 @@
+/*!*****************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./app/_utils/scss/default.scss ***!
+  \*****************************************************************************************************************************************************************/
+.vg-backdrop {
+  --vg-backdrop-bg: rgb(0, 0, 0) ;
+  --vg-backdrop-opacity: 0.4 ;
+  --vg-backdrop-z-index: 999 ;
+  --vg-backdrop-transition: all 0.5s ease-in-out ;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--vg-backdrop-bg);
+  transition: var(--vg-backdrop-transition);
+  opacity: 0;
+  z-index: var(--vg-backdrop-z-index);
+}
+.vg-backdrop.fade {
+  opacity: var(--vg-backdrop-opacity);
+}
+
+.vg-btn-close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  border: none;
+  background: transparent;
+}
+.vg-btn-close svg {
+  width: 24px;
+  height: 24px;
+}
+/*!****************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./app/modules/sidebar/scss/vgsidebar.scss ***!
+  \****************************************************************************************************************************************************************************/
+@charset "UTF-8";
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGSidebar
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE.md
+*--------------------------------------------------------------------------
+**/
+.vg-sidebar {
+  --vg-sidebar-horizontal-width: 400px ;
+  --vg-sidebar-horizontal-height: 100vh ;
+  --vg-sidebar-vertical-width: 100vw ;
+  --vg-sidebar-vertical-height: 30vh ;
+  --vg-sidebar-bg-color: #fff ;
+  --vg-sidebar-color: #000000 ;
+  --vg-sidebar-box-shadow: 0 8px 14px 5px rgba(0, 0, 0, 0.2) ;
+  --vg-sidebar-header-height: 60px ;
+  --vg-sidebar-footer-height: 70px ;
+  --vg-sidebar-padding: 1rem ;
+  --vg-sidebar-border: 1px solid rgba(0, 0, 0, 0.2) ;
+  --vg-sidebar-z-index: 1040 ;
+  --vg-sidebar-transition: all 0.5s ease-in-out ;
+  position: fixed;
+  width: auto;
+  height: auto;
+  transition: var(--vg-sidebar-transition);
+  z-index: var(--vg-sidebar-z-index);
+  background: var(--vg-sidebar-bg-color);
+  color: var(--vg-sidebar-color);
+  box-shadow: var(--vg-sidebar-box-shadow);
+}
+.vg-sidebar.left, .vg-sidebar.right {
+  width: var(--vg-sidebar-horizontal-width);
+  height: var(--vg-sidebar-horizontal-height);
+  top: 0;
+}
+.vg-sidebar.left {
+  left: -105%;
+}
+.vg-sidebar.left.show {
+  left: 0;
+}
+.vg-sidebar.right {
+  right: -105%;
+}
+.vg-sidebar.right.show {
+  right: 0;
+}
+.vg-sidebar.top, .vg-sidebar.bottom {
+  height: var(--vg-sidebar-vertical-height);
+  width: var(--vg-sidebar-vertical-width);
+  left: 0;
+}
+.vg-sidebar.top {
+  top: -105%;
+}
+.vg-sidebar.top.show {
+  top: 0;
+}
+.vg-sidebar.bottom {
+  bottom: -105%;
+}
+.vg-sidebar.bottom.show {
+  bottom: 0;
+}
+.vg-sidebar-header {
+  height: var(--vg-sidebar-header-height);
+  z-index: 10;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--vg-sidebar-padding);
+  border-bottom: var(--vg-sidebar-border);
+}
+.vg-sidebar-body {
+  height: calc(100% - var(--vg-sidebar-header-height) - var(--vg-sidebar-footer-height));
+  overflow-y: auto;
+  padding: var(--vg-sidebar-padding);
+}
+.vg-sidebar-footer {
+  height: var(--vg-sidebar-footer-height);
+  padding: var(--vg-sidebar-padding);
+  border-top: var(--vg-sidebar-border);
+}
 /*!******************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./app/modules/dropdown/scss/vgdropdown.scss ***!
   \******************************************************************************************************************************************************************************/
@@ -22,4 +142,4 @@
   visibility: hidden;
 }
 
-/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidmdhcHAuY3NzIiwibWFwcGluZ3MiOiI7OztBQUFBO0FBQUE7Ozs7OztBQUFBO0FBaUJBO0FBQ0E7QUFSQTtBQVVBO0FBQ0E7QUFDQTtBQUNBO0FBUkE7QUFVQTtBQUNBO0FBQ0E7QUFSQSIsInNvdXJjZXMiOlsid2VicGFjazovL3ZnLy4vYXBwL21vZHVsZXMvZHJvcGRvd24vc2Nzcy92Z2Ryb3Bkb3duLnNjc3MiXSwibmFtZXMiOltdLCJzb3VyY2VSb290IjoiIn0=*/
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidmdhcHAuY3NzIiwibWFwcGluZ3MiOiI7OztBQUlBO0FDR0E7QUFBQTtBQUFBO0FBQUE7QUREQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFBQTtBQUVBO0FBQ0E7QUFBQTs7QUFJQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFEQTtBQUdBO0FBQ0E7QUFDQTtBQURBOzs7O0FFN0JBO0FBQUE7Ozs7OztBQUFBO0FBYUE7QURUQTtBQUFBO0FBQUE7QUFBQTtBQUdBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQ1FBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFRQTtBQU5BO0FBQ0E7QUFDQTtBQUNBO0FBUUE7QUFMQTtBQUNBO0FBT0E7QUFMQTtBQUNBO0FBT0E7QUFIQTtBQUNBO0FBS0E7QUFIQTtBQUNBO0FBS0E7QUFEQTtBQUNBO0FBQ0E7QUFDQTtBQUdBO0FBQUE7QUFDQTtBQUVBO0FBQUE7QUFDQTtBQUVBO0FBRUE7QUFDQTtBQUFBO0FBRUE7QUFDQTtBQUFBO0FBSUE7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUZBO0FBS0E7QUFDQTtBQUNBO0FBQ0E7QUFIQTtBQU1BO0FBQ0E7QUFDQTtBQUNBO0FBSkE7Ozs7QUNuRkE7QUFBQTs7Ozs7O0FBQUE7QUFpQkE7QUFDQTtBQVJBO0FBVUE7QUFDQTtBQUNBO0FBQ0E7QUFSQTtBQVVBO0FBQ0E7QUFDQTtBQVJBIiwic291cmNlcyI6WyJ3ZWJwYWNrOi8vdmcvLi9hcHAvX3V0aWxzL3Njc3MvZGVmYXVsdC5zY3NzIiwid2VicGFjazovL3ZnLy4vYXBwL191dGlscy9zY3NzL21peGluLnNjc3MiLCJ3ZWJwYWNrOi8vdmcvLi9hcHAvbW9kdWxlcy9zaWRlYmFyL3Njc3MvdmdzaWRlYmFyLnNjc3MiLCJ3ZWJwYWNrOi8vdmcvLi9hcHAvbW9kdWxlcy9kcm9wZG93bi9zY3NzL3ZnZHJvcGRvd24uc2NzcyJdLCJuYW1lcyI6W10sInNvdXJjZVJvb3QiOiIifQ==*/

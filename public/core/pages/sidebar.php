@@ -13,7 +13,7 @@
 		</div>
 		<div class="col-lg-9">
 			<h3>Как это работает</h3>
-			
+			<div style="height: 2000px"></div>
 		</div>
 	</div>
 </div>

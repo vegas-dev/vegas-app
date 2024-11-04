@@ -152,4 +152,80 @@ function mergeDeepObject(...objects) {
 	}, {});
 }
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData}
+/**
+ * Callback
+ * @param possibleCallback
+ * @param args
+ * @param defaultValue
+ * @returns {*}
+ */
+function execute(possibleCallback, args = [], defaultValue = possibleCallback) {
+	return typeof possibleCallback === 'function' ? possibleCallback(...args) : defaultValue
+}
+
+/**
+ * Transition
+ * @param callback
+ * @param transitionElement
+ * @param waitForTransition
+ */
+const TRANSITION_END = 'transitionend';
+const MILLISECONDS_MULTIPLIER = 1000;
+
+function executeAfterTransition (callback, transitionElement, waitForTransition = true) {
+	if (!waitForTransition) {
+		execute(callback)
+		return
+	}
+
+	const durationPadding = 5
+	const emulatedDuration = getTransitionDurationFromElement(transitionElement) + durationPadding
+
+	let called = false
+
+	const handler = ({ target }) => {
+		if (target !== transitionElement) {
+			return
+		}
+
+		called = true
+		transitionElement.removeEventListener(TRANSITION_END, handler)
+		execute(callback)
+	}
+
+	transitionElement.addEventListener(TRANSITION_END, handler)
+	setTimeout(() => {
+		if (!called) {
+			triggerTransitionEnd(transitionElement)
+		}
+	}, emulatedDuration)
+}
+
+const getTransitionDurationFromElement = element => {
+	if (!element) {
+		return 0
+	}
+
+	// Get transition-duration of the element
+	let { transitionDuration, transitionDelay } = window.getComputedStyle(element)
+
+	const floatTransitionDuration = Number.parseFloat(transitionDuration)
+	const floatTransitionDelay = Number.parseFloat(transitionDelay)
+
+	// Return 0 if element or transition duration is not found
+	if (!floatTransitionDuration && !floatTransitionDelay) {
+		return 0
+	}
+
+	// If multiple durations are defined, take the first
+	transitionDuration = transitionDuration.split(',')[0]
+	transitionDelay = transitionDelay.split(',')[0]
+
+	return (Number.parseFloat(transitionDuration) + Number.parseFloat(transitionDelay)) * MILLISECONDS_MULTIPLIER
+}
+
+const triggerTransitionEnd = element => {
+	element.dispatchEvent(new Event(TRANSITION_END))
+}
+
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition}

@@ -30,10 +30,16 @@ const Manipulator = {
 	},
 
 	getAttribute: function (element, nameAttribute) {
-		if (!element || !nameAttribute) {
+		if (!element && !nameAttribute) {
 			return ''
 		}
 		return normalizeData(element.getAttribute(nameAttribute));
+	},
+
+	removeAttribute: function (element, nameAttribute) {
+		if (isElement(element) && nameAttribute) {
+			element.removeAttribute(nameAttribute);
+		}
 	}
 }
 

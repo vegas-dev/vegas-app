@@ -1,25 +1,28 @@
-/*// css классы по умолчанию
+// css классы по умолчанию
 import "./app/_utils/scss/default.scss";
+import Selectors from "./app/_utils/js/selectors";
 
 // vgsidebar
-import "./app/sidebar/scss/vgsidebar.scss";
-import VGSidebar from "./app/sidebar/js/vgsidebar";
+import "./app/modules/sidebar/scss/vgsidebar.scss";
+import VGSidebar from "./app/modules/sidebar/js/vgsidebar";
 
-// vgdropdown*/
+// vgdropdown
 import "./app/modules/dropdown/scss/vgdropdown.scss";
 import VGDropdown from "./app/modules/dropdown/js/vgdropdown";
-import Selectors from "./app/_utils/js/selectors";
 
 
 function onReady() {
 	// vgsidebar
-	/*[...document.querySelectorAll('[data-vg-toggle="sidebar"]')].forEach(function (btn) {
+	[...Selectors.findAll('[data-vg-toggle="sidebar"]')].forEach(function (btn) {
 		VGSidebar.makeInit(btn);
-	});*/
+	});
+
+	let sidebar = document.querySelector('[data-vg-target="#sidebar-right"]');
+	VGSidebar.getOrCreateInstance(sidebar).toggle();
 
 	// dropdowns
-	[...document.querySelectorAll('[data-vg-toggle="dropdown"]')].forEach(function (btn) {
-		VGDropdown.makeInit(btn);
+	[...Selectors.findAll('[data-vg-toggle="dropdown"]')].forEach(function (btn) {
+		//VGDropdown.makeInit(btn);
 	});
 }
 

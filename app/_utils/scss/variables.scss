@@ -21,3 +21,11 @@ $backdrop-opacity:  .4 !default;
 $sidebar-index:  1040;
 $dropdown-index: 1010;
 $backdrop-index: 999;
+
+// Backdrop map
+$backdrop-map: (
+		bg:         $backdrop-bg,
+		opacity:    $backdrop-opacity,
+		z-index:    $backdrop-index,
+		transition: $transition-base,
+)

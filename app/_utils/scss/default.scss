@@ -1,3 +1,24 @@
+@import "../../_utils/scss/functions";
+@import "../../_utils/scss/mixin";
+@import "../../_utils/scss/variables";
+
+.vg-backdrop {
+	@include mix-vars('backdrop', $backdrop-map);
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: var(--vg-backdrop-bg);
+	transition: var(--vg-backdrop-transition);
+	opacity: 0;
+	z-index: var(--vg-backdrop-z-index);
+
+	&.fade {
+		opacity: var(--vg-backdrop-opacity);
+	}
+}
+
 .vg-btn-close {
 	position: absolute;
 	right: 1rem;

@@ -1,4 +1,5 @@
 import {isElement} from "./functions";
+import {Manipulator} from "./manipulator";
 
 const Selectors = {
 	get(el, container) {
@@ -23,6 +24,21 @@ const Selectors = {
 
 	findOne(selector, element = document.documentElement) {
 		return Element.prototype.querySelector.call(element, selector)
+	},
+
+	getTargetFromSelector(selector) {
+		let _selector = null;
+
+		if (isElement(selector)) {
+			_selector = selector;
+		} else if (typeof selector === 'string') {
+			_selector = Selectors.findOne(selector);
+		}
+
+		let target = Manipulator.getAttribute(_selector,'href') || Manipulator.getAttribute(_selector,'data-vg-target') || '';
+		if (target) {
+			return Selectors.findOne(target);
+		}
 	}
 }
 
