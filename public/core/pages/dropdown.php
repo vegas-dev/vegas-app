@@ -8,15 +8,40 @@
 		</div>
 		<div class="col-lg-9">
 			<h3>Как это работает</h3>
-			<div class="vg-dropdown mt-5">
-				<a href="#" class="btn btn-primary" data-vg-toggle="dropdown" data-over="true" data-keyboard="true" data-params='{"ajax": {"route": "#", "target": "#drop-content"}}'>Открыть дроп</a>
-				<div class="vg-dropdown-content">
-					<ul class="list-group">
-						<li class="list-group-item"><a href="#">Главная</a></li>
-						<li class="list-group-item"><a href="#">Услуги</a></li>
-						<li class="list-group-item"><a href="#">О компании</a></li>
-						<li class="list-group-item"><a href="#">Контакты</a></li>
-					</ul>
+			
+			<div class="d-flex mt-5 pb-5">
+				<div class="vg-dropdown">
+					<a href="#" class="btn btn-primary" data-event="dasd" data-vg-toggle="dropdown" data-keyboard="true" data-params='{"ajax": {"route": "#", "target": "#drop-content"}}'>Открыть дроп</a>
+					<div class="vg-dropdown-content">
+						<ul class="list-group">
+							<li class="list-group-item"><a href="#">Главная</a></li>
+							<li class="list-group-item"><a href="#">Услуги</a></li>
+							<li class="list-group-item"><a href="#">О компании</a></li>
+							<li class="list-group-item"><a href="#">Контакты</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="vg-dropdown ms-2">
+					<a href="#" class="btn btn-danger" data-vg-toggle="dropdown" data-params='{"ajax": {"route": "#", "target": "#drop-content"}}'>Открыть дроп</a>
+					<div class="vg-dropdown-content">
+						<ul class="list-group">
+							<li class="list-group-item"><a href="#">Главная</a></li>
+							<li class="list-group-item"><a href="#">Услуги</a></li>
+							<li class="list-group-item"><a href="#">О компании</a></li>
+							<li class="list-group-item"><a href="#">Контакты</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="vg-dropdown ms-2">
+					<a href="#" class="btn btn-warning" data-vg-toggle="dropdown" data-params='{"ajax": {"route": "#", "target": "#drop-content"}}'>Открыть дроп</a>
+					<div class="vg-dropdown-content">
+						<ul class="list-group">
+							<li class="list-group-item"><a href="#">Главная</a></li>
+							<li class="list-group-item"><a href="#">Услуги</a></li>
+							<li class="list-group-item"><a href="#">О компании</a></li>
+							<li class="list-group-item"><a href="#">Контакты</a></li>
+						</ul>
+					</div>
 				</div>
 			</div>
 			<p class="mt-3">

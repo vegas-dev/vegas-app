@@ -24,7 +24,7 @@ class Params {
 					if (!(datum in pDefault)) {
 						let p = datum.split('-');
 
-						if (p[1] in pDefault[p[0]]) {
+						if (pDefault[p[0]] && p[1] in pDefault[p[0]]) {
 							pDefault[p[0]][p[1]] = value;
 						}
 

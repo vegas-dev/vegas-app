@@ -47,6 +47,32 @@ const isDisabled = element => {
 	return element.hasAttribute('disabled') && element.getAttribute('disabled') !== 'false'
 }
 
+function isVisible (element) {
+	if (!isElement(element) || element.getClientRects().length === 0) {
+		return false
+	}
+
+	const elementIsVisible = getComputedStyle(element).getPropertyValue('visibility') === 'visible'
+	const closedDetails = element.closest('details:not([open])')
+
+	if (!closedDetails) {
+		return elementIsVisible
+	}
+
+	if (closedDetails !== element) {
+		const summary = element.closest('summary')
+		if (summary && summary.parentNode !== closedDetails) {
+			return false
+		}
+
+		if (summary === null) {
+			return false
+		}
+	}
+
+	return elementIsVisible
+}
+
 /**
  * isObject
  * @param obj
@@ -126,4 +152,4 @@ function mergeDeepObject(...objects) {
 	}, {});
 }
 
-export {isElement, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData}
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData}

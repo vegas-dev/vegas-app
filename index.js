@@ -8,10 +8,10 @@ import VGSidebar from "./app/sidebar/js/vgsidebar";
 // vgdropdown*/
 import "./app/modules/dropdown/scss/vgdropdown.scss";
 import VGDropdown from "./app/modules/dropdown/js/vgdropdown";
+import Selectors from "./app/_utils/js/selectors";
 
 
 function onReady() {
-
 	// vgsidebar
 	/*[...document.querySelectorAll('[data-vg-toggle="sidebar"]')].forEach(function (btn) {
 		VGSidebar.makeInit(btn);
