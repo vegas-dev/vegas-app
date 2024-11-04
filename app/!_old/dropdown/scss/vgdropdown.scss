@@ -20,6 +20,12 @@
 
 	&-content {
 		position: absolute;
-		inset: 0;
+		min-width: 200px;
+		transition: var(--vg-transition-base);
+
+		&:not(.show) {
+			opacity: 0;
+			visibility: hidden;
+		}
 	}
 }

@@ -1,4 +1,6 @@
-import {isEmptyObj, Manipulator, mergeDeepObject} from "./manipulator";
+import {Manipulator} from "./manipulator";
+import {isEmptyObj, mergeDeepObject} from "./functions";
+import Params from "./params";
 
 class BaseModule {
 	constructor() {
@@ -26,6 +28,7 @@ class BaseModule {
 
 	set params(params) {
 		if (!isEmptyObj(params)) {
+			console.log(Params.get(params, this.element))
 			let attrs = Manipulator.getDataAttributes(this.element);
 			this._params = mergeDeepObject(params, attrs);
 		}
