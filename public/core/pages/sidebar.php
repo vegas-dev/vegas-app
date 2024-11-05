@@ -6,8 +6,8 @@
 		<div class="col-lg-3">
 			<ul class="list-group">
 				<li class="list-group-item"><a href="#sidebar-left" data-vg-toggle="sidebar">Открыть панель слева</a></li>
-				<li class="list-group-item"><button class="btn btn-primary" data-vg-target="#sidebar-right" data-vg-toggle="sidebar" data-params='{"ajax": {"route": "/core/server.php?sidebar=right", "target": "#sidebar-ajax-content"}}'>Открыть панель справа</button></li>
-				<li class="list-group-item"><button class="btn btn-primary" data-vg-target="#sidebar-top" data-vg-toggle="sidebar" data-ajax-route="/core/server.php?sidebar=top" data-ajax-target="#sidebar-contents">Открыть панель сверху</button></li>
+				<li class="list-group-item"><button class="btn btn-primary" data-vg-target="#sidebar-right" data-vg-toggle="sidebar">Открыть панель справа</button></li>
+				<li class="list-group-item"><button class="btn btn-primary" data-vg-target="#sidebar-top" data-vg-toggle="sidebar">Открыть панель сверху</button></li>
 				<li class="list-group-item"><a href="#sidebar-bottom" data-vg-toggle="sidebar">Открыть панель снизу</a></li>
 			</ul>
 		</div>
@@ -32,7 +32,7 @@
 	<div class="vg-sidebar-footer"></div>
 </div>
 
-<div class="vg-sidebar right" id="sidebar-right" data-backdrop="false" data-overflow="false">
+<div class="vg-sidebar right" id="sidebar-right" data-params='{"ajax": {"route": "/core/server.php?sidebar=right", "target": "#sidebar-ajax-content"}}'>
 	<div class="vg-sidebar-header">
 		<div class="vg-sidebar-header--title">Панель справа</div>
 		<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" aria-label="Close"></button>
@@ -45,7 +45,7 @@
 	</div>
 </div>
 
-<div class="vg-sidebar top" id="sidebar-top">
+<div class="vg-sidebar top" id="sidebar-top" data-backdrop="false" data-overflow="true">
 	<div class="vg-sidebar-header">
 		<div class="vg-sidebar-header--title">Панель сверху</div>
 		<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" data-vg-target="#sidebar-top" aria-label="Close"></button>

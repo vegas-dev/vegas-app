@@ -9,7 +9,7 @@ const Manipulator = {
 			return {}
 		}
 
-		let elmBase = ['data-vg-toggle', 'data-vg-target'],
+		let elmBase = ['data-vg-toggle', 'data-vg-target', 'data-vg-dismiss'],
 			attributes= {},
 			arr = [].filter.call(element.attributes, function (at) {
 				return /^data-/.test(at.name);

@@ -41,6 +41,8 @@ class Backdrop {
 
 	static _destroy() {
 		let element = Selectors.findOne('.' + CLASS_NAME);
+		if (!element) return;
+
 		element.classList.remove(CLASS_NAME_FADE);
 
 		setTimeout(() => {
