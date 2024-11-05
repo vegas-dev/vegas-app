@@ -14,14 +14,14 @@ const NAME_KEY = 'vg.sidebar';
 const CLASS_NAME_SHOW = 'show';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]'
 
-const EVENT_KEY_HIDE = 'vg.sidebar.hide';
-const EVENT_KEY_HIDDEN = 'vg.sidebar.hidden';
-const EVENT_KEY_SHOW = 'vg.sidebar.show';
-const EVENT_KEY_SHOWN = 'vg.sidebar.shown';
-const EVENT_KEY_LOADED = 'vg.sidebar.loaded';
-const EVENT_KEY_KEYDOWN_DISMISS = 'keydown.dismiss.vg.sidebar';
-const EVENT_KEY_HIDE_PREVENTED = 'hidePrevented.vg.sidebar';
-const EVENT_KEY_CLICK_DATA_API = 'click.vg.sidebar.data.api';
+const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
+const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
+const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
+const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
+
+const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
+const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
+const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
 const PARAMS_DEFAULT =  {
 	button: null,
@@ -38,7 +38,6 @@ class VGSidebar extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 		this._addEventListeners();
-		this._route();
 		this._dismissElement();
 	}
 
@@ -62,6 +61,8 @@ class VGSidebar extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this.element)) return;
 
+		this._route();
+
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
 
@@ -73,10 +74,6 @@ class VGSidebar extends BaseModule {
 			Overflow.append();
 		}
 
-		if (relatedTarget) {
-			relatedTarget.setAttribute('aria-expanded', true);
-		}
-
 		_this.element.classList.add(CLASS_NAME_SHOW);
 
 		const completeCallBack = () => {
@@ -86,7 +83,7 @@ class VGSidebar extends BaseModule {
 
 			EventHandler.trigger(this.element, EVENT_KEY_SHOWN, { relatedTarget });
 		}
-		this._queueCallback(completeCallBack, this.element, true)
+		this._queueCallback(completeCallBack, this.element, true, 50)
 	}
 
 	hide() {
@@ -151,6 +148,8 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	if (isDisabled(this)) {
 		return
 	}
+
+	this.setAttribute('aria-expanded', true);
 
 	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
 		this.setAttribute('aria-expanded', false);

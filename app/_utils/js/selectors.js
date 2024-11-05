@@ -1,5 +1,31 @@
 import {isElement} from "./functions";
-import {Manipulator} from "./manipulator";
+
+const parseSelector = selector => {
+	if (selector && window.CSS && window.CSS.escape) {
+		selector = selector.replace(/#([^\s"#']+)/g, (match, id) => `#${CSS.escape(id)}`)
+	}
+
+	return selector
+}
+
+const getSelector = element => {
+	let selector = element.getAttribute('data-vg-target')
+
+	if (!selector || selector === '#') {
+		let hrefAttribute = element.getAttribute('href')
+		if (!hrefAttribute || (!hrefAttribute.includes('#') && !hrefAttribute.startsWith('.'))) {
+			return null
+		}
+
+		if (hrefAttribute.includes('#') && !hrefAttribute.startsWith('#')) {
+			hrefAttribute = `#${hrefAttribute.split('#')[1]}`
+		}
+
+		selector = hrefAttribute && hrefAttribute !== '#' ? hrefAttribute.trim() : null
+	}
+
+	return selector ? selector.split(',').map(sel => parseSelector(sel)).join(',') : null
+}
 
 const Selectors = {
 	get(el, container) {
@@ -35,10 +61,13 @@ const Selectors = {
 			_selector = Selectors.findOne(selector);
 		}
 
-		let target = Manipulator.getAttribute(_selector,'href') || Manipulator.getAttribute(_selector,'data-vg-target') || '';
-		if (target) {
-			return Selectors.findOne(target);
-		}
+		let target = getSelector(_selector);
+		if (!target) return null;
+
+		let _targetSelector = Selectors.findOne(target);
+		if (_targetSelector) return  _targetSelector;
+
+		return null;
 	}
 }
 

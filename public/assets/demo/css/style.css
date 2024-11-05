@@ -10,7 +10,7 @@
 	--vg-sidebar-backdrop-opacity: 0.15;
 }
 
-[data-bs-theme="dark"] .vg-btn-close svg path {
+[data-bs-theme="dark"] .vg-btn-close svg polygon {
 	fill: var(--bs-body-color);
 }
 

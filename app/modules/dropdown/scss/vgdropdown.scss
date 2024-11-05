@@ -21,11 +21,19 @@
 	&-content {
 		position: absolute;
 		min-width: 200px;
-		transition: var(--vg-transition-base);
+		transition: var(--vg-dropdonw-transition, all .3s ease-in-out);
+		opacity: 0;
 
 		&:not(.show) {
-			opacity: 0;
-			visibility: hidden;
+			display: none;
+		}
+
+		&.fade-top {
+			opacity: 1;
+		}
+
+		&.bottom {
+			bottom: 0;
 		}
 	}
 }

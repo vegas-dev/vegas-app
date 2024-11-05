@@ -172,14 +172,14 @@ function execute(possibleCallback, args = [], defaultValue = possibleCallback) {
 const TRANSITION_END = 'transitionend';
 const MILLISECONDS_MULTIPLIER = 1000;
 
-function executeAfterTransition (callback, transitionElement, waitForTransition = true) {
+function executeAfterTransition (callback, transitionElement, waitForTransition = true, timeOutMs) {
 	if (!waitForTransition) {
 		execute(callback)
 		return
 	}
 
 	const durationPadding = 5
-	const emulatedDuration = getTransitionDurationFromElement(transitionElement) + durationPadding
+	const emulatedDuration = timeOutMs ? timeOutMs : getTransitionDurationFromElement(transitionElement) + durationPadding;
 
 	let called = false
 
@@ -228,4 +228,9 @@ const triggerTransitionEnd = element => {
 	element.dispatchEvent(new Event(TRANSITION_END))
 }
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition}
+/**
+ * Noop
+ */
+const noop = () => {};
+
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, noop}
