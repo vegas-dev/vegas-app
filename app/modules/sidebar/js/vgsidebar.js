@@ -5,9 +5,10 @@ import Overflow from "../../../_utils/js/overflow";
 import EventHandler from "../../../_utils/js/event";
 import {isDisabled} from "../../../_utils/js/functions";
 
-const NAME             = 'dropdown';
-const NAME_KEY         = 'vg.dropdown';
+const NAME             = 'vgSidebar';
+const NAME_KEY         = 'vg.sidebar';
 const CLASS_NAME_SHOW  = 'show';
+const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]'
 const PARAMS_DEFAULT =  {
 	backdrop: true,
 	overflow: true,
@@ -19,6 +20,7 @@ const PARAMS_DEFAULT =  {
 	}
 };
 
+const EVENT_KEY_CLICK_DATA_API = 'vg.sidebar.click.api';
 const EVENT_KEY_HIDE = 'vg.sidebar.hide';
 const EVENT_KEY_HIDDEN = 'vg.sidebar.hidden';
 const EVENT_KEY_SHOW = 'vg.sidebar.show';
@@ -88,7 +90,7 @@ class VGSidebar extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this.element)) return;
 
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE)
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
 		if (_this.params.backdrop) {
@@ -102,25 +104,38 @@ class VGSidebar extends BaseModule {
 		_this.element.setAttribute('aria-expanded', false);
 		_this.container.classList.remove(CLASS_NAME_SHOW);
 
-		const completeCallback = () => {
-			EventHandler.trigger(this.element, EVENT_KEY_HIDDEN)
-		}
-		this._queueCallback(completeCallback, this.element, true)
+		const completeCallback = () => EventHandler.trigger(this.element, EVENT_KEY_HIDDEN);
+		this._queueCallback(completeCallback, this.element, true);
 	}
 
 	_isShown() {
-		console.log(this.container)
-		return this.container.classList.contains(CLASS_NAME_SHOW)
-	}
-
-	static makeInit(btn) {
-		btn.addEventListener('click', () => {
-			let sidebar = VGSidebar.getOrCreateInstance(btn, {});
-			sidebar.toggle();
-
-			return false;
-		});
+		return this.container.classList.contains(CLASS_NAME_SHOW);
 	}
 }
+
+/**
+ * Data API implementation
+ */
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+	const target = Selectors.getTargetFromSelector(this);
+
+	console.log(event)
+
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault()
+	}
+
+	if (isDisabled(this)) {
+		return
+	}
+
+	const alreadyOpen = Selectors.findOne('.vg-sidebar.show')
+	if (alreadyOpen && alreadyOpen !== target) {
+		VGSidebar.getInstance(alreadyOpen).hide()
+	}
+
+	const data = VGSidebar.getOrCreateInstance(target)
+	data.toggle(this)
+})
 
 export default VGSidebar;
