@@ -4,11 +4,12 @@ import Backdrop from "../../../_utils/js/backdrop";
 import Overflow from "../../../_utils/js/overflow";
 import EventHandler from "../../../_utils/js/event";
 import {isDisabled} from "../../../_utils/js/functions";
+import {dismissTrigger} from "../../../_utils/js/module-fn";
 
 /**
  * Constants
  */
-const NAME = 'vgSidebar';
+const NAME = 'sidebar';
 const NAME_KEY = 'vg.sidebar';
 const CLASS_NAME_SHOW = 'show';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]'
@@ -37,6 +38,7 @@ class VGSidebar extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 		this._addEventListeners();
+		this._route();
 		this._dismissElement();
 	}
 
@@ -132,6 +134,9 @@ class VGSidebar extends BaseModule {
 		})
 	}
 }
+
+dismissTrigger(VGSidebar)
+
 
 /**
  * Data API implementation
