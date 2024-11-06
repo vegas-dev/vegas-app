@@ -38,7 +38,6 @@ class VGDropdown extends BaseModule {
 
 		this._parent = this.element.parentNode;
 		this._drop = Selectors.get('.' + TARGET_CONTAINER, this._parent);
-		this._setPlacement();
 	}
 
 	static get Default() {
@@ -129,8 +128,6 @@ class VGDropdown extends BaseModule {
 			rectElement = this.element.getBoundingClientRect();
 
 		if (offset.length !== 2 || !rectElement) return;
-
-		_this._drop.style.trasform = 'translate(0, 0)';
 
 		const completePlacement = () => {
 			if (_this.params.placement === 'bottom') {
