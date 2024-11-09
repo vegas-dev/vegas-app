@@ -52,6 +52,34 @@ const Selectors = {
 		return Element.prototype.querySelector.call(element, selector)
 	},
 
+	prev(element, selector) {
+		let previous = element.previousElementSibling
+
+		while (previous) {
+			if (previous.matches(selector)) {
+				return [previous]
+			}
+
+			previous = previous.previousElementSibling
+		}
+
+		return []
+	},
+
+	next(element, selector) {
+		let next = element.nextElementSibling
+
+		while (next) {
+			if (next.matches(selector)) {
+				return [next]
+			}
+
+			next = next.nextElementSibling
+		}
+
+		return []
+	},
+
 	getTargetFromSelector(selector) {
 		let _selector = null;
 

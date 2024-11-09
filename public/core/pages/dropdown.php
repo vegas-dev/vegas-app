@@ -45,6 +45,20 @@
 				fuga fugiat id in ipsa iure maiores, modi molestiae, officia pariatur provident qui sequi suscipit
 				tempora ut! Aliquid doloremque eveniet harum libero quis?
 			</p>
+			
+			<div class="mt-5 overflow-hidden">
+				<div class="vg-dropdown">
+					<a href="#" class="btn btn-primary" data-vg-toggle="dropdown" data-keyboard="true">Открыть дроп</a>
+					<div class="vg-dropdown-content">
+						<ul class="list-group">
+							<li class="list-group-item"><a href="#">Главная</a></li>
+							<li class="list-group-item"><a href="#">Услуги</a></li>
+							<li class="list-group-item"><a href="#">О компании</a></li>
+							<li class="list-group-item"><a href="#">Контакты</a></li>
+						</ul>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>

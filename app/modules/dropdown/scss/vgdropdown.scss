@@ -22,15 +22,13 @@
 		position: absolute;
 		min-width: 200px;
 		transition: var(--vg-dropdonw-transition, all .3s ease-in-out);
-		transform: translateY(50px);
-		opacity: 0;
+		opacity: 1;
 
 		&:not(.show) {
 			display: none;
 		}
 
-		&.fade-top {
-			transform: translateY(0);
+		&.fade {
 			opacity: 1;
 		}
 

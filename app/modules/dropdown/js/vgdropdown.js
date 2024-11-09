@@ -15,9 +15,9 @@ const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 
-const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
-const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
-const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`
+const EVENT_KEYDOWN_DATA_API = `keydown.${NAME_KEY}.data.api`
+const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
 const PARAMS_DEFAULT     = {
 	offset: [0, 2],
@@ -75,6 +75,7 @@ class VGDropdown extends BaseModule {
 		this.element.setAttribute('aria-expanded', true);
 		this.element.classList.add(CLASS_NAME_SHOW);
 		this._drop.classList.add(CLASS_NAME_SHOW);
+		this._setPlacement();
 
 		const completeCallBack = () => {
 			this._drop.classList.add(CLASS_NAME_FADE);
@@ -124,33 +125,112 @@ class VGDropdown extends BaseModule {
 
 	_setPlacement() {
 		const _this = this;
-		let offset = getOffset(),
-			rectElement = this.element.getBoundingClientRect();
 
-		if (offset.length !== 2 || !rectElement) return;
+		_this._getPlacement();
+	}
 
-		const completePlacement = () => {
-			if (_this.params.placement === 'bottom') {
-				_this._drop.style.inset      = '0px auto auto 0px';
-				_this._drop.style.transform  = 'translate(0, '+ (rectElement.height + offset[1]) +'px)';
+	_getPlacement() {
+		const _this = this;
+		const _parent = (self) => {
+			let parent = self.parentNode,
+				overflow = getComputedStyle(parent).overflow;
+
+			if (parent.tagName !== 'BODY') {
+				if (overflow === 'visible') {
+					_parent(parent)
+				} else {
+					return getBounds(parent);
+				}
+			} else {
+				return getBounds(document.body);
 			}
 		}
 
-		this._queueCallback(completePlacement, this._drop, true, 50);
+		let bounds = _parent(_this._parent);
+		console.log(bounds)
 
-		function getOffset() {
-			const { offset } = _this.params;
+		function getBounds(element) {
+			let rectDrop = _this._drop.getBoundingClientRect();
 
-			if (typeof offset === 'string') {
-				return offset.split(',').map(value => Number.parseInt(value, 10))
+			return {
+				top: rectDrop.top,
+				right: rectDrop.right,
+				bottom: rectDrop.bottom,
+				left: rectDrop.left
+			}
+		}
+	}
+
+	static keydownHandler(event) {
+		const isInput = /input|textarea/i.test(event.target.tagName)
+		const isEscapeEvent = event.key === 'Escape'
+		const isUpOrDownEvent = ['ArrowUp', 'ArrowDown'].includes(event.key)
+
+		if (!isUpOrDownEvent && !isEscapeEvent) {
+			return
+		}
+
+		if (isInput && !isEscapeEvent) {
+			return
+		}
+
+		event.preventDefault()
+
+		const getToggleButton = this.matches(SELECTOR_DATA_TOGGLE) ?
+			this :
+			(Selectors.prev(this, SELECTOR_DATA_TOGGLE)[0] ||
+				Selectors.next(this, SELECTOR_DATA_TOGGLE)[0] ||
+				Selectors.findOne(SELECTOR_DATA_TOGGLE, event.delegateTarget.parentNode))
+
+		const instance = VGDropdown.getOrCreateInstance(getToggleButton)
+
+		if (isUpOrDownEvent) {
+			event.stopPropagation()
+			instance.show()
+			return
+		}
+
+		if (instance._isShown()) {
+			event.stopPropagation()
+			instance.hide()
+			getToggleButton.focus()
+		}
+	}
+
+	static clearDrops(event) {
+		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) {
+			return
+		}
+
+		const openToggles = Selectors.findAll('[data-vg-toggle="dropdown"]:not(.disabled):not(:disabled).show');
+
+		for (const toggle of openToggles) {
+			const context = VGDropdown.getInstance(toggle);
+			if (!context) {
+				continue;
 			}
 
-			return offset;
+			const composedPath = event.composedPath();
+			if (composedPath.includes(context.element)) {
+				continue
+			}
+
+			const relatedTarget = { relatedTarget: context._element }
+
+			if (event.type === 'click') {
+				relatedTarget.clickEvent = event
+			}
+
+			context._completeHide(relatedTarget)
 		}
 	}
 }
 
-EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
+EventHandler.on(document, EVENT_KEYDOWN_DATA_API, '.' + TARGET_CONTAINER, VGDropdown.keydownHandler);
+EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
+EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
+EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
 	event.preventDefault();
 	VGDropdown.getOrCreateInstance(this).toggle();
 })
