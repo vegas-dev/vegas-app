@@ -1,23 +1,26 @@
 import BaseModule from "../../base-module";
 import EventHandler from "../../../_utils/js/event";
 import Selectors from "../../../_utils/js/selectors";
-import {isDisabled, noop} from "../../../_utils/js/functions";
+import {isDisabled, noop, normalizeData} from "../../../_utils/js/functions";
+import params from "../../../_utils/js/params";
 
 const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
 const CLASS_NAME_SHOW  = 'show';
 const CLASS_NAME_FADE  = 'fade-top';
 const TARGET_CONTAINER = 'vg-dropdown-content';
-const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="dropdown"]'
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="dropdown"]';
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 
-const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`
-const EVENT_KEYDOWN_DATA_API = `keydown.${NAME_KEY}.data.api`
+const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
+const EVENT_KEYDOWN_DATA_API = `keydown.${NAME_KEY}.data.api`;
 const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
+const EVENT_MOUSEOUT_DATA_API = `mouseout.${NAME_KEY}.data.api`;
 
 const PARAMS_DEFAULT     = {
 	offset: [0, 2],
@@ -26,6 +29,7 @@ const PARAMS_DEFAULT     = {
 	overflow: true,
 	keyboard: true,
 	placement: 'bottom',
+	hover: false,
 	ajax: {
 		route: '',
 		target: ''
@@ -38,6 +42,7 @@ class VGDropdown extends BaseModule {
 
 		this._parent = this.element.parentNode;
 		this._drop = Selectors.get('.' + TARGET_CONTAINER, this._parent);
+		this._isPlacement = false;
 	}
 
 	static get Default() {
@@ -96,12 +101,16 @@ class VGDropdown extends BaseModule {
 		this._completeHide(relatedTarget);
 	}
 
+	dispose() {
+		return super.dispose();
+	}
+
 	_isShown() {
 		return this.element.classList.contains(CLASS_NAME_SHOW);
 	}
 
 	_completeHide(relatedTarget) {
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE, relatedTarget)
+		const hideEvent = EventHandler.trigger(this.element, EVENT_KEY_HIDE, relatedTarget)
 		if (hideEvent.defaultPrevented) {
 			return;
 		}
@@ -120,13 +129,24 @@ class VGDropdown extends BaseModule {
 			this._drop.classList.remove(CLASS_NAME_SHOW);
 			EventHandler.trigger(this.element, EVENT_KEY_HIDDEN, relatedTarget);
 		}
-		this._queueCallback(completeCallback, this._drop, true);
+		this._queueCallback(completeCallback, this._drop, true, 10);
 	}
 
 	_setPlacement() {
 		const _this = this;
 
-		_this._getPlacement();
+		if (!_this._isPlacement) {
+			let placement = _this._getPlacement();
+
+			if (placement.isFixed) {
+				_this._drop.style.position = 'fixed';
+			}
+
+			_this._drop.style.left = placement.left + 'px';
+			_this._drop.style.top =  placement.top + 'px';
+		}
+
+		_this._isPlacement = true;
 	}
 
 	_getPlacement() {
@@ -139,25 +159,52 @@ class VGDropdown extends BaseModule {
 				if (overflow === 'visible') {
 					_parent(parent)
 				} else {
-					return getBounds(parent);
+					return parent;
 				}
 			} else {
-				return getBounds(document.body);
+				return null;
 			}
 		}
 
-		let bounds = _parent(_this._parent);
-		console.log(bounds)
+		let isFixed = false, top, left,
+			bounds = _this._drop.getBoundingClientRect(),
+			parent = _this._parent.getBoundingClientRect();
 
-		function getBounds(element) {
-			let rectDrop = _this._drop.getBoundingClientRect();
+		if (_parent(_this._parent)) {
+			left = bounds.left + _this.params.offset[0];
+			top  = bounds.top + _this.params.offset[1];
+			isFixed = true;
+		} else {
+			let styles = getComputedStyle(_this._drop);
+			top = normalizeData(styles.top.slice(0, -2)) + _this.params.offset[1];
+			left = normalizeData(styles.left.slice(0, -2)) + _this.params.offset[0];
+		}
 
-			return {
-				top: rectDrop.top,
-				right: rectDrop.right,
-				bottom: rectDrop.bottom,
-				left: rectDrop.left
-			}
+		if ((bounds.left + bounds.width) > window.innerWidth) {
+			left = parent.width - bounds.width;
+		}
+
+		return {
+			isFixed: isFixed,
+			top: top,
+			left: left
+		}
+	}
+
+	static init(element, params = {}) {
+		const instance = VGDropdown.getOrCreateInstance(element, params);
+
+		if (instance.params.hover) {
+			// TODO isHover not done
+		} else {
+			EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
+			EventHandler.on(document, EVENT_KEYDOWN_DATA_API, '.' + TARGET_CONTAINER, VGDropdown.keydownHandler);
+			EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
+			EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
+			EventHandler.on(element, EVENT_CLICK_DATA_API, function (event) {
+				event.preventDefault();
+				instance.toggle();
+			});
 		}
 	}
 
@@ -210,8 +257,12 @@ class VGDropdown extends BaseModule {
 				continue;
 			}
 
+			if (event.target.closest('.' + TARGET_CONTAINER) === context._drop) {
+				return;
+			}
+
 			const composedPath = event.composedPath();
-			if (composedPath.includes(context.element)) {
+			if (composedPath.includes(context._element)) {
 				continue
 			}
 
@@ -225,14 +276,5 @@ class VGDropdown extends BaseModule {
 		}
 	}
 }
-
-EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
-EventHandler.on(document, EVENT_KEYDOWN_DATA_API, '.' + TARGET_CONTAINER, VGDropdown.keydownHandler);
-EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
-EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
-EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-	event.preventDefault();
-	VGDropdown.getOrCreateInstance(this).toggle();
-})
 
 export default VGDropdown;
