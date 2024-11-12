@@ -21,12 +21,26 @@
 						</ul>
 					</div>
 				</div>
+				
 				<div class="vg-dropdown ms-2">
-					<a href="#" class="btn btn-danger" data-vg-toggle="dropdown" data-params='{"ajax": {"route": "#", "target": "#drop-content"}}'>Открыть дроп</a>
+					<a href="#" class="btn btn-light" data-vg-toggle="dropdown" data-hover="true" data-keyboard="true">Открыть дроп</a>
+					<div class="vg-dropdown-content">
+						<ul class="list-group">
+							<li class="list-group-item"><a href="#">Главная</a></li>
+							<li class="list-group-item"><a href="#">Услуги</a></li>
+							<li class="list-group-item"><a href="#">О компании</a></li>
+							<li class="list-group-item"><a href="#">Контакты</a></li>
+						</ul>
+					</div>
+				</div>
+				
+				<div class="vg-dropdown ms-2">
+					<a href="#" class="btn btn-danger" data-vg-toggle="dropdown" data-params='{"ajax": {"route": "/core/server.php?drop=list", "target": "#drop-content"}}'>Открыть дроп</a>
 					<div class="vg-dropdown-content">
 						<div id="drop-content"></div>
 					</div>
 				</div>
+				
 				<div class="vg-dropdown ms-2">
 					<a href="#" class="btn btn-warning" data-vg-toggle="dropdown">Открыть дроп</a>
 					<div class="vg-dropdown-content">

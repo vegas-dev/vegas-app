@@ -47,7 +47,7 @@ class BaseModule extends Params {
 	}
 
 	static getOrCreateInstance(element, params = {}) {
-		return this.getInstance(element) || new this(element, isEmptyObj(params) ? params : null)
+		return this.getInstance(element) || new this(element, !isEmptyObj(params) ? params : {})
 	}
 
 	dispose() {

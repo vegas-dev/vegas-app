@@ -15,3 +15,15 @@
 			echo 'Привет мир сверху';
 		}
 	}
+
+	if (isset($_GET['drop'])) {
+		if ($_GET['drop'] == 'list') {
+			echo '<ul class="list-group">
+							<li class="list-group-item"><a href="#">Список загружен</a></li>
+							<li class="list-group-item"><a href="#">Главная</a></li>
+							<li class="list-group-item"><a href="#">Услуги</a></li>
+							<li class="list-group-item"><a href="#">О компании</a></li>
+							<li class="list-group-item"><a href="#">Контакты</a></li>
+						</ul>';
+		}
+	}

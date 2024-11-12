@@ -2,13 +2,14 @@ import BaseModule from "../../base-module";
 import EventHandler from "../../../_utils/js/event";
 import Selectors from "../../../_utils/js/selectors";
 import {isDisabled, noop, normalizeData} from "../../../_utils/js/functions";
-import params from "../../../_utils/js/params";
+import Placement from "../../../_utils/js/placement";
 
 const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
 const CLASS_NAME_SHOW  = 'show';
-const CLASS_NAME_FADE  = 'fade-top';
+const CLASS_NAME_FADE  = 'fade';
 const TARGET_CONTAINER = 'vg-dropdown-content';
+const PARENT_CONTAINER = 'vg-dropdown';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="dropdown"]';
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
@@ -22,13 +23,15 @@ const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOUT_DATA_API = `mouseout.${NAME_KEY}.data.api`;
 
-const PARAMS_DEFAULT     = {
+const PARAMS_DEFAULT = {
 	offset: [0, 2],
 	over: false,
 	backdrop: true,
 	overflow: true,
 	keyboard: true,
 	placement: 'bottom',
+	animation: true,
+	timeoutAnimation: 300,
 	hover: false,
 	ajax: {
 		route: '',
@@ -43,6 +46,10 @@ class VGDropdown extends BaseModule {
 		this._parent = this.element.parentNode;
 		this._drop = Selectors.get('.' + TARGET_CONTAINER, this._parent);
 		this._isPlacement = false;
+
+		if (this.params.animation === false) {
+			this.params.timeoutAnimation = 10
+		}
 	}
 
 	static get Default() {
@@ -77,6 +84,8 @@ class VGDropdown extends BaseModule {
 			}
 		}
 
+		this._route();
+
 		this.element.setAttribute('aria-expanded', true);
 		this.element.classList.add(CLASS_NAME_SHOW);
 		this._drop.classList.add(CLASS_NAME_SHOW);
@@ -90,12 +99,12 @@ class VGDropdown extends BaseModule {
 	}
 
 	hide() {
-		if (isDisabled(this._element) || !this._isShown()) {
+		if (isDisabled(this.element) || !this._isShown()) {
 			return;
 		}
 
 		const relatedTarget = {
-			relatedTarget: this._element
+			relatedTarget: this.element
 		}
 
 		this._completeHide(relatedTarget);
@@ -129,73 +138,67 @@ class VGDropdown extends BaseModule {
 			this._drop.classList.remove(CLASS_NAME_SHOW);
 			EventHandler.trigger(this.element, EVENT_KEY_HIDDEN, relatedTarget);
 		}
-		this._queueCallback(completeCallback, this._drop, true, 10);
+		this._queueCallback(completeCallback, this._parent, true, this.params.timeoutAnimation);
 	}
 
+	// TODO class Placement not done
 	_setPlacement() {
 		const _this = this;
 
 		if (!_this._isPlacement) {
-			let placement = _this._getPlacement();
+			let placement = new Placement({
+				element: this._parent,
+				drop: this._drop
+			})._getPlacement();
 
 			if (placement.isFixed) {
 				_this._drop.style.position = 'fixed';
+				_this._drop.style.transform = 'translateY(-20%)'; // todo this is костыль поfixить
 			}
 
 			_this._drop.style.left = placement.left + 'px';
 			_this._drop.style.top =  placement.top + 'px';
 		}
 
+		if (_this.params.offset) {
+			_this._drop.style.paddingTop = _this.params.offset[1] + 'px';
+			_this._drop.style.paddingRight = _this.params.offset[0] + 'px';
+		}
+
 		_this._isPlacement = true;
 	}
 
-	_getPlacement() {
-		const _this = this;
-		const _parent = (self) => {
-			let parent = self.parentNode,
-				overflow = getComputedStyle(parent).overflow;
-
-			if (parent.tagName !== 'BODY') {
-				if (overflow === 'visible') {
-					_parent(parent)
-				} else {
-					return parent;
-				}
-			} else {
-				return null;
-			}
-		}
-
-		let isFixed = false, top, left,
-			bounds = _this._drop.getBoundingClientRect(),
-			parent = _this._parent.getBoundingClientRect();
-
-		if (_parent(_this._parent)) {
-			left = bounds.left + _this.params.offset[0];
-			top  = bounds.top + _this.params.offset[1];
-			isFixed = true;
-		} else {
-			let styles = getComputedStyle(_this._drop);
-			top = normalizeData(styles.top.slice(0, -2)) + _this.params.offset[1];
-			left = normalizeData(styles.left.slice(0, -2)) + _this.params.offset[0];
-		}
-
-		if ((bounds.left + bounds.width) > window.innerWidth) {
-			left = parent.width - bounds.width;
-		}
-
-		return {
-			isFixed: isFixed,
-			top: top,
-			left: left
-		}
-	}
 
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);
 
 		if (instance.params.hover) {
-			// TODO isHover not done
+			let currentElem = null;
+			EventHandler.on(instance._parent, EVENT_MOUSEOVER_DATA_API, function (event) {
+				if (currentElem) return;
+				VGDropdown.hideOpenToggles(event);
+
+				let target = event.target.closest('.' + PARENT_CONTAINER);
+				if (!target) return;
+
+				if (!instance._parent.contains(target)) return;
+				currentElem = target;
+				instance.show();
+			});
+
+			EventHandler.on(instance._parent, EVENT_MOUSEOUT_DATA_API, function (event) {
+				if (!currentElem) return;
+
+				let relatedTarget = event.relatedTarget;
+
+				while (relatedTarget) {
+					if (relatedTarget === currentElem) return;
+					relatedTarget = relatedTarget.parentNode;
+				}
+
+				currentElem = null;
+				instance._completeHide({relatedTarget: instance._element});
+			})
 		} else {
 			EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
 			EventHandler.on(document, EVENT_KEYDOWN_DATA_API, '.' + TARGET_CONTAINER, VGDropdown.keydownHandler);
@@ -205,6 +208,33 @@ class VGDropdown extends BaseModule {
 				event.preventDefault();
 				instance.toggle();
 			});
+		}
+	}
+
+	static hideOpenToggles(event) {
+		const openToggles = Selectors.findAll('[data-vg-toggle="dropdown"]:not(.disabled):not(:disabled).show');
+		for (const toggle of openToggles) {
+			const context = VGDropdown.getInstance(toggle);
+			if (!context) {
+				continue;
+			}
+
+			if (event.target.closest('.' + TARGET_CONTAINER) === context._drop) {
+				return;
+			}
+
+			const composedPath = event.composedPath();
+			if (composedPath.includes(context._element)) {
+				continue
+			}
+
+			const relatedTarget = { relatedTarget: context._element }
+
+			if (event.type === 'click') {
+				relatedTarget.clickEvent = event
+			}
+
+			context._completeHide(relatedTarget)
 		}
 	}
 
@@ -249,31 +279,7 @@ class VGDropdown extends BaseModule {
 			return
 		}
 
-		const openToggles = Selectors.findAll('[data-vg-toggle="dropdown"]:not(.disabled):not(:disabled).show');
-
-		for (const toggle of openToggles) {
-			const context = VGDropdown.getInstance(toggle);
-			if (!context) {
-				continue;
-			}
-
-			if (event.target.closest('.' + TARGET_CONTAINER) === context._drop) {
-				return;
-			}
-
-			const composedPath = event.composedPath();
-			if (composedPath.includes(context._element)) {
-				continue
-			}
-
-			const relatedTarget = { relatedTarget: context._element }
-
-			if (event.type === 'click') {
-				relatedTarget.clickEvent = event
-			}
-
-			context._completeHide(relatedTarget)
-		}
+		VGDropdown.hideOpenToggles(event)
 	}
 }
 

@@ -24,7 +24,7 @@
 		</div>
 		<div class="header-bottom">
 			<div class="container">
-				<div class="row justify-content-between">
+				<div class="row justify-content-between align-items-center">
 					<div class="col-lg-3">
 						<div class="logo-area">
 							<a href="/">
@@ -41,6 +41,9 @@
 								</li>
 								<li>
 									<a href="/?module=dropdown">VGDropdown</a>
+								</li>
+								<li>
+									<a href="/?module=vgnav">VGNav</a>
 								</li>
 							</ul>
 						</nav>

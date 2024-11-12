@@ -21,8 +21,9 @@
 	&-content {
 		position: absolute;
 		min-width: 300px;
+		opacity: 0;
+		transform: translateY(20%);
 		transition: var(--vg-dropdonw-transition, all .3s ease-in-out);
-		opacity: 1;
 
 		&:not(.show) {
 			display: none;
@@ -30,10 +31,7 @@
 
 		&.fade {
 			opacity: 1;
-		}
-
-		&.bottom {
-			bottom: 0;
+			transform: translateY(0);
 		}
 	}
 }
