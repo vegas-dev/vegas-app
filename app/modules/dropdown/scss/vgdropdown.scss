@@ -11,19 +11,20 @@
 @import "../../../_utils/scss/variables";
 @import "variables";
 
-:root {
-	//@include mix-vars('sidebar', $sidebar-map);
-}
-
 .vg-dropdown {
 	position: relative;
 
 	&-content {
+		@include mix-vars('dropdown', $dropdown-map);
+		background-color: var(--vg-dropdown-bg-color);
+		color: var(--vg-dropdown-color);
+		z-index: var(--vg-dropdown-z-index);
+		border: var(--vg-dropdown-border);
+		min-width: var(--vg-dropdown-min-width);
 		position: absolute;
-		min-width: 300px;
 		opacity: 0;
 		transform: translateY(20%);
-		transition: var(--vg-dropdonw-transition, all .3s ease-in-out);
+		transition: var(--vg-dropdonw-transition);
 
 		&:not(.show) {
 			display: none;
