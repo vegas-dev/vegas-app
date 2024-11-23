@@ -16,15 +16,12 @@
 
 	&-content {
 		@include mix-vars('dropdown', $dropdown-map);
-		background-color: var(--vg-dropdown-bg-color);
-		color: var(--vg-dropdown-color);
 		z-index: var(--vg-dropdown-z-index);
-		border: var(--vg-dropdown-border);
-		min-width: var(--vg-dropdown-min-width);
 		position: absolute;
 		opacity: 0;
 		transform: translateY(20%);
 		transition: var(--vg-dropdonw-transition);
+		min-width: var(--vg-dropdown-min-width);
 
 		&:not(.show) {
 			display: none;
@@ -33,6 +30,12 @@
 		&.fade {
 			opacity: 1;
 			transform: translateY(0);
+		}
+
+		&-container {
+			background-color: var(--vg-dropdown-bg-color);
+			color: var(--vg-dropdown-color);
+			border: var(--vg-dropdown-border);
 		}
 	}
 }

@@ -4,6 +4,9 @@
 	--vg-sidebar-bg-color: var(--bs-secondary-bg);
 	--vg-sidebar-color: var(--bs-body-color);
 	--vg-sidebar-border: 1px solid var(--bs-border-color);
+	--vg-dropdown-bg-color: var(--bs-secondary-bg);
+	--vg-dropdown-color: var(--bs-body-color);
+	--vg-dropdown-border: 1px solid var(--bs-border-color);
 }
 
 [data-bs-theme="dark"] .vg-sidebar-backdrop {
