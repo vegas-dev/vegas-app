@@ -17,5 +17,12 @@
 			<?php echo $content ?>
 		</main>
 	</div>
+	
+	<div class="vg-sidebar top" id="sidebar-nav">
+		<div class="vg-sidebar-body">
+		
+		</div>
+		<div class="vg-sidebar-footer"></div>
+	</div>
 </body>
 </html>
