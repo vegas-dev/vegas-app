@@ -45,6 +45,9 @@
 								<li>
 									<a href="/?module=vgnav">VGNav</a>
 								</li>
+                                <li>
+                                    <a href="/?module=modal">VGModal</a>
+                                </li>
 							</ul>
 						</nav>
 					</div>

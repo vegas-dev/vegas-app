@@ -1,0 +1,19 @@
+$modal-map: (
+		horizontal: (
+				width: 400px,
+				height: 100vh,
+		),
+		vertical: (
+				width: 100vw,
+				height: 30vh,
+		),
+		bg-color:                  $bg-color,
+		color:                     $color,
+		box-shadow:                $box-shadow,
+		header-height:             60px,
+		footer-height:             70px,
+		padding:                   1rem,
+		border:                    1px solid #{$border-color},
+		z-index:                   $sidebar-index,
+		transition:                $transition-base,
+);

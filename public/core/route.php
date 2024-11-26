@@ -19,6 +19,9 @@
 			case 'dropdown':
 				$content = file_get_contents(__DIR__.'/pages/dropdown.php');
 				break;
+            case 'modal':
+                $content = file_get_contents(__DIR__.'/pages/modal.php');
+                break;
 			default:
 				$content = file_get_contents(__DIR__.'/pages/home.php');
 				break;
