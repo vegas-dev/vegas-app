@@ -22,6 +22,9 @@
             case 'modal':
                 $content = file_get_contents(__DIR__.'/pages/modal.php');
                 break;
+			case 'nav':
+				$content = file_get_contents(__DIR__.'/pages/nav.php');
+				break;
 			default:
 				$content = file_get_contents(__DIR__.'/pages/home.php');
 				break;

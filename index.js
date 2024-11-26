@@ -13,10 +13,18 @@ import VGDropdown from "./app/modules/dropdown/js/vgdropdown";
 import "./app/modules/modal/scss/vgmodal.scss";
 import VgModal from "./app/modules/modal/js/vgmodal";
 
+// nav
+import "./app/modules/vgnav/scss/vgnav.scss";
+import VGNav from "./app/modules/vgnav/js/vgnav";
+
 
 function onReady() {
 	[...document.querySelectorAll('[data-vg-toggle="dropdown"]')].forEach(function (element) {
 		VGDropdown.init(element, {})
+	});
+
+	[...document.querySelectorAll('.vg-nav')].forEach(function (element) {
+		VGNav.init(element, {})
 	});
 }
 
@@ -24,5 +32,5 @@ document.addEventListener('DOMContentLoaded', onReady);
 console.log(1)
 
 export {
-	VGSidebar, VGDropdown, VgModal
+	VGSidebar, VGDropdown, VGNav, VgModal
 }

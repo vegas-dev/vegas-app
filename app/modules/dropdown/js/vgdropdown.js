@@ -141,7 +141,7 @@ class VGDropdown extends BaseModule {
 		this._queueCallback(completeCallback, this._parent, true, this.params.timeoutAnimation);
 	}
 
-	// TODO class Placement not done
+	// TODO class Placement isn't done
 	_setPlacement() {
 		const _this = this;
 
@@ -167,7 +167,6 @@ class VGDropdown extends BaseModule {
 
 		_this._isPlacement = true;
 	}
-
 
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);

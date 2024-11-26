@@ -25,7 +25,7 @@
 		<div class="header-bottom">
 			<div class="container">
 				<div class="row justify-content-between align-items-center">
-					<div class="col-lg-3">
+					<div class="col-lg-3 col-10">
 						<div class="logo-area">
 							<a href="/">
 								<img src="/assets/images/logo/logo-inverse.svg" alt="Vegas" class="img-fluid dark">
@@ -33,8 +33,8 @@
 							</a>
 						</div>
 					</div>
-					<div class="col-lg">
-						<nav class="vgnav">
+					<div class="col-lg col-2">
+						<nav class="vg-nav">
 							<ul class="vg-nav-wrapper">
 								<li class="active">
 									<a href="/?module=sidebar">VGSidebar</a>
@@ -43,7 +43,36 @@
 									<a href="/?module=dropdown">VGDropdown</a>
 								</li>
 								<li>
-									<a href="/?module=vgnav">VGNav</a>
+									<a href="/?module=nav">VGNav</a>
+								</li>
+								<li class="dropdown">
+									<a href="#">Сервисы</a>
+									
+									<ul>
+										<li><a href="#">Сервис №1</a></li>
+										<li><a href="#">Сервис №2</a></li>
+										<li><a href="#">Сервис №3</a></li>
+										<li><a href="#">Сервис №4</a></li>
+										<li><a href="#">Сервис №5</a></li>
+									</ul>
+								</li>
+								<li>
+									<a href="#">Ссылка 1</a>
+								</li>
+								<li>
+									<a href="#">Ссылка 2</a>
+								</li>
+								<li>
+									<a href="#">Ссылка 3</a>
+								</li>
+								<li>
+									<a href="#">Ссылка 4</a>
+								</li>
+								<li>
+									<a href="#">Ссылка 5</a>
+								</li>
+								<li>
+									<a href="#">Ссылка 6</a>
 								</li>
                                 <li>
                                     <a href="/?module=modal">VGModal</a>
