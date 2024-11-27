@@ -2,8 +2,10 @@ import BaseModule from "../../base-module";
 import Selectors from "../../../_utils/js/selectors";
 import Responsive from "../../../_utils/js/responsive";
 import {getSVG} from "../../../_utils/js/module-fn";
-import {execute, noop, normalizeData} from "../../../_utils/js/functions";
+import {execute, isDisabled, noop, normalizeData} from "../../../_utils/js/functions";
 import EventHandler from "../../../_utils/js/event";
+import {Manipulator} from "../../../_utils/js/manipulator";
+import params from "../../../_utils/js/params";
 
 /**
  * Constants
@@ -68,6 +70,10 @@ const PARAMS_DEFAULT =  {
 	callback: noop,
 	animation: true,
 	timeoutAnimation: 300,
+	ajax: {
+		route: '',
+		target: ''
+	}
 };
 
 class VGNav extends BaseModule {
@@ -235,6 +241,7 @@ class VGNav extends BaseModule {
 						}
 					} else {
 						let $dropdown = document.createElement('ul');
+						$dropdown.classList.add('dropdown-content');
 						$dropdown.classList.add('right');
 
 						for (let link of movedLinks) {
@@ -252,8 +259,88 @@ class VGNav extends BaseModule {
 		return this._isShown() ? this.hide() : this.show();
 	}
 
-	show() {
+	show(relatedTarget) {
+		const target = relatedTarget.relatedTarget;
+		const _this = this;
 
+		if (!target || isDisabled(target)) {
+			return;
+		}
+
+		const showEvent = EventHandler.trigger(target, EVENT_KEY_SHOW, relatedTarget)
+		if (showEvent.defaultPrevented) return;
+
+		if ('ontouchstart' in document.documentElement) {
+			for (const element of [].concat(...document.body.children)) {
+				EventHandler.on(element, 'mouseover', noop);
+			}
+		}
+
+		this._route();
+
+		let drop = Selectors.findOne('.dropdown-content', target),
+			link = target.firstElementChild;
+
+		//setDropPosition(drop);
+
+		if (link) link.setAttribute('aria-expanded', true);
+		drop.classList.add(CLASS_NAME_SHOW);
+		target.classList.add(CLASS_NAME_ACTIVE);
+
+		if (!drop.classList.contains('dropdown-content')) {
+			drop.classList.add('dropdown-content');
+		}
+
+		const completeCallBack = () => {
+			drop.classList.add(CLASS_NAME_FADE);
+			EventHandler.trigger(target, EVENT_KEY_SHOWN, relatedTarget)
+		}
+		this._queueCallback(completeCallBack, drop, true, 50);
+
+		/**
+		 * Функция позиционирования
+		 * TODO дописать класс Placement
+		 */
+		function setDropPosition($drop, isMegaMenu = false) {
+			// Позиционируем выпадающие списки
+			if (_this.params.position) {
+				let {width, height, right, top} = $drop.getBoundingClientRect(),
+					window_width = window.innerWidth,
+					window_height = window.innerHeight;
+
+				let N_right = window_width - right - width - 24,
+					N_bottom = window_height - top - height;
+
+				if (!isMegaMenu) {
+					$drop.removeAttribute('class');
+				}
+
+				let $parent = $drop.closest('li'),
+					$ul = $parent.querySelectorAll('ul');
+
+				if (N_bottom <= 0) {
+					for (const $el of $ul) {
+						$el.classList.add('bottom');
+					}
+
+					if (isMegaMenu) {
+						$drop.style.top = height * (-1) + 'px';
+					}
+				}
+
+				if (!isMegaMenu) {
+					if (N_right > width) {
+						for (const $el of $ul) {
+							$el.classList.add('left');
+						}
+					} else {
+						for (const $el of $ul) {
+							$el.classList.add('right');
+						}
+					}
+				}
+			}
+		}
 	}
 
 	_isShown() {
@@ -270,56 +357,56 @@ class VGNav extends BaseModule {
 		let drop = relatedTarget.relatedTarget,
 			parent = drop.closest('li');
 
-		drop.classList.remove(CLASS_NAME_SHOW);
+		console.log(drop)
+
+		/*drop.classList.remove(CLASS_NAME_SHOW);
 		parent.classList.remove(CLASS_NAME_ACTIVE);
 
 		const completeCallback = () => {
 			drop.classList.remove(CLASS_NAME_FADE);
 		}
-		this._queueCallback(completeCallback, drop, true, 10);
-	}
-
-	_isClickable() {
-		if (!this.params.hover) {
-			if (!Responsive.checkMobileOrTablet()) return true;
-			return window.innerWidth <= Responsive.check(this);
-		} else {
-			return false;
-		}
+		this._queueCallback(completeCallback, drop, true, 10);*/
 	}
 
 	static init(element, params = {}) {
 		const instance = VGNav.getOrCreateInstance(element, params);
 		instance.build();
 
+		let drops = Selectors.findAll('.dropdown', instance._navigation)
+
 		if (instance.params.hover) {
-			let currentElem = null;
+			[...drops].forEach(function (el) {
+				let currentElem = null;
+				EventHandler.on(el, EVENT_MOUSEOVER_DATA_API, function (event) {
+					if (currentElem) return;
+					VGNav.hideOpenDrops(event);
 
-			EventHandler.on(instance._element, EVENT_MOUSEOVER_DATA_API, function (event) {
-				if (currentElem) return;
-				VGNav.hideOpenDrops(event);
+					let target = event.target.closest('.dropdown');
+					if (!target) return;
 
-				let target = event.target.closest('.dropdown');
-				if (!target) return;
+					if (!instance.navigation.contains(target)) return;
+					currentElem = target;
 
-				if (!instance.navigation.contains(target)) return;
-				currentElem = target;
+					let relatedTarget = {
+						relatedTarget: target
+					}
 
-				instance.show();
-			});
+					instance.show(relatedTarget);
+				});
 
-			EventHandler.on(instance._element, EVENT_MOUSEOUT_DATA_API, function (event) {
-				if (!currentElem) return;
+				EventHandler.on(el, EVENT_MOUSEOUT_DATA_API, function (event) {
+					if (!currentElem) return;
 
-				let relatedTarget = event.relatedTarget;
+					let relatedTarget = event.relatedTarget;
 
-				while (relatedTarget) {
-					if (relatedTarget === currentElem) return;
-					relatedTarget = relatedTarget.parentNode;
-				}
+					while (relatedTarget) {
+						if (relatedTarget === currentElem) return;
+						relatedTarget = relatedTarget.parentNode;
+					}
 
-				currentElem = null;
-				instance._completeHide({relatedTarget: instance._element});
+					currentElem = null;
+					instance._completeHide({relatedTarget: instance._element});
+				})
 			})
 		}
 	}

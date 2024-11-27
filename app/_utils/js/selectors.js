@@ -67,7 +67,7 @@ const Selectors = {
 	},
 
 	next(element, selector) {
-		let next = element.nextElementSibling
+		let next = element.nextElementSibling;
 
 		while (next) {
 			if (next.matches(selector)) {

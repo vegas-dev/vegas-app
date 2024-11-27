@@ -11,7 +11,6 @@
 @import "../../../_utils/scss/variables";
 @import "variables";
 @import "breakpoints";
-@import "extend";
 
 .vg-nav {
 	@include mix-vars('nav', $nav-map);
@@ -50,78 +49,77 @@
 		}
 
 		.dropdown {
-			position: relative;
-
-			ul {
+			.dropdown-content {
+				transition: var(--vg-nav-drop-transition);
 				list-style: none;
-				padding: 0;
 				z-index: var(--vg-nav-drop-z-index);
-				display: none;
-			}
+				position: absolute;
+				top: 120%;
+				opacity: 0;
+				visibility: hidden;
+				width: var(--vg-nav-drop-width);
+				padding: var(--vg-nav-drop-padding);
+				border: 1px solid var(--vg-nav-drop-border-color);
+				border-radius: var(--vg-nav-drop-border-radius);
+				background-color: var(--vg-nav-drop-bg);
 
-			> ul {
-				@extend %dropUl;
+				&:not(.show) {
+					display: none;
+				}
+
+				&.fade {
+					visibility: visible;
+					opacity: 1;
+					top: 100%;
+				}
+
+				.dropdown-content {
+					&.fade {
+						top: 0;
+					}
+				}
 
 				li {
 					a {
-						@extend %dropUlLink;
+						display: block;
+						padding: var(--vg-nav-drop-item-padding);
+						border-top: 1px solid var(--vg-nav-drop-item-border-color);
+						background-color: var(--vg-nav-drop-item-bg);
+						transition: var(--vg-nav-drop-item-transition);
+						color: var(--vg-nav-drop-item-color);
+
+						&:hover {
+							background-color: var(--vg-nav-drop-item-bg-hover);
+							color: var(--vg-nav-drop-item-color-hover);
+							border-color: var(--vg-nav-drop-item-border-color-hover);
+						}
 					}
 
 					&:first-child {
 						a {
-							border: none;
+							border-top: none;
 						}
 					}
 				}
-
-				ul {
-					@extend %dropUl;
-				}
-
-				.dropdown {
-					&.show > ul {
-						@extend %dropUlShow;
-						top: 0;
-					}
-				}
 			}
 
-			&.show {
-				> ul {
-					@extend %dropUlShow;
-					top: 100%;
+			&.dropdown-mega {
+				position: static;
 
-					&.bottom, .bottom {
-						top: -200%;
-					}
-				}
+				.dropdown-content {
+					transition: var(--vg-nav-drop-mega-transition);
+					position: absolute;
+					left: 0;
+					width: var(--vg-nav-drop-mega-width);
+					min-height: var(--vg-nav-drop-mega-min-height);
+					padding: var(--vg-nav-drop-mega-padding);
+					border: 1px solid var(--vg-nav-drop-mega-border-color);
+					border-radius: var(--vg-nav-drop-mega-border-radius);
+					background-color: var(--vg-nav-drop-mega-bg);
+					z-index: var(--vg-nav-drop-z-index);
 
-				> a span.toggle {
-					.default {
-						transform: rotate(-180deg);
-					}
-				}
-			}
-		}
-
-		.dropdown-mega {
-			@extend %dropMega;
-
-			&:not(.show) {
-				display: none;
-			}
-
-			&.active {
-				> a span.toggle {
-					transform: rotate(-180deg);
-				}
-
-				> .dropdown-mega-container {
-					@extend %dropUlShow;
-					top: 100%;
-
-					&.bottom, .bottom {
-						top: -200%;
+					&:not(.show) {
+						display: none;
 					}
 				}
 			}

@@ -48,17 +48,25 @@
 								<li class="dropdown">
 									<a href="#">Сервисы</a>
 									
-									<ul class="dropdown-content">
+									<ul class="dropdown-content left">
 										<li><a href="#">Сервис №1</a></li>
 										<li><a href="#">Сервис №2</a></li>
 										<li><a href="#">Сервис №3</a></li>
 										<li><a href="#">Сервис №4</a></li>
-										<li><a href="#">Сервис №5</a></li>
+										<li class="dropdown">
+											<a href="#">Еще сервисы</a>
+											<ul class="dropdown-content left">
+												<li><a href="#">Сервис №5</a></li>
+												<li><a href="#">Сервис №6</a></li>
+												<li><a href="#">Сервис №7</a></li>
+												<li><a href="#">Сервис №8</a></li>
+											</ul>
+										</li>
 									</ul>
 								</li>
-								<!--<li class="dropdown">
+								<li class="dropdown dropdown-mega">
 									<a href="#">Большое меню</a>
-									<div class="dropdown-mega">
+									<div class="dropdown-content">
 										<h4 class="mb-3">Большое меню</h4>
 										<div class="row">
 											<div class="col">
@@ -75,7 +83,7 @@
 											</div>
 										</div>
 									</div>
-								</li>-->
+								</li>
 								<li>
 									<a href="#">Ссылка 2</a>
 								</li>
