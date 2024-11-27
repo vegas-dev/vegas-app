@@ -3,12 +3,32 @@ import Selectors from "../../../_utils/js/selectors";
 import Responsive from "../../../_utils/js/responsive";
 import {getSVG} from "../../../_utils/js/module-fn";
 import {execute, noop, normalizeData} from "../../../_utils/js/functions";
+import EventHandler from "../../../_utils/js/event";
 
 /**
  * Constants
  */
 const NAME = 'nav';
 const NAME_KEY = 'vg.nav';
+
+/**
+ * Constants Classes
+ */
+const CLASS_NAME_SHOW   = 'show';
+const CLASS_NAME_FADE   = 'fade';
+const CLASS_NAME_ACTIVE = 'active';
+
+/**
+ * Constants Events
+ */
+const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
+const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
+const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
+const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
+
+const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
+const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
 
 /**
  * Default Params
@@ -43,7 +63,9 @@ const PARAMS_DEFAULT =  {
 		title: '',
 		body: null
 	},
-	callback: noop
+	callback: noop,
+	animation: true,
+	timeoutAnimation: 300,
 };
 
 class VGNav extends BaseModule {
@@ -52,7 +74,11 @@ class VGNav extends BaseModule {
 
 		// Обязательная разметка с навигаций под классом vg-nav-wrapper
 		this._navigation = null;
-		this.navigation = '.' + this.params.classes.wrapper
+		this.navigation = '.' + this.params.classes.wrapper;
+
+		if (this.params.animation === false) {
+			this.params.timeoutAnimation = 10
+		}
 	}
 
 	static get Default() {
@@ -220,13 +246,176 @@ class VGNav extends BaseModule {
 	}
 
 	toggle() {
-		execute(this.params.callback.afterInit, [this]);
+		const _this = this;
+
+		if ('afterInit' in _this.params.callback) {
+			execute(_this.params.callback.afterInit, [_this]);
+		}
+
+		let $_a = [...Selectors.findAll('li > a', _this.navigation)];
+
+		if(_this._isClickable()) {
+			$_a.forEach(function(el) {
+				EventHandler.on(el, EVENT_CLICK_DATA_API, function (event) {
+					let parent = event.currentTarget.closest('li');
+
+					const relatedTarget = {
+						relatedTarget: event.relatedTarget
+					}
+
+					if ('beforeClick' in _this.params.callback) {
+						execute(_this.params.callback.beforeClick, [_this, event])
+					}
+
+					if (parent.classList.contains('dropdown') || parent.classList.contains('dropdown-mega')) {
+						event.preventDefault();
+
+						if (parent.classList.contains('dropdown-mega')) {
+							let $drop = Selectors.findOne('.dropdown-mega-container', parent);
+							setDropPosition($drop, true);
+							$drop.classList.add(CLASS_NAME_SHOW);
+							parent.classList.add(CLASS_NAME_ACTIVE);
+
+							const completeCallBack = () => {
+								$drop.classList.add(CLASS_NAME_FADE);
+
+								EventHandler.trigger(this.element, EVENT_KEY_SHOWN, relatedTarget)
+
+								if ('afterClick' in _this.params.callback) {
+									execute(_this.params.callback.afterClick, [_this, event])
+								}
+							}
+
+							_this._queueCallback(completeCallBack, $drop, true, 50);
+						}
+					}
+				});
+			});
+		} else {
+			$_a.forEach(function (el) {
+				EventHandler.on(el, EVENT_MOUSEOVER_DATA_API, function (event) {
+					let $drop = event.currentTarget.closest('li').querySelector('ul');
+
+					if ($drop) {
+						setDropPosition($drop);
+					}
+				});
+			})
+		}
+
+		/**
+		 * Функция позиционирования
+		 * TODO дописать класс Placement
+		 */
+		function setDropPosition($drop, isMegaMenu = false) {
+			// Позиционируем выпадающие списки
+			if (_this.params.position) {
+				let {width, height, right, top} = $drop.getBoundingClientRect(),
+					window_width = window.innerWidth,
+					window_height = window.innerHeight;
+
+				let N_right = window_width - right - width - 24,
+					N_bottom = window_height - top - height;
+
+				if (!isMegaMenu) {
+					$drop.removeAttribute('class');
+				}
+
+				let $parent = $drop.closest('li'),
+					$ul = $parent.querySelectorAll('ul');
+
+				if (N_bottom <= 0) {
+					for (const $el of $ul) {
+						$el.classList.add('bottom');
+					}
+
+					if (isMegaMenu) {
+						$drop.style.top = height * (-1) + 'px';
+					}
+				}
+
+				if (!isMegaMenu) {
+					if (N_right > width) {
+						for (const $el of $ul) {
+							$el.classList.add('left');
+						}
+					} else {
+						for (const $el of $ul) {
+							$el.classList.add('right');
+						}
+					}
+				}
+			}
+		}
+	}
+
+	_completeHide(relatedTarget) {
+		if ('ontouchstart' in document.documentElement) {
+			for (const element of [].concat(...document.body.children)) {
+				EventHandler.off(element, 'mouseover', noop);
+			}
+		}
+
+		let drop = relatedTarget.relatedTarget,
+			parent = drop.closest('li');
+
+		drop.classList.remove(CLASS_NAME_SHOW);
+		parent.classList.remove(CLASS_NAME_ACTIVE);
+
+		const completeCallback = () => {
+			drop.classList.remove(CLASS_NAME_FADE);
+		}
+		this._queueCallback(completeCallback, drop, true, 10);
+	}
+
+	_isClickable() {
+		if (!this.params.hover) {
+			if (!Responsive.checkMobileOrTablet()) return true;
+			return window.innerWidth <= Responsive.check(this);
+		} else {
+			return false;
+		}
 	}
 
 	static init(element, params = {}) {
 		const instance = VGNav.getOrCreateInstance(element, params);
 		instance.build();
 	}
+
+	static clearDrops(event) {
+		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) {
+			return
+		}
+
+		VGNav.hideOpenDrops(event)
+	}
+
+	static hideOpenDrops(event) {
+		let openToggles = [];
+		openToggles.push(Selectors.findAll('.dropdown:not(.disabled):not(:disabled).active'));
+		openToggles.push(Selectors.findAll('.dropdown-mega:not(.disabled):not(:disabled).active'));
+		openToggles = openToggles.flat();
+
+		for (const toggle of openToggles) {
+			const context = VGNav.getInstance(toggle.closest('.vg-nav'));
+			if (!context) continue;
+
+			if (event.target.closest('.dropdown-mega') === toggle) {
+				return;
+			}
+
+			const relatedTarget = { relatedTarget: toggle }
+
+			if (event.type === 'click') {
+				relatedTarget.clickEvent = event
+			}
+
+			context._completeHide(relatedTarget)
+		}
+	}
 }
+
+EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
+EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);
 
 export default VGNav;

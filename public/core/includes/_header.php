@@ -45,19 +45,46 @@
 								<li>
 									<a href="/?module=nav">VGNav</a>
 								</li>
-								<li class="dropdown">
+								<li class="dropdown-mega">
 									<a href="#">Сервисы</a>
 									
-									<ul>
-										<li><a href="#">Сервис №1</a></li>
-										<li><a href="#">Сервис №2</a></li>
-										<li><a href="#">Сервис №3</a></li>
-										<li><a href="#">Сервис №4</a></li>
-										<li><a href="#">Сервис №5</a></li>
-									</ul>
+									<div class="dropdown-mega-container">
+										<h4 class="mb-3">Какие-то сервисы</h4>
+										<div class="row">
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+										</div>
+									</div>
 								</li>
-								<li>
-									<a href="#">Ссылка 1</a>
+								<li class="dropdown-mega">
+									<a href="#">Большое меню</a>
+									<div class="dropdown-mega-container">
+										<h4 class="mb-3">Большое меню</h4>
+										<div class="row">
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+											<div class="col">
+												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
+											</div>
+										</div>
+									</div>
 								</li>
 								<li>
 									<a href="#">Ссылка 2</a>

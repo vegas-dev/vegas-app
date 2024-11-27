@@ -17,6 +17,7 @@
 	@include mix-vars('nav', $nav-map);
 	@include mix-vars('nav-item', $nav-item-map);
 	@include mix-vars('nav-drop', $nav-drop-map);
+	@include mix-vars('nav-drop-mega', $nav-drop-mega-map);
 	@include mix-vars('nav-drop-item', $nav-drop-item-map);
 	@include mix-vars('nav-hamburger', $hamburger-map);
 
@@ -105,15 +106,14 @@
 
 		.dropdown-mega {
 			.dropdown-mega-container {
-				@extend %dropUl;
-				left: 0;
-				width: 100%;
-				min-height: 300px;
-				display: none;
-				z-index: var(--vg-nav-drop-z-index);
+				@extend %dropMega;
+
+				&:not(.show) {
+					display: none;
+				}
 			}
 
-			&.show {
+			&.active {
 				> a span.toggle {
 					transform: rotate(-180deg);
 				}

@@ -24,19 +24,11 @@ function onReady() {
 	});
 
 	[...document.querySelectorAll('.vg-nav')].forEach(function (element) {
-		VGNav.init(element, {
-			callback: {
-				afterInit: function (self) {
-					console.log('Колбек afterInit');
-					console.log(self);
-				}
-			}
-		})
+		VGNav.init(element, {})
 	});
 }
 
 document.addEventListener('DOMContentLoaded', onReady);
-console.log(1)
 
 export {
 	VGSidebar, VGDropdown, VGNav, VgModal

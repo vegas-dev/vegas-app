@@ -19,6 +19,13 @@
 [data-bs-theme="dark"] .vg-nav {
 	--vg-nav-item-color: var(--bs-body-color);
 	--vg-nav-hamburger-line-color: var(--bs-body-color);
+	--vg-nav-drop-mega-border-color: var(--bs-border-color);
+	--vg-nav-drop-mega-bg: var(--bs-secondary-bg);
+	--vg-nav-drop-mega-color: var(--bs-body-color);
+	--vg-nav-drop-border-color: var(--bs-border-color);
+	--vg-nav-drop-bg: var(--bs-secondary-bg);
+	--vg-nav-drop-color: var(--bs-body-color);
+	--vg-nav-drop-item-border-color: var(--bs-border-color);
 }
 
 [data-bs-theme="dark"] .vg-btn-close svg polygon {
