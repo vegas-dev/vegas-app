@@ -17,6 +17,7 @@ const NAME_KEY = 'vg.nav';
 const CLASS_NAME_SHOW   = 'show';
 const CLASS_NAME_FADE   = 'fade';
 const CLASS_NAME_ACTIVE = 'active';
+const SELECTOR_DATA_TOGGLE = '.vg-nav a';
 
 /**
  * Constants Events
@@ -27,6 +28,7 @@ const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 
 const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
+const EVENT_MOUSEOUT_DATA_API  = `mouseout.${NAME_KEY}.data.api`;
 const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
 
@@ -168,8 +170,9 @@ class VGNav extends BaseModule {
 			setCollapse(this);
 		}
 
-		// Собрали меню переходим к открыванию подменю
-		this.toggle()
+		if ('afterInit' in this.params.callback) {
+			execute(this.params.callback.afterInit, [this]);
+		}
 
 		/**
 		 * Функция сворачивания
@@ -246,107 +249,15 @@ class VGNav extends BaseModule {
 	}
 
 	toggle() {
-		const _this = this;
+		return this._isShown() ? this.hide() : this.show();
+	}
 
-		if ('afterInit' in _this.params.callback) {
-			execute(_this.params.callback.afterInit, [_this]);
-		}
+	show() {
+		console.log('asdsad');
+	}
 
-		let $_a = [...Selectors.findAll('li > a', _this.navigation)];
-
-		if(_this._isClickable()) {
-			$_a.forEach(function(el) {
-				EventHandler.on(el, EVENT_CLICK_DATA_API, function (event) {
-					let parent = event.currentTarget.closest('li');
-
-					const relatedTarget = {
-						relatedTarget: event.relatedTarget
-					}
-
-					if ('beforeClick' in _this.params.callback) {
-						execute(_this.params.callback.beforeClick, [_this, event])
-					}
-
-					if (parent.classList.contains('dropdown') || parent.classList.contains('dropdown-mega')) {
-						event.preventDefault();
-
-						if (parent.classList.contains('dropdown-mega')) {
-							let $drop = Selectors.findOne('.dropdown-mega-container', parent);
-							setDropPosition($drop, true);
-							$drop.classList.add(CLASS_NAME_SHOW);
-							parent.classList.add(CLASS_NAME_ACTIVE);
-
-							const completeCallBack = () => {
-								$drop.classList.add(CLASS_NAME_FADE);
-
-								EventHandler.trigger(this.element, EVENT_KEY_SHOWN, relatedTarget)
-
-								if ('afterClick' in _this.params.callback) {
-									execute(_this.params.callback.afterClick, [_this, event])
-								}
-							}
-
-							_this._queueCallback(completeCallBack, $drop, true, 50);
-						}
-					}
-				});
-			});
-		} else {
-			$_a.forEach(function (el) {
-				EventHandler.on(el, EVENT_MOUSEOVER_DATA_API, function (event) {
-					let $drop = event.currentTarget.closest('li').querySelector('ul');
-
-					if ($drop) {
-						setDropPosition($drop);
-					}
-				});
-			})
-		}
-
-		/**
-		 * Функция позиционирования
-		 * TODO дописать класс Placement
-		 */
-		function setDropPosition($drop, isMegaMenu = false) {
-			// Позиционируем выпадающие списки
-			if (_this.params.position) {
-				let {width, height, right, top} = $drop.getBoundingClientRect(),
-					window_width = window.innerWidth,
-					window_height = window.innerHeight;
-
-				let N_right = window_width - right - width - 24,
-					N_bottom = window_height - top - height;
-
-				if (!isMegaMenu) {
-					$drop.removeAttribute('class');
-				}
-
-				let $parent = $drop.closest('li'),
-					$ul = $parent.querySelectorAll('ul');
-
-				if (N_bottom <= 0) {
-					for (const $el of $ul) {
-						$el.classList.add('bottom');
-					}
-
-					if (isMegaMenu) {
-						$drop.style.top = height * (-1) + 'px';
-					}
-				}
-
-				if (!isMegaMenu) {
-					if (N_right > width) {
-						for (const $el of $ul) {
-							$el.classList.add('left');
-						}
-					} else {
-						for (const $el of $ul) {
-							$el.classList.add('right');
-						}
-					}
-				}
-			}
-		}
+	_isShown() {
+		return Selectors.findOne('.' + CLASS_NAME_ACTIVE, this.element);
 	}
 
 	_completeHide(relatedTarget) {
@@ -380,6 +291,37 @@ class VGNav extends BaseModule {
 	static init(element, params = {}) {
 		const instance = VGNav.getOrCreateInstance(element, params);
 		instance.build();
+
+		if (instance.params.hover) {
+			let currentElem = null;
+
+			EventHandler.on(instance.element, EVENT_MOUSEOVER_DATA_API, function (event) {
+				if (currentElem) return;
+				VGNav.hideOpenDrops(event);
+
+				let target = event.target.closest('.dropdown') || event.target.closest('.dropdown-mega');
+				if (!target) return;
+
+				if (!instance.navigation.contains(target)) return;
+				currentElem = target;
+
+				instance.show();
+			});
+
+			EventHandler.on(instance.element, EVENT_MOUSEOUT_DATA_API, function (event) {
+				if (!currentElem) return;
+
+				let relatedTarget = event.relatedTarget;
+
+				while (relatedTarget) {
+					if (relatedTarget === currentElem) return;
+					relatedTarget = relatedTarget.parentNode;
+				}
+
+				currentElem = null;
+				instance._completeHide({relatedTarget: instance._element});
+			})
+		}
 	}
 
 	static clearDrops(event) {
