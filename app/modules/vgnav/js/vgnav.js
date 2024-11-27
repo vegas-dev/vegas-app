@@ -354,10 +354,12 @@ class VGNav extends BaseModule {
 			}
 		}
 
-		let drop = relatedTarget.relatedTarget,
+		console.log(relatedTarget)
+
+		/*let drop = relatedTarget.relatedTarget,
 			parent = drop.closest('li');
 
-		console.log(drop)
+		console.log(drop)*/
 
 		/*drop.classList.remove(CLASS_NAME_SHOW);
 		parent.classList.remove(CLASS_NAME_ACTIVE);
@@ -397,7 +399,9 @@ class VGNav extends BaseModule {
 				EventHandler.on(el, EVENT_MOUSEOUT_DATA_API, function (event) {
 					if (!currentElem) return;
 
-					let relatedTarget = event.relatedTarget;
+					let relatedTarget = event.relatedTarget.closest('.dropdown');
+
+					console.log(relatedTarget)
 
 					while (relatedTarget) {
 						if (relatedTarget === currentElem) return;
@@ -405,7 +409,7 @@ class VGNav extends BaseModule {
 					}
 
 					currentElem = null;
-					instance._completeHide({relatedTarget: instance._element});
+					instance._completeHide({relatedTarget: relatedTarget});
 				})
 			})
 		}
