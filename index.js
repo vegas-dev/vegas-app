@@ -24,7 +24,14 @@ function onReady() {
 	});
 
 	[...document.querySelectorAll('.vg-nav')].forEach(function (element) {
-		VGNav.init(element, {})
+		VGNav.init(element, {
+			callback: {
+				afterInit: function (self) {
+					console.log('Колбек afterInit');
+					console.log(self);
+				}
+			}
+		})
 	});
 }
 

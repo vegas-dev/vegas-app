@@ -2,7 +2,7 @@ import BaseModule from "../../base-module";
 import Selectors from "../../../_utils/js/selectors";
 import Responsive from "../../../_utils/js/responsive";
 import {getSVG} from "../../../_utils/js/module-fn";
-import {normalizeData} from "../../../_utils/js/functions";
+import {execute, noop, normalizeData} from "../../../_utils/js/functions";
 
 /**
  * Constants
@@ -42,7 +42,8 @@ const PARAMS_DEFAULT =  {
 	hamburger: {
 		title: '',
 		body: null
-	}
+	},
+	callback: noop
 };
 
 class VGNav extends BaseModule {
@@ -219,7 +220,7 @@ class VGNav extends BaseModule {
 	}
 
 	toggle() {
-		console.log(this.params);
+		execute(this.params.callback.afterInit, [this]);
 	}
 
 	static init(element, params = {}) {
