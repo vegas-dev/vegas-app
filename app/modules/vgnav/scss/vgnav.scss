@@ -105,12 +105,10 @@
 		}
 
 		.dropdown-mega {
-			.dropdown-mega-container {
-				@extend %dropMega;
+			@extend %dropMega;
 
-				&:not(.show) {
-					display: none;
-				}
+			&:not(.show) {
+				display: none;
 			}
 
 			&.active {

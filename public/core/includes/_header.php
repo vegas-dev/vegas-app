@@ -34,7 +34,7 @@
 						</div>
 					</div>
 					<div class="col-lg col-2">
-						<nav class="vg-nav">
+						<nav class="vg-nav" data-hover="true">
 							<ul class="vg-nav-wrapper">
 								<li class="active">
 									<a href="/?module=sidebar">VGSidebar</a>
@@ -45,30 +45,20 @@
 								<li>
 									<a href="/?module=nav">VGNav</a>
 								</li>
-								<li class="dropdown-mega">
+								<li class="dropdown">
 									<a href="#">Сервисы</a>
 									
-									<div class="dropdown-mega-container">
-										<h4 class="mb-3">Какие-то сервисы</h4>
-										<div class="row">
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-										</div>
-									</div>
+									<ul class="dropdown-content">
+										<li><a href="#">Сервис №1</a></li>
+										<li><a href="#">Сервис №2</a></li>
+										<li><a href="#">Сервис №3</a></li>
+										<li><a href="#">Сервис №4</a></li>
+										<li><a href="#">Сервис №5</a></li>
+									</ul>
 								</li>
-								<li class="dropdown-mega">
+								<!--<li class="dropdown">
 									<a href="#">Большое меню</a>
-									<div class="dropdown-mega-container">
+									<div class="dropdown-mega">
 										<h4 class="mb-3">Большое меню</h4>
 										<div class="row">
 											<div class="col">
@@ -85,7 +75,7 @@
 											</div>
 										</div>
 									</div>
-								</li>
+								</li>-->
 								<li>
 									<a href="#">Ссылка 2</a>
 								</li>

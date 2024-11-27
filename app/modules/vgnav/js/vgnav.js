@@ -253,7 +253,7 @@ class VGNav extends BaseModule {
 	}
 
 	show() {
-		console.log('asdsad');
+
 	}
 
 	_isShown() {
@@ -295,11 +295,11 @@ class VGNav extends BaseModule {
 		if (instance.params.hover) {
 			let currentElem = null;
 
-			EventHandler.on(instance.element, EVENT_MOUSEOVER_DATA_API, function (event) {
+			EventHandler.on(instance._element, EVENT_MOUSEOVER_DATA_API, function (event) {
 				if (currentElem) return;
 				VGNav.hideOpenDrops(event);
 
-				let target = event.target.closest('.dropdown') || event.target.closest('.dropdown-mega');
+				let target = event.target.closest('.dropdown');
 				if (!target) return;
 
 				if (!instance.navigation.contains(target)) return;
@@ -308,7 +308,7 @@ class VGNav extends BaseModule {
 				instance.show();
 			});
 
-			EventHandler.on(instance.element, EVENT_MOUSEOUT_DATA_API, function (event) {
+			EventHandler.on(instance._element, EVENT_MOUSEOUT_DATA_API, function (event) {
 				if (!currentElem) return;
 
 				let relatedTarget = event.relatedTarget;
@@ -333,10 +333,7 @@ class VGNav extends BaseModule {
 	}
 
 	static hideOpenDrops(event) {
-		let openToggles = [];
-		openToggles.push(Selectors.findAll('.dropdown:not(.disabled):not(:disabled).active'));
-		openToggles.push(Selectors.findAll('.dropdown-mega:not(.disabled):not(:disabled).active'));
-		openToggles = openToggles.flat();
+		const openToggles = Selectors.findAll('.dropdown:not(.disabled):not(:disabled).active');
 
 		for (const toggle of openToggles) {
 			const context = VGNav.getInstance(toggle.closest('.vg-nav'));
