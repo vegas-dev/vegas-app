@@ -15,84 +15,62 @@
 	@include mix-vars('modal', $modal-map);
 
 	position: fixed;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	z-index: 1050;
+	top: 0;
+	left: 0;
+	z-index: var(--vg-modal-z-index);
+	width: 100%;
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
 	display: none;
 
-	//position: fixed;
-	//width: auto;
-	//height: auto;
-	//transition: var(--vg-sidebar-transition);
-	//z-index: var(--vg-sidebar-z-index);
-	//background: var(--vg-sidebar-bg-color);
-	//color: var(--vg-sidebar-color);
-	//box-shadow: var(--vg-sidebar-box-shadow);
-	//
-	//&.left, &.right {
-	//	width: var(--vg-sidebar-horizontal-width);
-	//	height: var(--vg-sidebar-horizontal-height);
-	//	top: 0;
-	//}
-	//
-	//&.left {
-	//	left: -105%;
-	//
-	//	&.show {
-	//		left: 0;
-	//	}
-	//}
-	//
-	//&.right {
-	//	right: -105%;
-	//
-	//	&.show {
-	//		right: 0;
-	//	}
-	//}
-	//
-	//&.top, &.bottom {
-	//	height: var(--vg-sidebar-vertical-height);
-	//	width: var(--vg-sidebar-vertical-width);
-	//	left: 0;
-	//}
-	//
-	//&.top {
-	//	top: -105%;
-	//
-	//	&.show {
-	//		top: 0;
-	//	}
-	//}
-	//
-	//&.bottom {
-	//	bottom: -105%;
-	//
-	//	&.show {
-	//		bottom: 0;
-	//	}
-	//}
-	//
-	//&-header {
-	//	height: var(--vg-sidebar-header-height);
-	//	z-index: 10;
-	//	position: relative;
-	//	display: flex;
-	//	align-items: center;
-	//	padding: var(--vg-sidebar-padding);
-	//	border-bottom: var(--vg-sidebar-border);
-	//}
-	//
-	//&-body {
-	//	height: calc(100% - var(--vg-sidebar-header-height) - var(--vg-sidebar-footer-height));
-	//	overflow-y: auto;
-	//	padding: var(--vg-sidebar-padding);
-	//}
-	//
-	//&-footer {
-	//	height: var(--vg-sidebar-footer-height);
-	//	padding: var(--vg-sidebar-padding);
-	//	border-top: var(--vg-sidebar-border);
-	//}
+	&.show {
+		display: block;
+		pointer-events: auto;
+	}
+
+
+	&-dialog {
+		margin-top: 250px;
+		max-width: var(--vg-modal-width);
+		margin-right: auto;
+		margin-left: auto;
+	}
+
+	&-content {
+		border-radius: var(--vg-modal-border-radius);
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		pointer-events: auto;
+		background-color: var(--vg-modal-bg-color);
+
+		.vg-btn-close {
+			right: -45px;
+			top: -45px;
+			opacity: .9;
+			background: transparent;
+			border: none;
+			font-size: 18px;
+			cursor: pointer;
+			transition: transform .8s ease-in-out;
+			width: 35px;
+			height: 30px;
+			display: block;
+
+
+			svg {
+				width: 25px;
+
+				polygon, path {
+					fill: white !important;
+				}
+			}
+
+			&:hover {
+				transform: rotate(360deg);
+			}
+		}
+	}
 }

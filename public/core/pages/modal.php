@@ -19,6 +19,7 @@
 <div class="vg-modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
     <div class="vg-modal-dialog">
         <div class="vg-modal-content">
+            <button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal" aria-label="Close"></button>
             <div class="vg-modal-header">
                 <h1 class="modal-title fs-5" id="exampleModalLabel">New message</h1>
 <!--                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
@@ -36,8 +37,7 @@
                 </form>
             </div>
             <div class="vg-modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Send message</button>
+                <button type="button" data-vg-dismiss="modal" aria-label="Close" class="btn btn-primary">закрыть</button>
             </div>
         </div>
     </div>

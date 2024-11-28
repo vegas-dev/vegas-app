@@ -76,9 +76,6 @@ class VgModal extends BaseModule {
 		}
 
 		_this.element.classList.add(CLASS_NAME_SHOW);
-		// _this.element.setAttribute('aria-modal', true);
-		// _this.element.setAttribute('role', 'dialog');
-		// _this.element.style.display = 'block';
 
 		const completeCallBack = () => {
 			EventHandler.on(Selectors.findOne('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
