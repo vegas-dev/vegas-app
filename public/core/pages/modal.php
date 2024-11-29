@@ -22,7 +22,6 @@
             <button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal" aria-label="Close"></button>
             <div class="vg-modal-header">
                 <h1 class="modal-title fs-5" id="exampleModalLabel">New message</h1>
-<!--                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
             </div>
             <div class="vg-modal-body">
                 <form>

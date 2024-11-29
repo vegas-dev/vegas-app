@@ -9,6 +9,6 @@ $modal-map: (
         padding: 			1rem,
         border: 			1px solid #{$border-color},
         z-index: 			$sidebar-index,
-        transition: 		$transition-base,
+        transition: 		0.4s,
         border-radius: 		5px,
 );

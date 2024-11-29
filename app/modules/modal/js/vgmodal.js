@@ -12,6 +12,8 @@ import {dismissTrigger} from "../../../_utils/js/module-fn";
 const NAME = 'modal';
 const NAME_KEY = 'vg.modal';
 const CLASS_NAME_SHOW = 'show';
+const CLASS_NAME_FADE = 'fade'
+const SELECTOR_DIALOG = '.vg-modal-dialog'
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="modal"]'
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
@@ -38,6 +40,9 @@ const PARAMS_DEFAULT =  {
 class VgModal extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
+
+		this._dialog = Selectors.findOne(SELECTOR_DIALOG, this.element)
+
 		this._addEventListeners();
 		this._dismissElement();
 	}
@@ -75,11 +80,18 @@ class VgModal extends BaseModule {
 			Overflow.append();
 		}
 
+		if (this._isAnimated()) {
+			this.element.classList.add(CLASS_NAME_FADE);
+		}
+
 		_this.element.classList.add(CLASS_NAME_SHOW);
 
 		const completeCallBack = () => {
-			EventHandler.on(Selectors.findOne('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
-				_this.hide();
+			EventHandler.on(_this.element, 'mousedown.vg.modal', function (event) {
+				const modalContent = Selectors.get('.vg-modal-content', this);
+				if (!modalContent.contains(event.target)) {
+					_this.hide();
+				}
 			});
 
 			EventHandler.trigger(this.element, EVENT_KEY_SHOWN, { relatedTarget });
@@ -109,12 +121,23 @@ class VgModal extends BaseModule {
 		_this.element.setAttribute('aria-expanded', false);
 		_this.element.classList.remove(CLASS_NAME_SHOW);
 
-		const completeCallback = () => EventHandler.trigger(this.element, EVENT_KEY_HIDDEN);
-		this._queueCallback(completeCallback, this.element, true);
+		const completeCallback = () => {
+			if (this._isAnimated()) {
+				this.element.classList.remove(CLASS_NAME_FADE);
+			}
+
+			EventHandler.trigger(this.element, EVENT_KEY_HIDDEN);
+		};
+
+		this._queueCallback(completeCallback, this.element, this._isAnimated());
 	}
 
 	_isShown() {
 		return this.element.classList.contains(CLASS_NAME_SHOW);
+	}
+
+	_isAnimated() {
+		return this.element.classList.contains(CLASS_NAME_FADE)
 	}
 
 	_addEventListeners() {

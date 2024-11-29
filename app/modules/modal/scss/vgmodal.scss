@@ -22,13 +22,19 @@
 	height: 100%;
 	overflow-x: hidden;
 	overflow-y: auto;
-	display: none;
+	//display: none;
+	opacity: 0;
+	transform: translateY(-50px);
+	//transition: all 0.5s;
+	transition: var(--vg-modal-transition);
+	pointer-events: none;
 
 	&.show {
 		display: block;
 		pointer-events: auto;
+		opacity: 1;
+		transform: translateY(0px);
 	}
-
 
 	&-dialog {
 		margin-top: 250px;
