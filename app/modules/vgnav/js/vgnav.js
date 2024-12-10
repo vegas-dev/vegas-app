@@ -2,10 +2,11 @@ import BaseModule from "../../base-module";
 import Selectors from "../../../_utils/js/selectors";
 import Responsive from "../../../_utils/js/responsive";
 import {getSVG} from "../../../_utils/js/module-fn";
-import {execute, isDisabled, noop, normalizeData} from "../../../_utils/js/functions";
+import {execute, isDisabled, isVisible, noop, normalizeData} from "../../../_utils/js/functions";
 import EventHandler from "../../../_utils/js/event";
 import {Manipulator} from "../../../_utils/js/manipulator";
 import params from "../../../_utils/js/params";
+import VGSidebar from "../../sidebar/js/vgsidebar";
 
 /**
  * Constants
@@ -255,8 +256,8 @@ class VGNav extends BaseModule {
 		}
 	}
 
-	toggle() {
-		return this._isShown() ? this.hide() : this.show();
+	toggle(relatedTarget) {
+		return this._isShown() ? this.hide(relatedTarget) : this.show(relatedTarget);
 	}
 
 	show(relatedTarget) {
@@ -343,8 +344,10 @@ class VGNav extends BaseModule {
 		}
 	}
 
-	_isShown() {
-		return Selectors.findOne('.' + CLASS_NAME_ACTIVE, this.element);
+	hide(relatedTarget) {
+		console.log(relatedTarget.relatedTarget);
+
+		this._completeHide(relatedTarget)
 	}
 
 	_completeHide(relatedTarget) {
@@ -354,20 +357,29 @@ class VGNav extends BaseModule {
 			}
 		}
 
-		console.log(relatedTarget)
+		if (relatedTarget.elm) {
+			let parent = relatedTarget.elm,
+				drop = parent.querySelector('.show');
 
-		/*let drop = relatedTarget.relatedTarget,
-			parent = drop.closest('li');
+			const showEvent = EventHandler.trigger(parent, EVENT_KEY_HIDE, relatedTarget)
+			if (showEvent.defaultPrevented) return;
 
-		console.log(drop)*/
+			if (drop) {
+				drop.classList.remove(CLASS_NAME_FADE);
+				parent.classList.remove(CLASS_NAME_ACTIVE);
 
-		/*drop.classList.remove(CLASS_NAME_SHOW);
-		parent.classList.remove(CLASS_NAME_ACTIVE);
+				const completeCallback = () => {
+					drop.classList.remove(CLASS_NAME_SHOW);
+					EventHandler.trigger(parent, EVENT_KEY_HIDDEN, relatedTarget)
+				}
 
-		const completeCallback = () => {
-			drop.classList.remove(CLASS_NAME_FADE);
+				this._queueCallback(completeCallback, drop, true, 500);
+			}
 		}
-		this._queueCallback(completeCallback, drop, true, 10);*/
+	}
+
+	_isShown() {
+		return Selectors.findOne('.' + CLASS_NAME_ACTIVE, this.element);
 	}
 
 	static init(element, params = {}) {
@@ -399,9 +411,8 @@ class VGNav extends BaseModule {
 				EventHandler.on(el, EVENT_MOUSEOUT_DATA_API, function (event) {
 					if (!currentElem) return;
 
-					let relatedTarget = event.relatedTarget.closest('.dropdown');
-
-					console.log(relatedTarget)
+					let relatedTarget = event.relatedTarget.closest('.dropdown'),
+						elm = currentElem;
 
 					while (relatedTarget) {
 						if (relatedTarget === currentElem) return;
@@ -409,7 +420,7 @@ class VGNav extends BaseModule {
 					}
 
 					currentElem = null;
-					instance._completeHide({relatedTarget: relatedTarget});
+					instance._completeHide({relatedTarget: relatedTarget, elm: elm});
 				})
 			})
 		}
@@ -440,12 +451,37 @@ class VGNav extends BaseModule {
 				relatedTarget.clickEvent = event
 			}
 
-			context._completeHide(relatedTarget)
+			context.hide(relatedTarget)
 		}
 	}
 }
 
-EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
-EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);
+/*EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
+EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);*/
+EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+	let self = this.closest('.vg-nav');
+	if (!self) return;
+
+	let target = this.closest('.dropdown');
+	if (!target) return;
+
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault()
+	}
+
+	if (isDisabled(target) && !isVisible(target)) {
+		return;
+	}
+
+	let instance = VGNav.getOrCreateInstance(self);
+
+	[...Selectors.findAll('.active')].forEach(function (el) {
+		if (el && el !== target) {
+			instance.hide({relatedTarget: el})
+		}
+	})
+
+	instance.toggle({relatedTarget: target});
+});
 
 export default VGNav;
