@@ -29,6 +29,10 @@ const Manipulator = {
 		return attributes
 	},
 
+	hasAttribute: function (element, nameAttribute) {
+		return element.hasAttribute(nameAttribute);
+	},
+
 	getAttribute: function (element, nameAttribute) {
 		if (!element && !nameAttribute) {
 			return ''
