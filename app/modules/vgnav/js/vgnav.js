@@ -264,9 +264,9 @@ class VGNav extends BaseModule {
 			return;
 		}
 
-	/*	if (!target.closest('.dropdown-content')) {
+		if (!target.closest('.dropdown-content')) {
 			target.classList.add('first');
-		}*/
+		}
 
 		let drop = Selectors.findOne('.dropdown-content', target),
 			link = target.firstElementChild;
@@ -294,6 +294,10 @@ class VGNav extends BaseModule {
 
 		if (element) {
 			element.classList.remove(CLASS_NAME_ACTIVE);
+
+			if (element.classList.contains('first')) {
+				element.classList.remove('first');
+			}
 
 			[...Selectors.findAll('.' + CLASS_NAME_SHOW, element)].forEach(function (el, index) {
 				el.classList.remove(CLASS_NAME_FADE);
@@ -365,8 +369,8 @@ class VGNav extends BaseModule {
 
 				event.preventDefault();
 
-				let self = this.closest('.vg-nav');
-				if (!self) return;
+				let self = this.closest('.vg-nav'),
+					isFirst = self.querySelector('.first');
 
 				let target = this.closest('.dropdown');
 				if (!target) return;
@@ -375,15 +379,17 @@ class VGNav extends BaseModule {
 					return;
 				}
 
-				/*[...Selectors.findAll('.active', self)].forEach(function (el) {
-					if (el && el !== target) {
-						instance.hide({relatedTarget: el})
+				if (isFirst && this.closest('.first')) {
+					if (target.classList.contains('active')) {
+						instance.hide({relatedTarget: target});
+						return;
 					}
-				});*/
-
-				if (target.classList.contains('active')) {
-					instance.hide({relatedTarget: target});
-					return;
+				} else {
+					[...Selectors.findAll('.active', self)].forEach(function (el) {
+						if (el && el !== target) {
+							instance.hide({relatedTarget: el})
+						}
+					});
 				}
 
 				instance.show({relatedTarget: target});
