@@ -41,6 +41,10 @@
 				&.right, .right {
 					right: 100%;
 				}
+
+				&.fade {
+					top: 0;
+				}
 			}
 
 			&.show {
@@ -56,10 +60,8 @@
 			.dropdown-mega-container {
 				left: 100%;
 				top: 100%;
-			}
 
-			&.show {
-				.dropdown-mega-container {
+				&.fade {
 					top: 0;
 				}
 			}

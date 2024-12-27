@@ -34,7 +34,7 @@
 						</div>
 					</div>
 					<div class="col-lg col-2">
-						<nav class="vg-nav">
+						<nav class="vg-nav" data-hover="true">
 							<ul class="vg-nav-wrapper">
 								<li>
 									<a href="/?module=sidebar">VGSidebar</a>
@@ -44,6 +44,9 @@
 								</li>
 								<li>
 									<a href="/?module=nav">VGNav</a>
+								</li>
+								<li>
+									<a href="/?module=modal">VGModal</a>
 								</li>
 								<li class="dropdown">
 									<a href="#">Сервисы</a>
@@ -108,9 +111,6 @@
 								<li>
 									<a href="#">Ссылка 6</a>
 								</li>
-                                <li>
-                                    <a href="/?module=modal">VGModal</a>
-                                </li>
 							</ul>
 						</nav>
 					</div>

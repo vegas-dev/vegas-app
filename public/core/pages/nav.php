@@ -4,23 +4,23 @@
 	
 	<div class="row">
 		<div class="col-lg-4">
-			<nav class="vg-nav menu-sidebar" data-hover="true" data-placement="vertical" data-breakpoint="null">
+			<nav class="vg-nav menu-sidebar sticky-top" data-hover="true" data-placement="vertical" data-breakpoint="null">
 				<ul class="vg-nav-wrapper">
 					<li class="active">
 						<a href="/">Home page</a>
 					</li>
 					<li class="dropdown">
 						<a href="#">Left dropdown</a>
-						<ul>
+						<ul class="dropdown-content left">
 							<li><a href="/">Any page</a></li>
 							<li class="dropdown">
 								<a href="#">Second level</a>
-								<ul>
+								<ul class="dropdown-content left">
 									<li><a href="/">Another page</a></li>
 									<li><a href="/">Any page</a></li>
 									<li class="dropdown">
 										<a href="#">Third level</a>
-										<ul>
+										<ul class="dropdown-content left">
 											<li><a href="/">Any page</a></li>
 											<li><a href="/">Another page</a></li>
 										</ul>
@@ -30,9 +30,9 @@
 							<li><a href="/">Another page</a></li>
 						</ul>
 					</li>
-					<li class="dropdown-mega">
+					<li class="dropdown dropdown-mega">
 						<a href="#">Mega Menu</a>
-						<div class="dropdown-mega-container">
+						<div class="dropdown-content dropdown-mega-container">
 							<div class="row">
 								<div class="col-md-4 text-start">
 									Left
@@ -49,16 +49,16 @@
 					<li><a href="/">Another page</a></li>
 					<li class="dropdown">
 						<a href="#">Right dropdown</a>
-						<ul>
+						<ul class="dropdown-content left">
 							<li><a href="/">Any page</a></li>
 							<li class="dropdown">
 								<a href="#">Second level</a>
-								<ul>
+								<ul class="dropdown-content left">
 									<li><a href="/">Another page</a></li>
 									<li><a href="/">Any page</a></li>
 									<li class="dropdown">
 										<a href="#">Third level</a>
-										<ul>
+										<ul class="dropdown-content left">
 											<li><a href="/">Any page</a></li>
 											<li><a href="/">Another page</a></li>
 										</ul>

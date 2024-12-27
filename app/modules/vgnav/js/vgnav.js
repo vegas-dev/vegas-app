@@ -5,8 +5,6 @@ import {getSVG} from "../../../_utils/js/module-fn";
 import {execute, isDisabled, isVisible, noop, normalizeData} from "../../../_utils/js/functions";
 import EventHandler from "../../../_utils/js/event";
 import {Manipulator} from "../../../_utils/js/manipulator";
-import params from "../../../_utils/js/params";
-import VGSidebar from "../../sidebar/js/vgsidebar";
 
 /**
  * Constants
@@ -81,7 +79,6 @@ class VGNav extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
-		// Обязательная разметка с навигаций под классом vg-nav-wrapper
 		this._navigation = null;
 		this.navigation = '.' + this.params.classes.wrapper;
 
@@ -292,6 +289,10 @@ class VGNav extends BaseModule {
 
 		let element = relatedTarget.relatedTarget;
 
+		if ('elm' in relatedTarget && relatedTarget.elm) {
+			element = relatedTarget.elm
+		}
+
 		if (element) {
 			element.classList.remove(CLASS_NAME_ACTIVE);
 
@@ -307,6 +308,9 @@ class VGNav extends BaseModule {
 					parent.classList.remove(CLASS_NAME_ACTIVE);
 				}
 
+				let link = el.previousElementSibling;
+				if (link) link.setAttribute('aria-expanded', 'false');
+
 				if (index === 0) {
 					const completeCallback = () => {
 						el.classList.remove(CLASS_NAME_SHOW);
@@ -319,6 +323,12 @@ class VGNav extends BaseModule {
 		}
 	}
 
+
+	/**
+	 * TODO если на странице несколько навигаций, то ни одна не работает
+	 * @param element
+	 * @param params
+	 */
 	static init(element, params = {}) {
 		const instance = VGNav.getOrCreateInstance(element, params);
 		instance.build();
@@ -356,15 +366,19 @@ class VGNav extends BaseModule {
 					}
 
 					currentElem = null;
-					instance._completeHide({relatedTarget: relatedTarget, elm: elm});
+					instance.hide({relatedTarget: relatedTarget, elm: elm});
 				})
 			})
 		} else {
-/*			EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
-			EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);*/
+			EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
+			EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);
 			EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
 				if (!Manipulator.hasAttribute(this, 'aria-expanded')) {
 					return;
+				}
+
+				if ('click' in instance.params.callback) {
+					execute(instance.params.callback.click, [this]);
 				}
 
 				event.preventDefault();
@@ -412,7 +426,7 @@ class VGNav extends BaseModule {
 			const context = VGNav.getInstance(toggle.closest('.vg-nav'));
 			if (!context) continue;
 
-			if (event.target.closest('.dropdown-mega') === toggle) {
+			if (event.target.closest('.first')) {
 				return;
 			}
 
