@@ -32,6 +32,7 @@ const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOUT_DATA_API  = `mouseout.${NAME_KEY}.data.api`;
 const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
+const EVENT_RESIZE_DATA_API = `resize.${NAME_KEY}.data.api`;
 
 /**
  * Default Params
@@ -82,6 +83,9 @@ class VGNav extends BaseModule {
 		this._navigation = null;
 		this.navigation = '.' + this.params.classes.wrapper;
 
+		this.movedLinks = [];
+		this.$links = Selectors.findAll('.' + this.params.classes.wrapper + ' > li', this.navigation)
+
 		if (this.params.animation === false) {
 			this.params.timeoutAnimation = 10
 		}
@@ -110,9 +114,7 @@ class VGNav extends BaseModule {
 	build() {
 		if (!this.navigation) return;
 
-		let movedLinks = [],
-			params = this.params,
-			$links = Selectors.findAll('.' + this.params.classes.wrapper + ' > li', this.navigation);
+		let params = this.params;
 
 		// Вешаем основные классы
 		this.element.classList.add(params.classes.container);
@@ -165,8 +167,10 @@ class VGNav extends BaseModule {
 
 			if ($dropdown_a.length) {
 				$dropdown_a.forEach(function (elem) {
-					elem.setAttribute('aria-expanded', 'false')
-					elem.insertAdjacentHTML('beforeend', toggle)
+					if (!elem.querySelector('.toggle') && !elem.closest('.dots')) {
+						elem.setAttribute('aria-expanded', 'false')
+						elem.insertAdjacentHTML('beforeend', toggle)
+					}
 				});
 			}
 		}
@@ -181,6 +185,8 @@ class VGNav extends BaseModule {
 
 		/**
 		 * Функция сворачивания
+		 * TODO Придумать что то с мега меню, которое уходит в подменю
+		 * TODO Так же есть косяки при ресайзе
 		 */
 		function setCollapse(_this) {
 			let width_navigation_responsive = _this.navigation.clientWidth,
@@ -188,11 +194,11 @@ class VGNav extends BaseModule {
 				$dots = Selectors.findOne('.dots', _this.navigation),
 				_dots = getSVG('dots');
 
-			if ($links.length) {
+			if (_this.$links.length) {
 				if ($dots) {
 					width_all_links_responsive = $dots.clientWidth
 				} else {
-					let $a = Selectors.findOne('a', $links[0]),
+					let $a = Selectors.findOne('a', _this.$links[0]),
 						$linkStyle = getComputedStyle($a),
 						paddingLeft = normalizeData($linkStyle.paddingLeft.slice(0, -2)),
 						paddingRight =  normalizeData($linkStyle.paddingRight.slice(0, -2)),
@@ -202,26 +208,26 @@ class VGNav extends BaseModule {
 					width_all_links_responsive = padding + 16;
 				}
 
-				for (let $link of $links) {
+				for (let $link of _this.$links) {
 					let width = $link.getBoundingClientRect().width;
 					width_all_links_responsive = width_all_links_responsive + width;
 
 					if ((width_navigation_responsive) < width_all_links_responsive) {
-						movedLinks.push($link);
+						_this.movedLinks.push($link);
 						$link.remove();
 					} else {
-						if (movedLinks.length) {
+						if (_this.movedLinks.length) {
 							if ($dots) {
-								_this.navigation.insertBefore(movedLinks[0], $dots)
+								_this.navigation.insertBefore(_this.movedLinks[0], $dots)
 							} else {
-								_this.navigation.appendChild(movedLinks[0])
+								_this.navigation.appendChild(_this.movedLinks[0])
 							}
-							movedLinks.splice(0, 1);
+							_this.movedLinks.splice(0, 1);
 						}
 					}
 				}
 
-				if (movedLinks.length) {
+				if (_this.movedLinks.length) {
 					if (!$dots) {
 						_this.navigation.insertAdjacentHTML('beforeend','<li class="dropdown dots">' + '<a href="#" aria-expanded="false">'+ _dots +'</a></li>');
 					}
@@ -232,10 +238,10 @@ class VGNav extends BaseModule {
 				}
 
 				let $d = _this.navigation.querySelector('.dots');
-				if ($d && movedLinks.length) {
+				if ($d && _this.movedLinks.length) {
 					let $dropdown = $d.querySelector('ul');
 					if ($dropdown) {
-						for (let link of movedLinks) {
+						for (let link of _this.movedLinks) {
 							$dropdown.prepend(link);
 						}
 					} else {
@@ -243,7 +249,7 @@ class VGNav extends BaseModule {
 						$dropdown.classList.add('dropdown-content');
 						$dropdown.classList.add('right');
 
-						for (let link of movedLinks) {
+						for (let link of _this.movedLinks) {
 							$dropdown.prepend(link);
 						}
 
@@ -265,6 +271,9 @@ class VGNav extends BaseModule {
 			target.classList.add('first');
 		}
 
+		const showEvent = EventHandler.trigger(target, EVENT_KEY_SHOW, { relatedTarget });
+		if (showEvent.defaultPrevented) return;
+
 		let drop = Selectors.findOne('.dropdown-content', target),
 			link = target.firstElementChild;
 
@@ -272,11 +281,40 @@ class VGNav extends BaseModule {
 		drop.classList.add(CLASS_NAME_SHOW);
 		target.classList.add(CLASS_NAME_ACTIVE);
 
+		setDropPosition(drop)
+
 		const completeCallBack = () => {
 			drop.classList.add(CLASS_NAME_FADE);
 			EventHandler.trigger(target, EVENT_KEY_SHOWN, relatedTarget)
 		}
 		this._queueCallback(completeCallBack, drop, true, 50);
+
+		/**
+		 *
+		 * @param $drop
+		 */
+		function setDropPosition($drop) {
+			let {width, right} = $drop.getBoundingClientRect(),
+				window_width = window.innerWidth;
+
+			let N_right = window_width - right - width;
+
+			$drop.classList.remove('right');
+			$drop.classList.remove('left');
+
+			let $parent = $drop.closest('li'),
+				$ul = $parent.querySelectorAll('ul');
+
+			if (N_right > width) {
+				for (const $el of $ul) {
+					$el.classList.add('left');
+				}
+			} else {
+				for (const $el of $ul) {
+					$el.classList.add('right');
+				}
+			}
+		}
 	}
 
 	hide(relatedTarget) {
@@ -294,6 +332,9 @@ class VGNav extends BaseModule {
 		}
 
 		if (element) {
+			const hideEvent = EventHandler.trigger(element, EVENT_KEY_HIDE);
+			if (hideEvent.defaultPrevented) return;
+
 			element.classList.remove(CLASS_NAME_ACTIVE);
 
 			if (element.classList.contains('first')) {
@@ -323,9 +364,8 @@ class VGNav extends BaseModule {
 		}
 	}
 
-
 	/**
-	 * TODO если на странице несколько навигаций, то ни одна не работает
+	 * TODO если на странице несколько навигаций, то есть косяки
 	 * @param element
 	 * @param params
 	 */
@@ -409,6 +449,19 @@ class VGNav extends BaseModule {
 				instance.show({relatedTarget: target});
 			});
 		}
+
+		const vgNavSidebar = document.getElementById('sidebar-nav');
+		let hamburger = instance.element.querySelector('.' + instance.params.classes.hamburger);
+
+		if (vgNavSidebar && hamburger) {
+			vgNavSidebar.addEventListener('vg.sidebar.show', function () {
+				hamburger.classList.add(instance.params.classes.hamburgerActive);
+			});
+
+			vgNavSidebar.addEventListener('vg.sidebar.hide', function () {
+				hamburger.classList.remove(instance.params.classes.hamburgerActive);
+			});
+		}
 	}
 
 	static clearDrops(event) {
@@ -440,5 +493,10 @@ class VGNav extends BaseModule {
 		}
 	}
 }
+
+EventHandler.on(window, EVENT_RESIZE_DATA_API, function (event) {
+	const instance = VGNav.getOrCreateInstance('.vg-nav', {});
+	instance.build();
+})
 
 export default VGNav;

@@ -19,9 +19,10 @@
 	</div>
 	
 	<div class="vg-sidebar top" id="sidebar-nav">
-		<div class="vg-sidebar-body">
-		
+		<div class="vg-sidebar-header">
+			<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" aria-label="Close"></button>
 		</div>
+		<div class="vg-sidebar-body"></div>
 		<div class="vg-sidebar-footer"></div>
 	</div>
 </body>

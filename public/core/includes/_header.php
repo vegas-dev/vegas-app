@@ -34,19 +34,28 @@
 						</div>
 					</div>
 					<div class="col-lg col-2">
-						<nav class="vg-nav" data-hover="true">
+						<nav class="vg-nav" data-hover="true" data-breakpoint="md">
 							<ul class="vg-nav-wrapper">
 								<li>
-									<a href="/?module=sidebar">VGSidebar</a>
+									<a href="/?page=about">О проекте</a>
 								</li>
-								<li>
-									<a href="/?module=dropdown">VGDropdown</a>
-								</li>
-								<li>
-									<a href="/?module=nav">VGNav</a>
-								</li>
-								<li>
-									<a href="/?module=modal">VGModal</a>
+								<li class="dropdown">
+									<a href="#">Модули</a>
+									
+									<ul class="dropdown-content left">
+										<li>
+											<a href="/?module=sidebar">VGSidebar</a>
+										</li>
+										<li>
+											<a href="/?module=dropdown">VGDropdown</a>
+										</li>
+										<li>
+											<a href="/?module=nav">VGNav</a>
+										</li>
+										<li>
+											<a href="/?module=modal">VGModal</a>
+										</li>
+									</ul>
 								</li>
 								<li class="dropdown">
 									<a href="#">Сервисы</a>
@@ -56,60 +65,7 @@
 										<li><a href="#">Сервис №2</a></li>
 										<li><a href="#">Сервис №3</a></li>
 										<li><a href="#">Сервис №4</a></li>
-										<li class="dropdown">
-											<a href="#">Еще сервисы</a>
-											<ul class="dropdown-content left">
-												<li><a href="#">Сервис №5</a></li>
-												<li class="dropdown">
-													<a href="#">Еще сервисы 5.5</a>
-													<ul class="dropdown-content right">
-														<li><a href="#">Сервис №5.1</a></li>
-														<li><a href="#">Сервис №6</a></li>
-														<li><a href="#">Сервис №7</a></li>
-														<li><a href="#">Сервис №8</a></li>
-													</ul>
-												</li>
-												<li><a href="#">Сервис №6</a></li>
-												<li><a href="#">Сервис №7</a></li>
-												<li><a href="#">Сервис №8</a></li>
-											</ul>
-										</li>
 									</ul>
-								</li>
-								<li class="dropdown dropdown-mega">
-									<a href="#">Большое меню</a>
-									<div class="dropdown-content">
-										<h4 class="mb-3">Большое меню</h4>
-										<div class="row">
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-											<div class="col">
-												Lorem ipsum dolor sit amet, consectetur adipisicing elit. Porro, quibusdam.
-											</div>
-										</div>
-									</div>
-								</li>
-								<li>
-									<a href="#">Ссылка 2</a>
-								</li>
-								<li>
-									<a href="#">Ссылка 3</a>
-								</li>
-								<li>
-									<a href="#">Ссылка 4</a>
-								</li>
-								<li>
-									<a href="#">Ссылка 5</a>
-								</li>
-								<li>
-									<a href="#">Ссылка 6</a>
 								</li>
 							</ul>
 						</nav>
