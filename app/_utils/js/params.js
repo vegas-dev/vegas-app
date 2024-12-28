@@ -1,6 +1,10 @@
 import {isElement, isEmptyObj, isObject, mergeDeepObject, normalizeData} from "./functions";
 import {Manipulator} from "./manipulator";
 
+/**
+ * Класс Params, собирает все "параметры" для работы модулей, являясь для них отправной точкой
+ */
+
 class Params {
 	static get Default() {
 		return {}
@@ -43,7 +47,7 @@ class Params {
 	}
 
 	_mergeParamsObj(params, element) {
-		return isElement(element) ? mergeDeepObject(Manipulator.getDataAttributes(element), params) : {}
+		return isElement(element) ? mergeDeepObject(Manipulator.get(element), params) : {}
 	}
 }
 export default Params;

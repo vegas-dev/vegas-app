@@ -1,3 +1,8 @@
+/**
+ * Класс Responsive, работает по таким же медиа точкам, что и bootstrap
+ * и определяет на тач устройства.
+ */
+
 class Responsive {
 	constructor() {
 		this.breakpoints = {

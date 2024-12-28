@@ -17,6 +17,9 @@ import VgModal from "./app/modules/modal/js/vgmodal";
 import "./app/modules/vgnav/scss/vgnav.scss";
 import VGNav from "./app/modules/vgnav/js/vgnav";
 
+// form sender
+import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
+
 function onReady() {
 	[...document.querySelectorAll('[data-vg-toggle="dropdown"]')].forEach(function (element) {
 		VGDropdown.init(element, {})
@@ -24,6 +27,10 @@ function onReady() {
 
 	[...document.querySelectorAll('.vg-nav')].forEach(function (element) {
 		VGNav.init(element, {})
+	});
+
+	[...document.querySelectorAll('[data-vgformsender]')].forEach(function (element) {
+		VGFormSender.init(element, {})
 	});
 }
 

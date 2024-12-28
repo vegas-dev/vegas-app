@@ -413,7 +413,7 @@ class VGNav extends BaseModule {
 			EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
 			EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);
 			EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-				if (!Manipulator.hasAttribute(this, 'aria-expanded')) {
+				if (!Manipulator.has(this, 'aria-expanded')) {
 					return;
 				}
 

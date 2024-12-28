@@ -3,10 +3,11 @@
  * Bootstrap data.js
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
  * --------------------------------------------------------------------------
+ * Скрипт работает с коллекцией модулей. Подробнее тут https://learn.javascript.ru/map-set
  */
 
 /**
- * Constants
+ * Константы
  */
 
 const elementMap = new Map()

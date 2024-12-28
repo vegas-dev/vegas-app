@@ -1,46 +1,58 @@
 import {isElement, normalizeData} from "./functions";
 
 /**
- * Манипуляции с элементом
+ * Манипуляции с атрибутами у элемента:
+ * get (элемент, имя, флаг - вырезать data-) - метод выбирает значение атрибута по его имени, если в поле имени передать 'data' -> будут выбраны только дата атрибуты, если 'all' -> метод вернет значение всех атрибутов
+ * has (элемент, имя) - есть ли атрибут у элемента
+ * set (элемент, имя, значение) - установка у элемента атрибута или его изменение
+ * remove (элемент, имя) - удаляет атрибут у элемента
  */
 const Manipulator = {
-	getDataAttributes(element, isRemoveDataName = true) {
+	get(element, nameAttribute = 'data', isRemoveDataName = true) {
 		if (!element) {
 			return {}
 		}
 
-		let elmBase = ['data-vg-toggle', 'data-vg-target', 'data-vg-dismiss'],
-			attributes= {},
-			arr = [].filter.call(element.attributes, function (at) {
+		if (nameAttribute === 'data') {
+			let elmBase = ['data-vg-toggle', 'data-vg-target', 'data-vg-dismiss'],
+				attributes = {};
+
+			let arr = [].filter.call(element.attributes, function (at) {
 				return /^data-/.test(at.name);
 			});
 
-		if (arr.length) {
-			arr.forEach(function (v) {
-				let name = v.name;
+			if (arr.length) {
+				arr.forEach(function (v) {
+					let name = v.name;
 
-				if (!elmBase.includes(name)) {
-					if (isRemoveDataName) name = name.slice(5);
-					attributes[name] = normalizeData(v.value)
-				}
-			});
+					if (!elmBase.includes(name)) {
+						if (isRemoveDataName) name = name.slice(5);
+						attributes[name] = normalizeData(v.value)
+					}
+				});
+			}
+
+			return attributes;
+		} else if (nameAttribute === 'all') {
+			return element.getAttributeNames().reduce((acc, name) => {
+				return {...acc, [name]: element.getAttribute(name)};
+			}, {});
+		} else {
+			return element.getAttribute(nameAttribute);
 		}
-
-		return attributes
 	},
 
-	hasAttribute: function (element, nameAttribute) {
+	has(element, nameAttribute) {
 		return element.hasAttribute(nameAttribute);
 	},
 
-	getAttribute: function (element, nameAttribute) {
-		if (!element && !nameAttribute) {
-			return ''
+	set(element, name, value) {
+		if (isElement(element) && name && value) {
+			element.setAttribute(name, value);
 		}
-		return normalizeData(element.getAttribute(nameAttribute));
 	},
 
-	removeAttribute: function (element, nameAttribute) {
+	remove(element, nameAttribute) {
 		if (isElement(element) && nameAttribute) {
 			element.removeAttribute(nameAttribute);
 		}

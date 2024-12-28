@@ -34,7 +34,7 @@
 						</div>
 					</div>
 					<div class="col-lg col-2">
-						<nav class="vg-nav" data-hover="true" data-breakpoint="md">
+						<nav class="vg-nav vg-nav-header" data-hover="true" data-breakpoint="md">
 							<ul class="vg-nav-wrapper">
 								<li>
 									<a href="/?page=about">О проекте</a>
@@ -44,16 +44,34 @@
 									
 									<ul class="dropdown-content left">
 										<li>
-											<a href="/?module=sidebar">VGSidebar</a>
+											<a href="/?module=sidebar">
+												<span>VGSidebar</span>
+												<small>Боковая панель</small>
+											</a>
 										</li>
 										<li>
-											<a href="/?module=dropdown">VGDropdown</a>
+											<a href="/?module=dropdown">
+												<span>VGDropdown</span>
+												<small>Выпадающий список</small>
+											</a>
 										</li>
 										<li>
-											<a href="/?module=nav">VGNav</a>
+											<a href="/?module=nav">
+												<span>VGNav</span>
+												<small>Навигационная панель</small>
+											</a>
 										</li>
 										<li>
-											<a href="/?module=modal">VGModal</a>
+											<a href="/?module=modal">
+												<span>VGModal</span>
+												<small>Всплывающие окна</small>
+											</a>
+										</li>
+										<li>
+											<a href="/?module=form-sender">
+												<span>VGFormSender</span>
+												<small>Отправка данных на сервер</small>
+											</a>
 										</li>
 									</ul>
 								</li>

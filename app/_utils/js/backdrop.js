@@ -1,4 +1,4 @@
-import {execute, isElement} from "./functions";
+import {execute} from "./functions";
 import Selectors from "./selectors";
 import EventHandler from "./event";
 import Overflow from "./overflow";

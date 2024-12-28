@@ -1,7 +1,7 @@
 import BaseModule from "../../base-module";
 import EventHandler from "../../../_utils/js/event";
 import Selectors from "../../../_utils/js/selectors";
-import {isDisabled, noop, normalizeData} from "../../../_utils/js/functions";
+import {isDisabled, noop} from "../../../_utils/js/functions";
 import Placement from "../../../_utils/js/placement";
 
 const NAME             = 'dropdown';

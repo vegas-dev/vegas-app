@@ -1,5 +1,10 @@
 import {mergeDeepObject, normalizeData} from "./functions";
 
+/**
+ * Класс Placement, определяет и устанавливает местоположение элемента на странице.
+ * TODO класс не дописан
+ */
+
 class Placement {
 	constructor(arg = {}) {
 		this.params = mergeDeepObject({

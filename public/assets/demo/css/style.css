@@ -142,6 +142,19 @@ a {
 	--vg-nav-drop-item-padding: 1rem;
 }
 
+.vg-nav-header {
+	--vg-nav-drop-width: 275px;
+}
+
+.vg-nav-header .vg-nav-wrapper .dropdown .dropdown-content li a {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.vg-nav-header .vg-nav-wrapper .dropdown .dropdown-content li a small {
+	color: var(--bs-tertiary-color);
+}
+
 /* VGSidebar */
 #sidebar-nav {
 	--vg-sidebar-vertical-height: 100vh;

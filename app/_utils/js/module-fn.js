@@ -2,6 +2,15 @@ import EventHandler from "./event";
 import {execute, isDisabled, isEmptyObj, isObject} from "./functions";
 import Selectors from "./selectors";
 
+/**
+ * Тут собраны вспомогательные скрипты для работы модулей
+ */
+
+/**
+ * Набор svg элементов
+ * @param name
+ * @returns {*|{}}
+ */
 const getSVG = (name) => {
 	const svg =  {
 		error: '',
@@ -14,7 +23,7 @@ const getSVG = (name) => {
 }
 
 /**
- * Enable Dismiss Trigger
+ * Вешаем событие "Закрыть" на все модалки, сайдбары и т.п.
  * @param module
  * @param method
  */
@@ -43,6 +52,10 @@ const dismissTrigger = (module, method = 'hide') => {
  * @type {{post: ajax.post, get: ajax.get, x: ((function(): (XMLHttpRequest))|*), send: ajax.send}}
  */
 const Ajax = {
+	/**
+	 * Инициализирует http запросы
+	 * @returns {XMLHttpRequest|*}
+	 */
 	x() {
 		if (typeof XMLHttpRequest !== 'undefined') {
 			return new XMLHttpRequest();
@@ -67,6 +80,14 @@ const Ajax = {
 		return xhr;
 	},
 
+	/**
+	 * Отправляет запросы и принимает ответ
+	 * @param url
+	 * @param method
+	 * @param data
+	 * @param callback
+	 * @param async
+	 */
 	send(url, method, data, callback, async) {
 		if (async === undefined) async = true;
 
@@ -87,6 +108,13 @@ const Ajax = {
 		x.send(data);
 	},
 
+	/**
+	 * Отправляет и принимает GET запросы
+	 * @param url
+	 * @param data
+	 * @param callback
+	 * @param async
+	 */
 	get(url, data, callback, async) {
 		let query = [];
 
@@ -99,6 +127,13 @@ const Ajax = {
 		Ajax.send(url + (query.length ? '?' + query.join('&') : ''), 'GET', null, callback, async)
 	},
 
+	/**
+	 * Отправляет и принимает POST запросы
+	 * @param url
+	 * @param data
+	 * @param callback
+	 * @param async
+	 */
 	post(url, data, callback, async) {
 		Ajax.send(url, callback, 'POST', data, async)
 	}

@@ -13,6 +13,9 @@
 		$bodyClass = 'page';
 		
 		switch ($get['module']) {
+			case 'form-sender':
+				$content = file_get_contents(__DIR__.'/pages/form.php');
+				break;
 			case 'sidebar':
 				$content = file_get_contents(__DIR__.'/pages/sidebar.php');
 				break;

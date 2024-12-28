@@ -1,5 +1,10 @@
 import {Manipulator} from "./manipulator";
 
+/**
+ * Класс Overflow
+ * Запрещает скроллинг и убирает его, компенсируя отступом
+ */
+
 class Overflow {
 	static append() {
 		document.body.style.paddingRight = getWidth() + 'px';
@@ -15,8 +20,8 @@ class Overflow {
 		document.body.style.overflow = '';
 		document.body.style.paddingRight = '';
 
-		let styles = Manipulator.getAttribute(document.body, 'style');
-		if (!styles) Manipulator.removeAttribute(document.body, 'style');
+		let styles = Manipulator.get(document.body, 'style');
+		if (!styles) Manipulator.remove(document.body, 'style');
 	}
 }
 

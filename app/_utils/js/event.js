@@ -3,10 +3,11 @@
  * Bootstrap event.js
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
  * --------------------------------------------------------------------------
+ * Скрипт для прослушивания события
  */
 
 /**
- * Constants
+ * Константы
  */
 
 const namespaceRegex = /[^.]*(?=\..*)\.|.*/
@@ -69,7 +70,7 @@ const nativeEvents = new Set([
 ])
 
 /**
- * Private methods
+ * Приватные методы
  */
 
 function makeEventUid(element, uid) {
@@ -126,7 +127,7 @@ function findHandler(events, callable, delegationSelector = null) {
 
 function normalizeParameters(originalTypeEvent, handler, delegationFunction) {
 	const isDelegated = typeof handler === 'string'
-	// TODO: tooltip passes `false` instead of selector, so we need to check
+	// TODO: выдает "false" вместо селектора, поэтому нужно проверить. boot
 	const callable = isDelegated ? delegationFunction : (handler || delegationFunction)
 	let typeEvent = getTypeEvent(originalTypeEvent)
 
@@ -209,15 +210,57 @@ function getTypeEvent(event) {
 	return customEvents[event] || event
 }
 
+function hydrateObj(obj, meta = {}) {
+	for (const [key, value] of Object.entries(meta)) {
+		try {
+			obj[key] = value
+		} catch {
+			Object.defineProperty(obj, key, {
+				configurable: true,
+				get() {
+					return value
+				}
+			})
+		}
+	}
+
+	return obj
+}
+
+/**
+ * События
+ * @type {{one(*, *, *, *): void, trigger(*, *, *): (null|*), off(*, *, *, *): void, on(*, *, *, *): void}}
+ */
 const EventHandler = {
+	/**
+	 * Прослушиватель событий (элемент, событие (полный список смотри в константе nativeEvents, источник события или хендлер, функция обратного вызова))
+	 * @param element
+	 * @param event
+	 * @param handler
+	 * @param delegationFunction
+	 */
 	on(element, event, handler, delegationFunction) {
 		addHandler(element, event, handler, delegationFunction, false)
 	},
 
+	/**
+	 * Прослушиватель событий, но замыкается и больше не повторяется на элементе
+	 * @param element
+	 * @param event
+	 * @param handler
+	 * @param delegationFunction
+	 */
 	one(element, event, handler, delegationFunction) {
 		addHandler(element, event, handler, delegationFunction, true)
 	},
 
+	/**
+	 * Удаление обработчика
+	 * @param element
+	 * @param originalTypeEvent
+	 * @param handler
+	 * @param delegationFunction
+	 */
 	off(element, originalTypeEvent, handler, delegationFunction) {
 		if (typeof originalTypeEvent !== 'string' || !element) {
 			return
@@ -254,6 +297,13 @@ const EventHandler = {
 		}
 	},
 
+	/**
+	 * Пользовательские события. Подробнее тут https://learn.javascript.ru/dispatch-events
+	 * @param element
+	 * @param event
+	 * @param args
+	 * @returns {*|null}
+	 */
 	trigger(element, event, args) {
 		if (typeof event !== 'string' || !element) {
 			return null
@@ -275,23 +325,6 @@ const EventHandler = {
 
 		return evt
 	}
-}
-
-function hydrateObj(obj, meta = {}) {
-	for (const [key, value] of Object.entries(meta)) {
-		try {
-			obj[key] = value
-		} catch {
-			Object.defineProperty(obj, key, {
-				configurable: true,
-				get() {
-					return value
-				}
-			})
-		}
-	}
-
-	return obj
 }
 
 export default EventHandler

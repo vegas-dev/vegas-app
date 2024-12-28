@@ -1,5 +1,12 @@
 import {isElement} from "./functions";
 
+/**
+ * Работа с DOM
+ * TODO переработать константу Selectors
+ * @param selector
+ * @returns {*}
+ */
+
 const parseSelector = selector => {
 	if (selector && window.CSS && window.CSS.escape) {
 		selector = selector.replace(/#([^\s"#']+)/g, (match, id) => `#${CSS.escape(id)}`)
