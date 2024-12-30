@@ -32,6 +32,8 @@ function onReady() {
 	[...document.querySelectorAll('[data-vgformsender]')].forEach(function (element) {
 		VGFormSender.init(element, {})
 	});
+
+	console.log('asdsadsad')
 }
 
 document.addEventListener('DOMContentLoaded', onReady);

@@ -7,38 +7,25 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = outputPaths.map(outputPath => {
 	return (env, argv) => {
-		let NODE_ENV = argv.mode || 'development',
-			args = {
-				name: nameModule.trim().toLowerCase(),
-				filename: {},
-				devtool: 'inline-cheap-module-source-map',
-				watch: false,
-				watchOptions: {
-					aggregateTimeout: 100
-				}
-			};
+		let mode = argv.mode || 'development',
+			NODE_ENV = argv.mode || 'development',
+			name = nameModule.trim().toLowerCase();
 
-		if (NODE_ENV === 'development') {
-			args.filename = {
-				js: args.name + '.js',
-				css: args.name + '.css',
-			}
-			args.watch = true;
-		} else if (NODE_ENV === 'production') {
-			args.filename = {
-				js: args.name + '.js',
-				css: args.name + '.css',
-			}
-			args.devtool = 'source-map'
-		}
+		if (argv.mode === 'development') mode = 'dev';
+		if ('WEBPACK_SERVE' in env && env.WEBPACK_SERVE) mode = 'serve';
 
-		return  {
+		let args = {
 			entry: './index.js',
 			output: {
 				path: path.resolve(__dirname, outputPath),
-				filename: args.filename.js,
-				library: 'vg'
+				filename: name + '.js',
+				library: 'vg',
+				publicPath: '/public'
 			},
+			stats: {
+				warnings: false
+			},
+
 			module: {
 				rules: [
 					{
@@ -51,18 +38,43 @@ module.exports = outputPaths.map(outputPath => {
 					}
 				],
 			},
+
 			plugins: [
 				new webpack.DefinePlugin({
 					NODE_ENV: JSON.stringify(NODE_ENV),
 					LANG: JSON.stringify('ru'),
 				}),
 				new MiniCssExtractPlugin({
-					filename: args.filename.css,
+					filename: name + '.css',
 				}),
 			],
-			devtool: args.devtool,
-			watch: args.watch,
-			watchOptions: args.watchOptions
 		};
+
+		if (mode === 'serve') {
+			args.devtool = 'inline-cheap-module-source-map';
+			args.devServer = {
+				watchFiles: {
+					paths: ['src/**/*.php', 'public/**/*'],
+					options: {
+						usePolling: false,
+					},
+				},
+			}
+		}
+
+		if (mode === 'dev') {
+			args.cache = false;
+			args.devtool = 'inline-cheap-module-source-map';
+			args.watch = true;
+			args.watchOptions = {
+				aggregateTimeout: 100
+			}
+		}
+
+		if (mode === 'production') {
+			args.devtool = 'source-map'
+		}
+
+		return args;
 	}
 });
