@@ -33,6 +33,7 @@ const nativeEvents = new Set([
 	'mousemove',
 	'selectstart',
 	'selectend',
+	'submit',
 	'keydown',
 	'keypress',
 	'keyup',

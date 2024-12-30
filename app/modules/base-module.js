@@ -60,24 +60,34 @@ class BaseModule extends Params {
 
 	_route() {
 		const _this = this;
+		let $content = null;
 
-		if (_this.params.hasOwnProperty('ajax')) {
-			if ('target' in _this.params.ajax && _this.params.ajax.target) {
-				let $content = Selectors.findOne(_this.params.ajax.target);
-				if ($content) {
-					if ('route' in _this.params.ajax && _this.params.ajax.route) {
-						Ajax.get(_this.params.ajax.route, {}, function (status, data) {
-							setData(data);
-							EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
-						});
-					}
-				}
-
-				const setData = (data) => {
-					$content.innerHTML = data;
-				};
-			}
+		if (!_this.params.hasOwnProperty('ajax')) {
+			return;
 		}
+
+		if (!'route' in _this.params.ajax && !_this.params.ajax.route) {
+			return;
+		}
+
+		if ('target' in _this.params.ajax && _this.params.ajax.target) {
+			$content = Selectors.findOne(_this.params.ajax.target);
+		}
+
+		const setData = (data) => {
+			if ($content) $content.innerHTML = data;
+		};
+
+		if (!'method' in _this.params.ajax) {
+			_this.params.ajax.method = 'get';
+		}
+
+		console.log(_this.params.ajax)
+
+		/*Ajax[method](_this.params.ajax.route, {}, function (status, data) {
+			setData(data);
+			EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
+		});*/
 	}
 
 	_dismissElement() {

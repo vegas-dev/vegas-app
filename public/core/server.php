@@ -27,3 +27,9 @@
 						</ul>';
 		}
 	}
+	
+	if (isset($_GET['form'])) {
+		if ($_GET['form'] == 'simple') {
+			echo json_encode(['error' => 'false', 'data' => 'Всё прошло успешно']);
+		}
+	}
