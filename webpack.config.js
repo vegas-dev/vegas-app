@@ -1,5 +1,6 @@
 const nameModule = 'VGApp';
-const outputPaths = ['./build', './public/assets/build']
+const outputPaths = ['./public/assets/build'];
+const proxy_target = 'vgapp.dev.via';
 
 const path = require('path');
 const webpack = require('webpack');
@@ -20,7 +21,6 @@ module.exports = outputPaths.map(outputPath => {
 				path: path.resolve(__dirname, outputPath),
 				filename: name + '.js',
 				library: 'vg',
-				publicPath: '/public'
 			},
 			stats: {
 				warnings: false
@@ -52,9 +52,12 @@ module.exports = outputPaths.map(outputPath => {
 
 		if (mode === 'serve') {
 			args.devtool = 'inline-cheap-module-source-map';
+			args.cache = false;
 			args.devServer = {
+				host: 'vgapp.dev.via',
+				compress: true,
 				watchFiles: {
-					paths: ['src/**/*.php', 'public/**/*'],
+					paths: ['public/**/*.php', 'app/**/*'],
 					options: {
 						usePolling: false,
 					},

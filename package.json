@@ -18,7 +18,6 @@
 		"url": "https://github.com/vegas-dev/vegas-sidebar/issues"
 	},
 	"scripts": {
-		"live": "webpack serve --mode development",
 		"dev": "webpack --mode development",
 		"prod": "webpack --mode production"
 	},

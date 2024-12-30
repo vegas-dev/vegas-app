@@ -33,11 +33,11 @@ function onReady() {
 		VGFormSender.init(element, {})
 	});
 
-	console.log('asdsadsad')
+	console.log('asdsadsadv sfdsdf sdfsfsdfsdf')
 }
 
 document.addEventListener('DOMContentLoaded', onReady);
 
 export {
-	VGSidebar, VGDropdown, VGNav, VgModal
+	VGSidebar, VGDropdown, VGNav, VgModal, VGFormSender
 }
