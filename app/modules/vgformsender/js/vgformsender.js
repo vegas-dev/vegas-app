@@ -101,7 +101,7 @@ class VGFormSender extends BaseModule {
 
 		if (this.params.isValidate) {
 			Manipulator.set(this.element, 'novalidate', '');
-			this.element.classList.add(this.params.classes.general);
+			this.element.classList.add(this.params.classes.validation);
 		}
 
 		// TODO сделать добавление глаза если есть ввод пароля
@@ -131,7 +131,7 @@ class VGFormSender extends BaseModule {
 
 		this.element.addEventListener('submit', function (event) {
 			if (_this.params.isValidate) {
-				if (!_this.form.checkValidity()) {
+				if (!_this.element.checkValidity()) {
 					event.preventDefault();
 					event.stopPropagation();
 
@@ -145,8 +145,6 @@ class VGFormSender extends BaseModule {
 				event.preventDefault();
 				return;
 			}
-
-			_this.request(callback, event);
 
 			if (!_this.params.isSubmit) {
 				event.preventDefault();
@@ -165,18 +163,20 @@ class VGFormSender extends BaseModule {
 		const _this = this;
 
 		_this.params.ajax = {
-			route: _this.settings.action,
-			method: _this.settings.method.toLowerCase(),
+			route: _this.params.action,
+			method: _this.params.method.toLowerCase(),
 			data: data
 		}
 
 		if (callback && 'beforeSend' in callback) {
-			execute(callback.beforeSend, [event, _this])
+			execute(callback.beforeSend, [event, _this]);
+			EventHandler.trigger(_this.element, EVENT_KEY_BEFORE, _this);
 		}
 
-		EventHandler.trigger(_this.element, EVENT_KEY_BEFORE, _this);
-
-
+		_this._route(function (status, data) {
+			console.log(status);
+			console.log(data);
+		})
 	}
 
 	/**

@@ -10,13 +10,13 @@
 			<h3>Как это работает</h3>
 			
 			<div class="d-flex mt-5 pb-5">
-				<form action="/core/server.php?form=simple" method="POST" class="form" id="form-simple" data-vgformsender>
+				<form action="/core/server.php?form=simple" method="POST" class="form" id="form-simple" data-validate="true" data-vgformsender>
 					<input type="hidden" name="form" value="simple">
 					
 					<div class="row">
 						<div class="col-lg-4 mb-3">
 							<label for="name" class="form-label">Ваше имя</label>
-							<input type="text" name="name" id="name" class="form-control">
+							<input type="text" name="name" id="name" class="form-control" required>
 						</div>
 						<div class="col-lg-4 mb-3">
 							<label for="patronymic" class="form-label">Ваше отчество</label>

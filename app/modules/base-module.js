@@ -1,9 +1,10 @@
-import {executeAfterTransition, isEmptyObj} from "../_utils/js/functions";
+import {execute, executeAfterTransition, isEmptyObj} from "../_utils/js/functions";
 import Params from "../_utils/js/params";
 import Data from "../_utils/js/data";
 import Selectors from "../_utils/js/selectors";
 import EventHandler from "../_utils/js/event";
 import {Ajax, getSVG} from "../_utils/js/module-fn";
+import event from "../_utils/js/event";
 
 class BaseModule extends Params {
 	constructor(element, params) {
@@ -58,7 +59,7 @@ class BaseModule extends Params {
 		}
 	}
 
-	_route() {
+	_route(callback) {
 		const _this = this;
 		let $content = null;
 
@@ -82,12 +83,23 @@ class BaseModule extends Params {
 			_this.params.ajax.method = 'get';
 		}
 
-		console.log(_this.params.ajax)
+		if (_this.params.ajax.method === 'get') {
+			Ajax.get(_this.params.ajax.route, _this.params.ajax.data || {}, function (status, data) {
+				setData(data);
+				execute(callback, [status, data]);
+				EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
+			})
+		}
 
-		/*Ajax[method](_this.params.ajax.route, {}, function (status, data) {
-			setData(data);
-			EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
-		});*/
+		if (_this.params.ajax.method === 'post') {
+
+			console.log(_this.params.ajax)
+			Ajax.post(_this.params.ajax.route, {}, function (status, data) {
+				setData(data);
+				execute(callback, [status, data]);
+				EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
+			})
+		}
 	}
 
 	_dismissElement() {

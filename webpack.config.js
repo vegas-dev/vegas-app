@@ -1,6 +1,5 @@
 const nameModule = 'VGApp';
-const outputPaths = ['./public/assets/build'];
-const proxy_target = 'vgapp.dev.via';
+const outputPaths = ['./build', './public/assets/build'];
 
 const path = require('path');
 const webpack = require('webpack');
@@ -9,11 +8,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 module.exports = outputPaths.map(outputPath => {
 	return (env, argv) => {
 		let mode = argv.mode || 'development',
-			NODE_ENV = argv.mode || 'development',
 			name = nameModule.trim().toLowerCase();
-
-		if (argv.mode === 'development') mode = 'dev';
-		if ('WEBPACK_SERVE' in env && env.WEBPACK_SERVE) mode = 'serve';
 
 		let args = {
 			entry: './index.js',
@@ -41,7 +36,7 @@ module.exports = outputPaths.map(outputPath => {
 
 			plugins: [
 				new webpack.DefinePlugin({
-					NODE_ENV: JSON.stringify(NODE_ENV),
+					NODE_ENV: JSON.stringify(mode),
 					LANG: JSON.stringify('ru'),
 				}),
 				new MiniCssExtractPlugin({
@@ -50,22 +45,7 @@ module.exports = outputPaths.map(outputPath => {
 			],
 		};
 
-		if (mode === 'serve') {
-			args.devtool = 'inline-cheap-module-source-map';
-			args.cache = false;
-			args.devServer = {
-				host: 'vgapp.dev.via',
-				compress: true,
-				watchFiles: {
-					paths: ['public/**/*.php', 'app/**/*'],
-					options: {
-						usePolling: false,
-					},
-				},
-			}
-		}
-
-		if (mode === 'dev') {
+		if (mode === 'development') {
 			args.cache = false;
 			args.devtool = 'inline-cheap-module-source-map';
 			args.watch = true;
