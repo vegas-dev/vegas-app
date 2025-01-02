@@ -47,7 +47,7 @@ const Manipulator = {
 	},
 
 	set(element, name, value) {
-		if (isElement(element) && name && value) {
+		if (isElement(element) && name) {
 			element.setAttribute(name, value);
 		}
 	},

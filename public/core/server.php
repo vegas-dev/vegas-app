@@ -29,7 +29,15 @@
 	}
 	
 	if (isset($_GET['form'])) {
+		sleep(2);
+		
 		if ($_GET['form'] == 'simple') {
 			echo json_encode(['error' => 'false', 'data' => 'Всё прошло успешно']);
+		}
+		if ($_GET['form'] == 'feedback') {
+			echo json_encode(['error' => 'false', 'data' => 'Заявка отправлена']);
+		}
+		if ($_GET['form'] == 'modal') {
+			echo json_encode(['error' => 'false', 'data' => 'Форма из модалки']);
 		}
 	}

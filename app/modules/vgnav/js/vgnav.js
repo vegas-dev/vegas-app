@@ -72,7 +72,8 @@ const PARAMS_DEFAULT =  {
 	timeoutAnimation: 300,
 	ajax: {
 		route: '',
-		target: ''
+		target: '',
+		method: 'get'
 	}
 };
 

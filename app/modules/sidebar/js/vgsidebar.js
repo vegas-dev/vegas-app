@@ -30,7 +30,8 @@ const PARAMS_DEFAULT =  {
 	keyboard: true,
 	ajax: {
 		route: '',
-		target: ''
+		target: '',
+		method: 'get'
 	}
 };
 

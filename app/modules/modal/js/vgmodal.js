@@ -33,11 +33,12 @@ const PARAMS_DEFAULT =  {
 	keyboard: true,
 	ajax: {
 		route: '',
-		target: ''
+		target: '',
+		method: 'get'
 	}
 };
 
-class VgModal extends BaseModule {
+class VGModal extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
@@ -67,7 +68,7 @@ class VgModal extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this.element)) return;
 
-		this._route();
+		//this._route();
 
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
@@ -156,7 +157,7 @@ class VgModal extends BaseModule {
 	}
 }
 
-dismissTrigger(VgModal)
+dismissTrigger(VGModal)
 
 
 /**
@@ -182,11 +183,11 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	const alreadyOpen = Selectors.findOne('.vg-modal.show')
 	if (alreadyOpen && alreadyOpen !== target) {
-		VgModal.getInstance(alreadyOpen).hide()
+		VGModal.getInstance(alreadyOpen).hide()
 	}
 
-	const data = VgModal.getOrCreateInstance(target)
+	const data = VGModal.getOrCreateInstance(target)
 	data.toggle(this)
 })
 
-export default VgModal;
+export default VGModal;

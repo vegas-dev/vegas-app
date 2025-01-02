@@ -52,15 +52,10 @@ const dismissTrigger = (module, method = 'hide') => {
  * @type {{post: ajax.post, get: ajax.get, x: ((function(): (XMLHttpRequest))|*), send: ajax.send}}
  */
 const Ajax = {
-	/**
-	 * Инициализирует http запросы
-	 * @returns {XMLHttpRequest|*}
-	 */
-	x() {
+	x: function () {
 		if (typeof XMLHttpRequest !== 'undefined') {
 			return new XMLHttpRequest();
 		}
-
 		let versions = [
 			"MSXML2.XmlHttp.6.0",
 			"MSXML2.XmlHttp.5.0",
@@ -68,8 +63,9 @@ const Ajax = {
 			"MSXML2.XmlHttp.3.0",
 			"MSXML2.XmlHttp.2.0",
 			"Microsoft.XmlHttp"
-		], xhr;
+		];
 
+		let xhr;
 		for (let i = 0; i < versions.length; i++) {
 			try {
 				xhr = new ActiveXObject(versions[i]);
@@ -80,61 +76,36 @@ const Ajax = {
 		return xhr;
 	},
 
-	/**
-	 * Отправляет запросы и принимает ответ
-	 * @param url
-	 * @param method
-	 * @param data
-	 * @param callback
-	 * @param async
-	 */
-	send(url, method, data, callback, async) {
-		if (async === undefined) async = true;
-
+	send: function (url, callback, method, data, async) {
+		if (async === undefined) {
+			async = true;
+		}
 		let x = Ajax.x();
 		x.open(method, url, async);
 		x.onreadystatechange = function () {
 			if (x.readyState === 4) {
 				switch (x.status) {
 					case 200:
-						execute(callback, ['success', x.responseText]);
+						callback('success', x.responseText)
 						break;
 					default:
-						execute(callback, ['error', x.statusText]);
+						callback('error', x.statusText)
 						break;
 				}
 			}
-		}
-		x.send(data);
+		};
+		x.send(data)
 	},
 
-	/**
-	 * Отправляет и принимает GET запросы
-	 * @param url
-	 * @param data
-	 * @param callback
-	 * @param async
-	 */
-	get(url, data, callback, async) {
+	get: function (url, data, callback, async) {
 		let query = [];
-
-		if (isObject(data) && !isEmptyObj(data)) {
-			for (let key of data) {
-				query.push(encodeURIComponent(key[0]) + '=' + encodeURIComponent(key[1]));
-			}
+		for (let key of data) {
+			query.push(encodeURIComponent(key[0]) + '=' + encodeURIComponent(key[1]));
 		}
-
-		Ajax.send(url + (query.length ? '?' + query.join('&') : ''), 'GET', null, callback, async)
+		Ajax.send(url + (query.length ? '?' + query.join('&') : ''), callback, 'GET', null, async)
 	},
 
-	/**
-	 * Отправляет и принимает POST запросы
-	 * @param url
-	 * @param data
-	 * @param callback
-	 * @param async
-	 */
-	post(url, data, callback, async) {
+	post: function (url, data, callback, async) {
 		Ajax.send(url, callback, 'POST', data, async)
 	}
 };

@@ -67,7 +67,11 @@ class BaseModule extends Params {
 			return;
 		}
 
-		if (!'route' in _this.params.ajax && !_this.params.ajax.route) {
+		if (!'method' in _this.params.ajax) {
+			_this.params.ajax.method = 'get';
+		}
+
+		if (!_this.params.ajax.method && !_this.params.ajax.route) {
 			return;
 		}
 
@@ -79,27 +83,11 @@ class BaseModule extends Params {
 			if ($content) $content.innerHTML = data;
 		};
 
-		if (!'method' in _this.params.ajax) {
-			_this.params.ajax.method = 'get';
-		}
-
-		if (_this.params.ajax.method === 'get') {
-			Ajax.get(_this.params.ajax.route, _this.params.ajax.data || {}, function (status, data) {
-				setData(data);
-				execute(callback, [status, data]);
-				EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
-			})
-		}
-
-		if (_this.params.ajax.method === 'post') {
-
-			console.log(_this.params.ajax)
-			Ajax.post(_this.params.ajax.route, {}, function (status, data) {
-				setData(data);
-				execute(callback, [status, data]);
-				EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded');
-			})
-		}
+		Ajax[_this.params.ajax.method](_this.params.ajax.route, _this.params.ajax.data || {}, function (status, data) {
+			setData(data);
+			execute(callback, [status, data]);
+			EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded', [_this, status, data]);
+		});
 	}
 
 	_dismissElement() {

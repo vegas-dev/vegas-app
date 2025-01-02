@@ -35,7 +35,8 @@ const PARAMS_DEFAULT = {
 	hover: false,
 	ajax: {
 		route: '',
-		target: ''
+		target: '',
+		method: 'get'
 	}
 };
 
