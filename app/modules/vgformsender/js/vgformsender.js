@@ -2,6 +2,8 @@ import BaseModule from "../../base-module";
 import {Manipulator} from "../../../_utils/js/manipulator";
 import EventHandler from "../../../_utils/js/event";
 import VGModal from "../../modal/js/vgmodal";
+import params from "../../../_utils/js/params";
+import {mergeDeepObject} from "../../../_utils/js/functions";
 
 /**
  * Constants
@@ -28,18 +30,18 @@ const EVENT_SUBMIT_DATA_API = `submit.${NAME_KEY}.data.api`;
  * Default Params
  */
 const PARAMS_DEFAULT =  {
-	action: location.href,
-	method: 'post',
-	fields: [],
-	redirect: null,
-	isJsonParse: true,
-	isValidate: false,
-	isSubmit: false,
-	isBtnText: true,
-	isShowPass: true,
+	redirect: '',
+	validate: false,
+	submit: false,
 	alert: {
 		enabled: true,
 		type: 'modal'
+	},
+	ajax: {
+		route: '',
+		target: '',
+		method: 'get',
+		fields: [],
 	},
 	classes: {
 		general: 'vg-form-sender',
@@ -52,22 +54,17 @@ class VGFormSender extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
-		this._button = null;
-		this.button = this.element.querySelector('[type="submit"]');
+		this._button = this._element.querySelector('[type="submit"]');
 
-		this.params.action = Manipulator.get(this.element, 'action') || this.params.action;
-		this.params.method = Manipulator.get(this.element, 'method') || this.params.method;
+		this._params.ajax.route = Manipulator.get(this._element, 'action') || location.href;
+		//this._params.ajax.method = Manipulator.get(this._element, 'method') || 'get';
 
-		this.params.isValidate    = Manipulator.get(this.element, 'data-validate') === 'true';
-		this.params.isSubmit      = Manipulator.get(this.element, 'data-submit') === 'true';
-		this.params.isBtnText     = Manipulator.get(this.element, 'data-btn-text') !== 'false';
-		this.params.isJsonParse   = Manipulator.get(this.element, 'data-json-parse') !== 'false';
-		this.params.isShowPass    = Manipulator.get(this.element, 'data-show-pass') !== 'false';
-		this.params.alert.enabled = Manipulator.get(this.element, 'data-alert') !== 'false';
+		console.log(Manipulator.get(this._element, 'action'))
+		console.log(this._params);
 
-		if (this.params.fields && typeof this.params.fields == 'function') {
-			this.params.fields = this.params.fields();
-		}
+		/*if (this.params.ajax.fields && typeof this.params.ajax.fields == 'function') {
+			this.params.ajax.fields = this.params.ajax.fields();
+		}*/
 	}
 
 	static get Default() {
@@ -82,25 +79,13 @@ class VGFormSender extends BaseModule {
 		return NAME_KEY;
 	}
 
-	get button() {
-		return this._button
-	}
-
-	set button(btn) {
-		if (!btn) {
-			this._button = document.querySelector('[form="' + this.element.id + '"]');
-		} else {
-			this._button = btn;
-		}
-	}
-
 	build() {
-		this.element.classList.add(this.params.classes.general);
+		/*this.element.classList.add(this.params.classes.general);
 
-		if (this.params.isValidate) {
+		if (this.params.validate) {
 			Manipulator.set(this.element, 'novalidate', '');
 			this.element.classList.add(this.params.classes.validation);
-		}
+		}*/
 
 		// TODO сделать добавление глаза если есть ввод пароля
 
@@ -112,19 +97,19 @@ class VGFormSender extends BaseModule {
 
 		_this._alertBefore();
 
-		_this.params.ajax = {
-			route: _this.params.action,
-			method: _this.params.method.toLowerCase(),
-			data: data
-		}
+		_this.params.ajax.fields = data;
+
+		console.log(this.params)
 
 		_this._route(function (status, data) {
 			_this.element.classList.remove('was-validated');
 
-			if (typeof status === 'string' && status === 'error') {
-				_this._alertError(event, data);
-			} else if (typeof status === 'string' && status === 'success') {
-				_this._alertSuccess(event, data);
+			if (_this.params.alert.enabled) {
+				if (typeof status === 'string' && status === 'error') {
+					_this._alertError(event, data);
+				} else if (typeof status === 'string' && status === 'success') {
+					_this._alertSuccess(event, data);
+				}
 			}
 
 			if (_this.params.redirect) {
@@ -263,8 +248,6 @@ class VGFormSender extends BaseModule {
 
 	_alertCollapse(data, status) {
 		const _this = this;
-
-		console.log(_this.params)
 	}
 
 	/**
@@ -288,7 +271,7 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		return;
 	}
 
-	if (instance.params.isValidate) {
+	if (instance.params.validate) {
 		if (!instance.element.checkValidity()) {
 			event.preventDefault();
 			event.stopPropagation();
@@ -316,12 +299,12 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		return data;
 	}
 
-	if (!instance.params.isSubmit) {
+	if (!instance.params.submit) {
 		event.preventDefault();
 
 		let data = new FormData(instance.element);
-		if (typeof instance.params.fields === 'object') {
-			data = collectData(data, instance.params.fields);
+		if (typeof instance.params.ajax.fields === 'object') {
+			data = collectData(data, instance.params.ajax.fields);
 		}
 
 		return instance.request(data, event);

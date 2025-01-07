@@ -11,8 +11,8 @@ class Params {
 	}
 
 	_getParams(params, element) {
-		params = this._mergeParamsObj(params, element)
-		params = this._paramsAfterMerge(params)
+		params = this._mergeParamsObj(params, element);
+		params = this._paramsAfterMerge(params);
 		return params
 	}
 

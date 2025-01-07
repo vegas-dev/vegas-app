@@ -10,29 +10,16 @@ class BaseModule extends Params {
 	constructor(element, params) {
 		super();
 
-		this._element = null;
-		this._params = {};
+		this._element = element;
+		this._params = this._getParams(params);
 
-		this.element = element;
-		this.params = params;
-
-		Data.set(this.element, this.constructor.NAME_KEY, this)
+		Data.set(this._element, this.constructor.NAME_KEY, this)
 	}
 
-	get element() {
-		return this._element
-	}
-
-	set element(el) {
-		this._element = Selectors.get(el);
-	}
-
-	get params() {
-		return this._params
-	}
-
-	set params(params) {
-		this._params = this._getParams(params, this.element);
+	_getParams(params, element) {
+		params = this._mergeParamsObj(params, this._element)
+		params = this._paramsAfterMerge(params)
+		return params
 	}
 
 	static get NAME_KEY() {
