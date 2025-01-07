@@ -4,34 +4,19 @@ import Data from "../_utils/js/data";
 import Selectors from "../_utils/js/selectors";
 import EventHandler from "../_utils/js/event";
 import {Ajax, getSVG} from "../_utils/js/module-fn";
-import event from "../_utils/js/event";
 
 class BaseModule extends Params {
 	constructor(element, params) {
 		super();
 
 		this._element = element;
-		this._params = this._getParams(params);
+		this._params = this._getParams(params, element);
 
 		Data.set(this._element, this.constructor.NAME_KEY, this)
 	}
 
-	_getParams(params, element) {
-		params = this._mergeParamsObj(params, this._element)
-		params = this._paramsAfterMerge(params)
-		return params
-	}
-
-	static get NAME_KEY() {
-		return ''
-	}
-
-	static get NAME() {
-		return ''
-	}
-
 	static getInstance(element) {
-		return Data.get(Selectors.get(element), this.NAME_KEY)
+		return Data.get(Selectors.find(element), this.NAME_KEY)
 	}
 
 	static getOrCreateInstance(element, params = {}) {

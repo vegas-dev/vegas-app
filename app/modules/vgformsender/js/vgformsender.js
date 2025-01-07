@@ -9,6 +9,7 @@ import {mergeDeepObject} from "../../../_utils/js/functions";
  * Constants
  */
 const NAME = 'form-sender';
+const NAME_FULL = 'vgformsender';
 const NAME_KEY = 'vg.fs';
 
 /**
@@ -33,6 +34,7 @@ const PARAMS_DEFAULT =  {
 	redirect: '',
 	validate: false,
 	submit: false,
+	fields: [],
 	alert: {
 		enabled: true,
 		type: 'modal'
@@ -41,7 +43,6 @@ const PARAMS_DEFAULT =  {
 		route: '',
 		target: '',
 		method: 'get',
-		fields: [],
 	},
 	classes: {
 		general: 'vg-form-sender',
@@ -54,17 +55,7 @@ class VGFormSender extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
-		this._button = this._element.querySelector('[type="submit"]');
-
-		this._params.ajax.route = Manipulator.get(this._element, 'action') || location.href;
-		//this._params.ajax.method = Manipulator.get(this._element, 'method') || 'get';
-
-		console.log(Manipulator.get(this._element, 'action'))
-		console.log(this._params);
-
-		/*if (this.params.ajax.fields && typeof this.params.ajax.fields == 'function') {
-			this.params.ajax.fields = this.params.ajax.fields();
-		}*/
+		this._params.ajax.route = Manipulator.get(this._element, 'action');
 	}
 
 	static get Default() {
@@ -73,6 +64,10 @@ class VGFormSender extends BaseModule {
 
 	static get NAME() {
 		return NAME;
+	}
+
+	static get NAME_FULL() {
+		return NAME_FULL;
 	}
 
 	static get NAME_KEY() {

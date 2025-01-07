@@ -6,48 +6,58 @@ import {Manipulator} from "./manipulator";
  */
 
 class Params {
+	static get NAME() {
+		return ''
+	}
+
+	static get NAME_FULL() {
+		return '';
+	}
+
+	static get NAME_KEY() {
+		return ''
+	}
+
 	static get Default() {
 		return {}
 	}
 
 	_getParams(params, element) {
-		params = this._mergeParamsObj(params, element);
-		params = this._paramsAfterMerge(params);
-		return params
+		return this._mergeParams(params, element)
 	}
 
-	_paramsAfterMerge(params) {
-		let pDefault = this.constructor.Default,
-			mParams = mergeDeepObject(pDefault, params);
+	_mergeParams(params, element) {
+		let elementParams = this._getElementParams(element),
+			defaultParams = this.constructor.Default;
 
-		if (isObject(mParams) && !isEmptyObj(mParams)) {
-			for (const datum in mParams) {
-				let value = normalizeData(mParams[datum]);
+		Object.keys(elementParams).forEach(key => {
+			if (key === this.constructor.NAME_FULL) {
+				delete elementParams[key];
+			}
+		});
 
-				if (datum !== 'params') {
-					if (!(datum in pDefault)) {
-						let p = datum.split('-');
+		params = mergeDeepObject(this.constructor.Default, elementParams, params);
 
-						if (pDefault[p[0]] && p[1] in pDefault[p[0]]) {
-							pDefault[p[0]][p[1]] = value;
-						}
+		for (let key in params) {
+			if (key.indexOf('-') !== -1) {
+				let keys = key.split('-'),
+					obj = defaultParams[keys[0]];
 
-						delete mParams[datum];
-					} else {
-						mParams[datum] = value;
-					}
-				} else {
-					mParams = mergeDeepObject(mParams, value)
-					delete mParams[datum];
+				if (params[keys[0]] === defaultParams[keys[0]]) {
+					obj[keys[1]] = params[key];
 				}
+
+				params[keys[0]] = obj;
 			}
 		}
 
-		return mParams;
+		console.log(params)
+
+		return params;
 	}
 
-	_mergeParamsObj(params, element) {
-		return isElement(element) ? mergeDeepObject(Manipulator.get(element), params) : {}
+	_getElementParams(element) {
+		return isElement(element) ? Manipulator.get(element) : {}
 	}
 }
 export default Params;

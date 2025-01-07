@@ -35,28 +35,34 @@ const getSelector = element => {
 }
 
 const Selectors = {
-	get(el, container) {
-		if (!el) {
+	get(selector, container, isAll = false) {
+		if (!selector) {
 			throw new Error('Товарищ! Первый параметр не должен быть пустым!');
 		} else {
-			if (typeof el === 'string') {
-				let elm = isElement(container) ? Selectors.findOne(el, container) : Selectors.findOne(el);
-				if (elm) return elm;
-				else throw new Error('Ахпер! Не удалось найти элемент');
-			} else if (isElement(el)) {
-				return el;
+			if (typeof selector === 'string') {
+				let elm;
+
+				if (isAll) {
+					elm = [].concat(...Element.prototype.querySelectorAll.call(container, selector));
+				} else {
+					elm = Element.prototype.querySelector.call(container, selector);
+				}
+
+				if (elm) return elm; else throw new Error('Ахпер! Не удалось найти элемент');
+			} else if (!isAll && isElement(selector)) {
+				return selector;
 			} else {
 				throw new Error('КЭП! Какая-то дичь к нам залетела');
 			}
 		}
 	},
 
-	findAll(selector, element = document.documentElement) {
-		return [].concat(...Element.prototype.querySelectorAll.call(element, selector))
+	find(selector, container = document.documentElement) {
+		return Selectors.get(selector, container);
 	},
 
-	findOne(selector, element = document.documentElement) {
-		return Element.prototype.querySelector.call(element, selector)
+	findAll(selector, container = document.documentElement) {
+		return Selectors.get(selector, container, true);
 	},
 
 	prev(element, selector) {
@@ -93,13 +99,13 @@ const Selectors = {
 		if (isElement(selector)) {
 			_selector = selector;
 		} else if (typeof selector === 'string') {
-			_selector = Selectors.findOne(selector);
+			_selector = Selectors.find(selector);
 		}
 
 		let target = getSelector(_selector);
 		if (!target) return null;
 
-		let _targetSelector = Selectors.findOne(target);
+		let _targetSelector = Selectors.find(target);
 		if (_targetSelector) return  _targetSelector;
 
 		return null;
