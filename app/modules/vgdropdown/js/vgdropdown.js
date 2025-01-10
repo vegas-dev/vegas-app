@@ -1,8 +1,8 @@
 import BaseModule from "../../base-module";
-import EventHandler from "../../../_utils/js/event";
-import Selectors from "../../../_utils/js/selectors";
-import {isDisabled, noop} from "../../../_utils/js/functions";
-import Placement from "../../../_utils/js/placement";
+import EventHandler from "../../../utils/js/dom/event";
+import Selectors from "../../../utils/js/dom/selectors";
+import {isDisabled, mergeDeepObject, noop} from "../../../utils/js/functions";
+import Placement from "../../../utils/js/components/placement";
 
 const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
@@ -17,44 +17,40 @@ const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 
-const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
-const EVENT_KEYDOWN_DATA_API = `keydown.${NAME_KEY}.data.api`;
-const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEYUP_DATA_API =     `keyup.${NAME_KEY}.data.api`;
+const EVENT_KEYDOWN_DATA_API =   `keydown.${NAME_KEY}.data.api`;
+const EVENT_CLICK_DATA_API =     `click.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
-const EVENT_MOUSEOUT_DATA_API = `mouseout.${NAME_KEY}.data.api`;
-
-const PARAMS_DEFAULT = {
-	offset: [0, 2],
-	over: false,
-	backdrop: true,
-	overflow: true,
-	keyboard: true,
-	placement: 'bottom',
-	animation: true,
-	timeoutAnimation: 300,
-	hover: false,
-	ajax: {
-		route: '',
-		target: '',
-		method: 'get'
-	}
-};
+const EVENT_MOUSEOUT_DATA_API =  `mouseout.${NAME_KEY}.data.api`;
 
 class VGDropdown extends BaseModule {
 	constructor(element, params) {
 		super(element, params);
 
-		this._parent = this.element.parentNode;
-		this._drop = Selectors.get('.' + TARGET_CONTAINER, this._parent);
+		this._params = this._getParams(element, mergeDeepObject({
+			offset: [0, 2],
+			over: false,
+			backdrop: true,
+			overflow: true,
+			keyboard: true,
+			placement: 'bottom',
+			animation: true,
+			timeoutAnimation: 300,
+			hover: false,
+			ajax: {
+				route: '',
+				target: '',
+				method: 'get'
+			}
+		}, params));
+
+		this._parent = this._element.parentNode;
+		this._drop = Selectors.find('.' + TARGET_CONTAINER, this._parent);
 		this._isPlacement = false;
 
-		if (this.params.animation === false) {
-			this.params.timeoutAnimation = 10
+		if (this._params.animation === false) {
+			this._params.timeoutAnimation = 10
 		}
-	}
-
-	static get Default() {
-		return PARAMS_DEFAULT
 	}
 
 	static get NAME() {
@@ -70,10 +66,10 @@ class VGDropdown extends BaseModule {
 	}
 
 	show() {
-		if (isDisabled(this.element) || this._isShown()) return;
+		if (isDisabled(this._element) || this._isShown()) return;
 
 		const relatedTarget = {
-			relatedTarget: this.element
+			relatedTarget: this._element
 		}
 
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, relatedTarget)
@@ -87,25 +83,25 @@ class VGDropdown extends BaseModule {
 
 		this._route();
 
-		this.element.setAttribute('aria-expanded', true);
-		this.element.classList.add(CLASS_NAME_SHOW);
+		this._element.setAttribute('aria-expanded', true);
+		this._element.classList.add(CLASS_NAME_SHOW);
 		this._drop.classList.add(CLASS_NAME_SHOW);
 		this._setPlacement();
 
 		const completeCallBack = () => {
 			this._drop.classList.add(CLASS_NAME_FADE);
-			EventHandler.trigger(this.element, EVENT_KEY_SHOWN, relatedTarget)
+			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, relatedTarget)
 		}
 		this._queueCallback(completeCallBack, this._drop, true, 50);
 	}
 
 	hide() {
-		if (isDisabled(this.element) || !this._isShown()) {
+		if (isDisabled(this._element) || !this._isShown()) {
 			return;
 		}
 
 		const relatedTarget = {
-			relatedTarget: this.element
+			relatedTarget: this._element
 		}
 
 		this._completeHide(relatedTarget);
@@ -116,11 +112,11 @@ class VGDropdown extends BaseModule {
 	}
 
 	_isShown() {
-		return this.element.classList.contains(CLASS_NAME_SHOW);
+		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
 	_completeHide(relatedTarget) {
-		const hideEvent = EventHandler.trigger(this.element, EVENT_KEY_HIDE, relatedTarget)
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE, relatedTarget)
 		if (hideEvent.defaultPrevented) {
 			return;
 		}
@@ -132,14 +128,14 @@ class VGDropdown extends BaseModule {
 		}
 
 		this._drop.classList.remove(CLASS_NAME_FADE);
-		this.element.classList.remove(CLASS_NAME_SHOW);
-		this.element.setAttribute('aria-expanded', 'false');
+		this._element.classList.remove(CLASS_NAME_SHOW);
+		this._element.setAttribute('aria-expanded', 'false');
 
 		const completeCallback = () => {
 			this._drop.classList.remove(CLASS_NAME_SHOW);
-			EventHandler.trigger(this.element, EVENT_KEY_HIDDEN, relatedTarget);
+			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
 		}
-		this._queueCallback(completeCallback, this._parent, true, this.params.timeoutAnimation);
+		this._queueCallback(completeCallback, this._parent, true, this._params.timeoutAnimation);
 	}
 
 	// TODO class Placement isn't done
@@ -161,9 +157,9 @@ class VGDropdown extends BaseModule {
 			_this._drop.style.top =  placement.top + 'px';
 		}
 
-		if (_this.params.offset) {
-			_this._drop.style.paddingTop = _this.params.offset[1] + 'px';
-			_this._drop.style.paddingRight = _this.params.offset[0] + 'px';
+		if (_this._params.offset) {
+			_this._drop.style.paddingTop = _this._params.offset[1] + 'px';
+			_this._drop.style.paddingRight = _this._params.offset[0] + 'px';
 		}
 
 		_this._isPlacement = true;
@@ -172,7 +168,7 @@ class VGDropdown extends BaseModule {
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);
 
-		if (instance.params.hover) {
+		if (instance._params.hover) {
 			let currentElem = null;
 			EventHandler.on(instance._parent, EVENT_MOUSEOVER_DATA_API, function (event) {
 				if (currentElem) return;

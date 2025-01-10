@@ -1,10 +1,10 @@
 import BaseModule from "../../base-module";
-import Selectors from "../../../_utils/js/selectors";
-import Backdrop from "../../../_utils/js/backdrop";
-import Overflow from "../../../_utils/js/overflow";
-import EventHandler from "../../../_utils/js/event";
-import {isDisabled} from "../../../_utils/js/functions";
-import {dismissTrigger} from "../../../_utils/js/module-fn";
+import {isDisabled, isVisible, mergeDeepObject} from "../../../utils/js/functions";
+import EventHandler from "../../../utils/js/dom/event";
+import {dismissTrigger} from "../../module-fn";
+import Selectors from "../../../utils/js/dom/selectors";
+import Backdrop from "../../../utils/js/components/backdrop";
+import Overflow from "../../../utils/js/components/overflow";
 
 /**
  * Constants
@@ -23,27 +23,24 @@ const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
-const PARAMS_DEFAULT =  {
-	button: null,
-	backdrop: true,
-	overflow: true,
-	keyboard: true,
-	ajax: {
-		route: '',
-		target: '',
-		method: 'get'
-	}
-};
-
 class VGSidebar extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
+
+		this.params_default =  {
+			backdrop: true,
+			overflow: true,
+			keyboard: true,
+			ajax: {
+				route: '',
+				target: '',
+				method: 'get'
+			}
+		};
+		this._params = this._getParams(element, mergeDeepObject(this.params_default, params));
+
 		this._addEventListeners();
 		this._dismissElement();
-	}
-
-	static get Default() {
-		return PARAMS_DEFAULT
 	}
 
 	static get NAME() {
@@ -51,7 +48,7 @@ class VGSidebar extends BaseModule {
 	}
 
 	static get NAME_KEY() {
-		return NAME_KEY;
+		return NAME_KEY
 	}
 
 	toggle(relatedTarget) {
@@ -60,87 +57,88 @@ class VGSidebar extends BaseModule {
 
 	show(relatedTarget) {
 		const _this = this;
-		if (isDisabled(_this.element)) return;
+		if (isDisabled(_this._element)) return;
 
 		this._route();
 
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
 
-		if (_this.params.backdrop) {
+		if (_this._params.backdrop) {
 			Backdrop.show();
 		}
 
-		if (_this.params.overflow) {
+		if (_this._params.overflow) {
 			Overflow.append();
 		}
 
-		_this.element.classList.add(CLASS_NAME_SHOW);
+		_this._element.classList.add(CLASS_NAME_SHOW);
 
 		const completeCallBack = () => {
 			EventHandler.on(Selectors.findOne('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
 				_this.hide();
 			});
 
-			EventHandler.trigger(this.element, EVENT_KEY_SHOWN, { relatedTarget });
+			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
 		}
-		this._queueCallback(completeCallBack, this.element, true, 50)
+		this._queueCallback(completeCallBack, this._element, true, 50)
 	}
 
 	hide() {
 		const _this = this;
-		if (isDisabled(_this.element)) return;
+		if (isDisabled(_this._element)) return;
 
-		const hideEvent = EventHandler.trigger(this.element, EVENT_KEY_HIDE);
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
-		if (_this.params.backdrop) {
+		if (_this._params.backdrop) {
 			Backdrop.hide(function () {
-				if (_this.params.overflow) {
+				if (_this._params.overflow) {
 					Overflow.destroy();
 				}
 			});
 		}
 
-		if (_this.params.overflow) {
+		if (_this._params.overflow) {
 			Overflow.destroy();
 		}
 
-		_this.element.setAttribute('aria-expanded', false);
-		_this.element.classList.remove(CLASS_NAME_SHOW);
+		_this._element.setAttribute('aria-expanded', false);
+		_this._element.classList.remove(CLASS_NAME_SHOW);
 
-		const completeCallback = () => EventHandler.trigger(this.element, EVENT_KEY_HIDDEN);
-		this._queueCallback(completeCallback, this.element, true);
+		const completeCallback = () => EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+		this._queueCallback(completeCallback, this._element, true);
+	}
+
+	dispose() {
+		super.dispose();
 	}
 
 	_isShown() {
-		return this.element.classList.contains(CLASS_NAME_SHOW);
+		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
 	_addEventListeners() {
 		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
-			if (event.key !== 'Escape') {
-				return
+			if (event.key !== 'Escape') return;
+
+			if (this._params.keyboard) {
+				this.hide();
+				return;
 			}
 
-			if (this.params.keyboard) {
-				this.hide()
-				return
-			}
-
-			EventHandler.trigger(this.element, EVENT_KEY_HIDE_PREVENTED)
-		})
+			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
+		});
 	}
 }
 
-dismissTrigger(VGSidebar)
-
+dismissTrigger(VGSidebar);
 
 /**
  * Data API implementation
  */
 EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-	const target = Selectors.getTargetFromSelector(this);
+	const target = Selectors.getElementFromSelector(this);
 
 	if (['A', 'AREA'].includes(this.tagName)) {
 		event.preventDefault()
@@ -151,8 +149,8 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	}
 
 	this.setAttribute('aria-expanded', true);
-
 	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
+		if (isVisible(this)) this.focus();
 		this.setAttribute('aria-expanded', false);
 	})
 
@@ -162,7 +160,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	}
 
 	const data = VGSidebar.getOrCreateInstance(target)
-	data.toggle(this)
-})
+	data.toggle(this);
+});
 
 export default VGSidebar;

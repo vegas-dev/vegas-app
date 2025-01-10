@@ -83,6 +83,34 @@ const Selectors = {
 		const selector = getSelector(element)
 		return selector ? Selectors.find(selector) : null
 	},
+
+	prev(element, selector) {
+		let previous = element.previousElementSibling
+
+		while (previous) {
+			if (previous.matches(selector)) {
+				return [previous]
+			}
+
+			previous = previous.previousElementSibling
+		}
+
+		return []
+	},
+	// TODO: this is now unused; remove later along with prev()
+	next(element, selector) {
+		let next = element.nextElementSibling
+
+		while (next) {
+			if (next.matches(selector)) {
+				return [next]
+			}
+
+			next = next.nextElementSibling
+		}
+
+		return []
+	},
 }
 
 export default Selectors;

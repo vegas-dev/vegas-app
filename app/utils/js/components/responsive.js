@@ -54,8 +54,8 @@ class Responsive {
 	}
 
 	_checkResponsiveClass(module) {
-		let element = module.element,
-			params = module.params,
+		let element = module._element,
+			params = module._params,
 			current_responsive_size = 0;
 
 		if (element.classList.contains(params.classes.XXXL)) {

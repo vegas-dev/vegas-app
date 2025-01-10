@@ -1,10 +1,10 @@
 import BaseModule from "../../base-module";
-import Selectors from "../../../_utils/js/selectors";
-import Responsive from "../../../_utils/js/responsive";
-import {getSVG} from "../../../_utils/js/module-fn";
-import {execute, isDisabled, isVisible, noop, normalizeData} from "../../../_utils/js/functions";
-import EventHandler from "../../../_utils/js/event";
-import {Manipulator} from "../../../_utils/js/manipulator";
+import Selectors from "../../../utils/js/dom/selectors";
+import Responsive from "../../../utils/js/components/responsive";
+import {getSVG} from "../../module-fn";
+import {execute, isDisabled, isVisible, mergeDeepObject, noop, normalizeData} from "../../../utils/js/functions";
+import EventHandler from "../../../utils/js/dom/event";
+import {Manipulator} from "../../../utils/js/dom/manipulator";
 
 /**
  * Constants
@@ -34,66 +34,60 @@ const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
 const EVENT_RESIZE_DATA_API = `resize.${NAME_KEY}.data.api`;
 
-/**
- * Default Params
- */
-const PARAMS_DEFAULT =  {
-	breakpoint: 'lg',
-	placement: 'horizontal',
-	classes: {
-		hamburgerActive: 'vg-nav-hamburger-active',
-		hamburger: 'vg-nav-hamburger',
-		container: 'vg-nav-container',
-		wrapper: 'vg-nav-wrapper',
-		active: 'vg-nav-active',
-		expand: 'vg-nav-expand',
-		cloned: 'vg-nav-cloned',
-		hover: 'vg-nav-hover',
-		flip: 'vg-nav-flip',
-		XXXL: 'vg-nav-xxxl',
-		XXL: 'vg-nav-xxl',
-		XL: 'vg-nav-xl',
-		LG: 'vg-nav-lg',
-		MD: 'vg-nav-md',
-		SM: 'vg-nav-sm',
-		XS: 'vg-nav-xs'
-	},
-	expand: true,
-	hover: false,
-	position: true,
-	collapse: true,
-	toggle: '<span class="default"></span>',
-	hamburger: {
-		title: '',
-		body: null
-	},
-	callback: noop,
-	animation: true,
-	timeoutAnimation: 300,
-	ajax: {
-		route: '',
-		target: '',
-		method: 'get'
-	}
-};
-
 class VGNav extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
+		this._params_default = {
+			breakpoint: 'lg',
+			placement: 'horizontal',
+			classes: {
+				hamburgerActive: 'vg-nav-hamburger-active',
+				hamburger: 'vg-nav-hamburger',
+				container: 'vg-nav-container',
+				wrapper: 'vg-nav-wrapper',
+				active: 'vg-nav-active',
+				expand: 'vg-nav-expand',
+				cloned: 'vg-nav-cloned',
+				hover: 'vg-nav-hover',
+				flip: 'vg-nav-flip',
+				XXXL: 'vg-nav-xxxl',
+				XXL: 'vg-nav-xxl',
+				XL: 'vg-nav-xl',
+				LG: 'vg-nav-lg',
+				MD: 'vg-nav-md',
+				SM: 'vg-nav-sm',
+				XS: 'vg-nav-xs'
+			},
+			expand: true,
+			hover: false,
+			position: true,
+			collapse: true,
+			toggle: '<span class="default"></span>',
+			hamburger: {
+				title: '',
+				body: null
+			},
+			callback: noop,
+			animation: true,
+			timeoutAnimation: 300,
+			ajax: {
+				route: '',
+				target: '',
+				method: 'get'
+			}
+		};
+		this._params = this._getParams(element, mergeDeepObject(this._params_default, params));
+
 		this._navigation = null;
-		this.navigation = '.' + this.params.classes.wrapper;
+		this.navigation = '.' + this._params.classes.wrapper;
 
 		this.movedLinks = [];
-		this.$links = Selectors.findAll('.' + this.params.classes.wrapper + ' > li', this.navigation)
+		this.$links = Selectors.findAll('.' + this._params.classes.wrapper + ' > li', this.navigation)
 
-		if (this.params.animation === false) {
-			this.params.timeoutAnimation = 10
+		if (this._params.animation === false) {
+			this._params.timeoutAnimation = 10
 		}
-	}
-
-	static get Default() {
-		return PARAMS_DEFAULT
 	}
 
 	static get NAME() {
@@ -109,17 +103,17 @@ class VGNav extends BaseModule {
 	}
 
 	set navigation(el) {
-		this._navigation = Selectors.get(el, this.element);
+		this._navigation = Selectors.get(el, this._element);
 	}
 
 	build() {
 		if (!this.navigation) return;
 
-		let params = this.params;
+		let params = this._params;
 
 		// Вешаем основные классы
-		this.element.classList.add(params.classes.container);
-		this.element.classList.add('vg-nav-' + params.placement);
+		this._element.classList.add(params.classes.container);
+		this._element.classList.add('vg-nav-' + params.placement);
 
 		// Если нужно оставить список меню или установить медиа точку
 		if (params.breakpoint === null) {
@@ -127,23 +121,23 @@ class VGNav extends BaseModule {
 		}
 
 		if (params.breakpoint === null || !params.expand) {
-			this.element.classList.add(params.classes.expand);
+			this._element.classList.add(params.classes.expand);
 		} else {
-			this.element.classList.add('vg-nav-' + params.breakpoint);
+			this._element.classList.add('vg-nav-' + params.breakpoint);
 		}
 
 		// Меню срабатывает при наведении, если это не мобильное устройство
 		if (params.hover) {
-			this.element.classList.add(params.classes.hover);
+			this._element.classList.add(params.classes.hover);
 
 			if (Responsive.checkMobileOrTablet()) {
-				this.element.classList.remove(params.classes.hover);
+				this._element.classList.remove(params.classes.hover);
 			}
 		}
 
 		// Устанавливаем гамбургер, если его нет в разметке
 		if (params.expand && !params.hamburger.body) {
-			let isHamburger = Selectors.findOne('.' + params.classes.hamburger, this.element);
+			let isHamburger = Selectors.findOne('.' + params.classes.hamburger, this._element);
 
 			if (isHamburger === null) {
 				let mTitle = '',
@@ -157,13 +151,13 @@ class VGNav extends BaseModule {
 					hamburger = params.hamburger.body;
 				}
 
-				this.element.insertAdjacentHTML('afterbegin','<a href="#sidebar-nav" class="' + params.classes.hamburger + '" data-vg-toggle="sidebar">' + mTitle + hamburger +'</a>');
+				this._element.insertAdjacentHTML('afterbegin','<a href="#sidebar-nav" class="' + params.classes.hamburger + '" data-vg-toggle="sidebar">' + mTitle + hamburger +'</a>');
 			}
 		}
 
 		// Устанавливаем указатель переключателя
 		if (params.toggle) {
-			let $dropdown_a = [...Selectors.findAll('.dropdown-mega > a, .dropdown > a', this.element)],
+			let $dropdown_a = [...Selectors.findAll('.dropdown-mega > a, .dropdown > a', this._element)],
 				toggle = '<span class="toggle">' + params.toggle + '</span>';
 
 			if ($dropdown_a.length) {
@@ -180,8 +174,8 @@ class VGNav extends BaseModule {
 			setCollapse(this);
 		}
 
-		if ('afterInit' in this.params.callback) {
-			execute(this.params.callback.afterInit, [this]);
+		if ('afterInit' in this._params.callback) {
+			execute(this._params.callback.afterInit, [this]);
 		}
 
 		/**
@@ -376,7 +370,7 @@ class VGNav extends BaseModule {
 
 		let drops = Selectors.findAll('.dropdown', instance._navigation)
 
-		if (instance.params.hover) {
+		if (instance._params.hover) {
 			[...drops].forEach(function (el) {
 				let currentElem = null;
 				EventHandler.on(el, EVENT_MOUSEOVER_DATA_API, function (event) {
@@ -418,8 +412,8 @@ class VGNav extends BaseModule {
 					return;
 				}
 
-				if ('click' in instance.params.callback) {
-					execute(instance.params.callback.click, [this]);
+				if ('click' in instance._params.callback) {
+					execute(instance._params.callback.click, [this]);
 				}
 
 				event.preventDefault();
@@ -452,7 +446,7 @@ class VGNav extends BaseModule {
 		}
 
 		const vgNavSidebar = document.getElementById('sidebar-nav');
-		let hamburger = instance.element.querySelector('.' + instance.params.classes.hamburger);
+		let hamburger = instance._element.querySelector('.' + instance._params.classes.hamburger);
 
 		if (vgNavSidebar && hamburger) {
 			vgNavSidebar.addEventListener('vg.sidebar.show', function () {

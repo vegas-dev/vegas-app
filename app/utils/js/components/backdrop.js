@@ -1,6 +1,6 @@
-import {execute} from "./functions";
-import Selectors from "./selectors";
-import EventHandler from "./event";
+import {execute} from "../functions";
+import Selectors from "../dom/selectors";
+import EventHandler from "../dom/event";
 import Overflow from "./overflow";
 
 const NAME = 'backdrop'

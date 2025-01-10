@@ -1,26 +1,26 @@
 // css классы по умолчанию
-import "./src/utils/scss/default.scss";
+import "./app/utils/scss/default.scss";
 
 // vgsidebar
-import "./src/modules/vgsidebar/scss/vgsidebar.scss";
-import VGSidebar from "./src/modules/vgsidebar/js/vgsidebar";
-
-/*
-// dropdown
-import "./app/modules/dropdown/scss/vgdropdown.scss";
-import VGDropdown from "./app/modules/dropdown/js/vgdropdown";
-
-// modal
-import "./app/modules/modal/scss/vgmodal.scss";
-import VgModal from "./app/modules/modal/js/vgmodal";
+import "./app/modules/vgsidebar/scss/vgsidebar.scss";
+import VGSidebar from "./app/modules/vgsidebar/js/vgsidebar";
 
 // nav
 import "./app/modules/vgnav/scss/vgnav.scss";
-import VGNav from "./app/modules/vgnav/js/vgnav";*/
+import VGNav from "./app/modules/vgnav/js/vgnav";
+
+// dropdown
+import "./app/modules/vgdropdown/scss/vgdropdown.scss";
+import VGDropdown from "./app/modules/vgdropdown/js/vgdropdown";
+
+// modal
+import "./app/modules/vgmodal/scss/vgmodal.scss";
+import VGModal from "./app/modules/vgmodal/js/vgmodal";
 
 // form sender
-//import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
+import "./app/modules/vgformsender/scss/vgformsender.scss";
+import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
 
 export {
-	VGSidebar
+	VGSidebar, VGNav, VGDropdown, VGModal, VGFormSender
 }

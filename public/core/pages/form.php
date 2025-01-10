@@ -10,7 +10,7 @@
 			<h3>Как это работает</h3>
 			
 			<div class="d-flex mt-5 pb-5">
-				<form action="/core/server.php?form=simple" method="POST" data-alert-type="collapse" data-submit="true" class="form" id="form-simple" data-vgformsender>
+				<form action="/core/server.php?form=simple" method="POST" data-alert-type="collapse" class="form" id="form-simple" data-vgformsender>
 					<input type="hidden" name="form" value="simple">
 					
 					<div class="row">
@@ -73,7 +73,7 @@
 			</div>
 			
 			<div class="mt-5">
-				<form action="/core/server.php?form=feedback" method="POST" data-validate="true" data-alert-enabled="false" data-redirect="#" id="form-feedback" data-vgformsender>
+				<form action="/core/server.php?form=feedback" method="POST" data-validate="true" id="form-feedback" data-vgformsender>
 					<input type="hidden" name="form" value="feedback">
 					
 					<div class="row">
@@ -110,7 +110,7 @@
 	</div>
 </div>
 
-<!--<div class="modal fade" id="modal-form">
+<div class="modal fade" id="modal-form">
 	<div class="modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header">
@@ -118,7 +118,7 @@
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				<form action="/core/server.php?form=modal" method="post" id="form-in-modal" data-vgformsender>
+				<form action="/core/server.php?form=modal" method="post" data-show-pass="true" id="form-in-modal" data-vgformsender>
 					<div class="row">
 						<div class="col-12">
 							<div class="form-floating mb-3">
@@ -186,4 +186,4 @@
 			</div>
 		</div>
 	</div>
-</div>-->
+</div>

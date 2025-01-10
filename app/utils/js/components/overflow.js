@@ -1,4 +1,4 @@
-import {Manipulator} from "./manipulator";
+import {Manipulator} from "../dom/manipulator";
 
 /**
  * Класс Overflow

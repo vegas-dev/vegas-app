@@ -1,4 +1,4 @@
-import {mergeDeepObject, normalizeData} from "./functions";
+import {mergeDeepObject, normalizeData} from "../functions";
 
 /**
  * Класс Placement, определяет и устанавливает местоположение элемента на странице.

@@ -1,30 +1,29 @@
-import {execute, executeAfterTransition, isEmptyObj} from "../_utils/js/functions";
-import Params from "../_utils/js/params";
-import Data from "../_utils/js/data";
-import Selectors from "../_utils/js/selectors";
-import EventHandler from "../_utils/js/event";
-import {Ajax, getSVG} from "../_utils/js/module-fn";
+import {execute, executeAfterTransition, isEmptyObj} from "../utils/js/functions";
+import Selectors from "../utils/js/dom/selectors";
+import Data from "../utils/js/dom/data";
+import Params from "../utils/js/components/params";
+import params from "../utils/js/components/params";
+import EventHandler from "../utils/js/dom/event";
+import {Ajax, getSVG} from "./module-fn";
 
-class BaseModule extends Params {
-	constructor(element, params) {
-		super();
+
+class BaseModule {
+	constructor(element, params = {}) {
+		if (!element) return
 
 		this._element = element;
-		this._params = this._getParams(params, element);
+		this._params = {};
 
 		Data.set(this._element, this.constructor.NAME_KEY, this)
 	}
 
-	static getInstance(element) {
-		return Data.get(Selectors.find(element), this.NAME_KEY)
-	}
-
-	static getOrCreateInstance(element, params = {}) {
-		return this.getInstance(element) || new this(element, !isEmptyObj(params) ? params : {})
+	_getParams(element, params) {
+		return new Params(params, element).get();
 	}
 
 	dispose() {
-		Data.remove(this.element, this.constructor.NAME_KEY)
+		Data.remove(this._element, this.constructor.NAME_KEY);
+		EventHandler.off(this._element, this.constructor.EVENT_KEY)
 
 		for (const propertyName of Object.getOwnPropertyNames(this)) {
 			this[propertyName] = null
@@ -35,36 +34,35 @@ class BaseModule extends Params {
 		const _this = this;
 		let $content = null;
 
-		if (!_this.params.hasOwnProperty('ajax')) {
+		if (!_this._params.hasOwnProperty('ajax')) {
 			return;
 		}
 
-		if (!'method' in _this.params.ajax) {
-			_this.params.ajax.method = 'get';
-		}
-
-		if (!_this.params.ajax.method && !_this.params.ajax.route) {
+		if (!_this._params.ajax.route) {
 			return;
 		}
 
-		if ('target' in _this.params.ajax && _this.params.ajax.target) {
-			$content = Selectors.findOne(_this.params.ajax.target);
+		if (!'method' in _this._params.ajax) {
+			_this._params.ajax.method = 'get';
+		}
+
+		if ('target' in _this._params.ajax && _this._params.ajax.target) {
+			$content = Selectors.findOne(_this._params.ajax.target);
 		}
 
 		const setData = (data) => {
 			if ($content) $content.innerHTML = data;
 		};
 
-		Ajax[_this.params.ajax.method](_this.params.ajax.route, _this.params.ajax.data || {}, function (status, data) {
+		Ajax[_this._params.ajax.method](_this._params.ajax.route, _this._params.ajax.data || {}, function (status, data) {
 			setData(data);
 			execute(callback, [status, data]);
-			EventHandler.trigger(_this.element, _this.NAME_KEY + '.loaded', [_this, status, data]);
 		});
 	}
 
 	_dismissElement() {
 		let cross = getSVG('cross'),
-			button = this.element.querySelector('.vg-btn-close');
+			button = this._element.querySelector('.vg-btn-close');
 
 		if (button) {
 			let svg = button.querySelector('svg');
@@ -74,6 +72,22 @@ class BaseModule extends Params {
 
 	_queueCallback(callback, element, isAnimated = true, timeOutMs) {
 		executeAfterTransition(callback, element, isAnimated, timeOutMs);
+	}
+
+	static getInstance(element) {
+		return Data.get(Selectors.find(element), this.NAME_KEY)
+	}
+
+	static getOrCreateInstance(element, params = {}) {
+		return this.getInstance(element) || new this(element, !isEmptyObj(params) ? params : {})
+	}
+
+	static get DATA_KEY() {
+		return `vg.${this.NAME}`
+	}
+
+	static get EVENT_KEY() {
+		return `.${this.DATA_KEY}`
 	}
 }
 
