@@ -37,6 +37,11 @@ a {
 	text-decoration: none;
 }
 
+.bordered {
+	border: 1px solid var(--bs-border-color);
+	border-radius: var(--bs-border-radius);
+}
+
 /* Header */
 .header {
 	position: relative;

@@ -51,14 +51,14 @@ class VGCollapse extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this._element)) return;
 
-
+		console.log('show')
 	}
 
 	hide() {
 		const _this = this;
 		if (isDisabled(_this._element)) return;
 
-
+		console.log('hide')
 	}
 
 	dispose() {
@@ -78,10 +78,9 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 		event.preventDefault()
 	}
 
-	let target = Selectors.getSelectorFromElement(this);
-	if (!target) return;
-
-	VGCollapse.getOrCreateInstance(target, { toggle: false }).toggle()
+	Selectors.getMultipleElementsFromSelector(this).forEach(function (element) {
+		VGCollapse.getOrCreateInstance(element, {toggle: false}).toggle();
+	});
 })
 
 export default VGCollapse;
