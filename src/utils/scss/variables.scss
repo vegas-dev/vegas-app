@@ -1,0 +1,32 @@
+// -- Backgrounds
+$bg-color:          #fff !default;
+
+// -- Colors
+$color:             #000000 !default;
+
+// -- Shadows
+$box-shadow:        0 8px 14px 5px rgba(0, 0, 0, 0.2) !default;
+
+// -- Borders
+$border-color:      rgba(0, 0, 0, .2) !default;
+
+// -- Transitions
+$transition-base:   all .5s ease-in-out !default;
+
+// -- Backdrop
+$backdrop-bg:       rgba(0, 0, 0, 1) !default;
+$backdrop-opacity:  .4 !default;
+
+// Z-indexes
+$sidebar-index:  1040;
+$dropdown-index: 1010;
+$modal-index:    1040;
+$backdrop-index: 999;
+
+// Backdrop map
+$backdrop-map: (
+		bg:         $backdrop-bg,
+		opacity:    $backdrop-opacity,
+		z-index:    $backdrop-index,
+		transition: $transition-base,
+)

@@ -1,0 +1,11 @@
+@mixin mix-vars($module, $properties) {
+	@each $key, $value in $properties {
+		@if (is-map($value)) {
+			@each $k, $v in $value {
+				--vg-#{$module}-#{$key}-#{$k}: #{$v}
+			}
+		} @else {
+			--vg-#{$module}-#{$key}: #{$value}
+		}
+	}
+}

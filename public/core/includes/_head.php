@@ -9,3 +9,4 @@
 <!-- Scripts -->
 <script src="/assets/build/vgapp.js"></script>
 <script src="/assets/demo/js/script.js"></script>
+<script src="/assets/demo/js/listeners.js"></script>
