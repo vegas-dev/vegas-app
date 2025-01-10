@@ -2,18 +2,17 @@ import {execute, executeAfterTransition, isEmptyObj} from "../utils/js/functions
 import Selectors from "../utils/js/dom/selectors";
 import Data from "../utils/js/dom/data";
 import Params from "../utils/js/components/params";
-import params from "../utils/js/components/params";
 import EventHandler from "../utils/js/dom/event";
 import {Ajax, getSVG} from "./module-fn";
 
-
 class BaseModule {
-	constructor(element, params = {}) {
+	constructor(element) {
 		if (!element) return
 
-		this._element = element;
-		this._params = {};
+		this._element = Selectors.find(element);
+		if (!this._element) return;
 
+		this._params = {};
 		Data.set(this._element, this.constructor.NAME_KEY, this)
 	}
 
@@ -47,7 +46,7 @@ class BaseModule {
 		}
 
 		if ('target' in _this._params.ajax && _this._params.ajax.target) {
-			$content = Selectors.findOne(_this._params.ajax.target);
+			$content = Selectors.find(_this._params.ajax.target);
 		}
 
 		const setData = (data) => {

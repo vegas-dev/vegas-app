@@ -20,7 +20,7 @@ class Backdrop {
 	}
 
 	static _append() {
-		if (Selectors.findOne('.' + CLASS_NAME)) {
+		if (Selectors.find('.' + CLASS_NAME)) {
 			return false;
 		}
 
@@ -40,7 +40,7 @@ class Backdrop {
 	}
 
 	static _destroy() {
-		let element = Selectors.findOne('.' + CLASS_NAME);
+		let element = Selectors.find('.' + CLASS_NAME);
 		if (!element) return;
 
 		element.classList.remove(CLASS_NAME_FADE);

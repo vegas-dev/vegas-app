@@ -13,6 +13,9 @@
 		$bodyClass = 'page';
 		
 		switch ($get['module']) {
+			case 'collapse':
+				$content = file_get_contents(__DIR__.'/pages/collapse.php');
+				break;
 			case 'form-sender':
 				$content = file_get_contents(__DIR__.'/pages/form.php');
 				break;

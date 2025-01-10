@@ -5,6 +5,10 @@ import "./app/utils/scss/default.scss";
 import "./app/modules/vgsidebar/scss/vgsidebar.scss";
 import VGSidebar from "./app/modules/vgsidebar/js/vgsidebar";
 
+// vgcollapse
+import "./app/modules/vgcollapse/scss/vgcollapse.scss";
+import VGCollapse from "./app/modules/vgcollapse/js/vgcollapse";
+
 // nav
 import "./app/modules/vgnav/scss/vgnav.scss";
 import VGNav from "./app/modules/vgnav/js/vgnav";
@@ -22,5 +26,5 @@ import "./app/modules/vgformsender/scss/vgformsender.scss";
 import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
 
 export {
-	VGSidebar, VGNav, VGDropdown, VGModal, VGFormSender
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender
 }

@@ -27,7 +27,7 @@ class VGSidebar extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
-		this.params_default =  {
+		this._params = this._getParams(element, mergeDeepObject({
 			backdrop: true,
 			overflow: true,
 			keyboard: true,
@@ -36,8 +36,7 @@ class VGSidebar extends BaseModule {
 				target: '',
 				method: 'get'
 			}
-		};
-		this._params = this._getParams(element, mergeDeepObject(this.params_default, params));
+		}, params));
 
 		this._addEventListeners();
 		this._dismissElement();
@@ -75,7 +74,7 @@ class VGSidebar extends BaseModule {
 		_this._element.classList.add(CLASS_NAME_SHOW);
 
 		const completeCallBack = () => {
-			EventHandler.on(Selectors.findOne('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
+			EventHandler.on(Selectors.find('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
 				_this.hide();
 			});
 
@@ -154,7 +153,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 		this.setAttribute('aria-expanded', false);
 	})
 
-	const alreadyOpen = Selectors.findOne('.vg-sidebar.show')
+	const alreadyOpen = Selectors.find('.vg-sidebar.show')
 	if (alreadyOpen && alreadyOpen !== target) {
 		VGSidebar.getInstance(alreadyOpen).hide()
 	}

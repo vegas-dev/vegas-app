@@ -50,6 +50,12 @@
 											</a>
 										</li>
 										<li>
+											<a href="/?module=collapse">
+												<span>VGCollapse</span>
+												<small>Сворачивающийся блок</small>
+											</a>
+										</li>
+										<li>
 											<a href="/?module=dropdown">
 												<span>VGDropdown</span>
 												<small>Выпадающий список</small>

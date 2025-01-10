@@ -250,10 +250,7 @@ class VGDropdown extends BaseModule {
 		event.preventDefault()
 
 		const getToggleButton = this.matches(SELECTOR_DATA_TOGGLE) ?
-			this :
-			(Selectors.prev(this, SELECTOR_DATA_TOGGLE)[0] ||
-				Selectors.next(this, SELECTOR_DATA_TOGGLE)[0] ||
-				Selectors.findOne(SELECTOR_DATA_TOGGLE, event.delegateTarget.parentNode))
+			this : (Selectors.find(SELECTOR_DATA_TOGGLE, event.delegateTarget.parentNode))
 
 		const instance = VGDropdown.getOrCreateInstance(getToggleButton)
 

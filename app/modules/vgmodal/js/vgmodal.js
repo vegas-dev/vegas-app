@@ -41,7 +41,7 @@ class VGModal extends BaseModule {
 			}
 		}, params));
 
-		this._dialog = Selectors.findOne(SELECTOR_DIALOG, this._element)
+		this._dialog = Selectors.find(SELECTOR_DIALOG, this._element)
 
 		this._addEventListeners();
 		this._dismissElement();
@@ -176,7 +176,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 		this.setAttribute('aria-expanded', false);
 	})
 
-	const alreadyOpen = Selectors.findOne('.vg-modal.show')
+	const alreadyOpen = Selectors.find('.vg-modal.show')
 	if (alreadyOpen && alreadyOpen !== target) {
 		VGModal.getInstance(alreadyOpen).hide()
 	}

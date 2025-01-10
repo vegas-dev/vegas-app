@@ -36,9 +36,9 @@ const EVENT_RESIZE_DATA_API = `resize.${NAME_KEY}.data.api`;
 
 class VGNav extends BaseModule {
 	constructor(element, params = {}) {
-		super(element, params);
+		super(element);
 
-		this._params_default = {
+		this._params = this._getParams(element, mergeDeepObject({
 			breakpoint: 'lg',
 			placement: 'horizontal',
 			classes: {
@@ -76,8 +76,7 @@ class VGNav extends BaseModule {
 				target: '',
 				method: 'get'
 			}
-		};
-		this._params = this._getParams(element, mergeDeepObject(this._params_default, params));
+		}, params));
 
 		this._navigation = null;
 		this.navigation = '.' + this._params.classes.wrapper;
@@ -103,7 +102,9 @@ class VGNav extends BaseModule {
 	}
 
 	set navigation(el) {
-		this._navigation = Selectors.get(el, this._element);
+		let elm = Selectors.find(el, this._element);
+		if (!elm) return;
+		this._navigation = elm;
 	}
 
 	build() {
@@ -137,7 +138,7 @@ class VGNav extends BaseModule {
 
 		// Устанавливаем гамбургер, если его нет в разметке
 		if (params.expand && !params.hamburger.body) {
-			let isHamburger = Selectors.findOne('.' + params.classes.hamburger, this._element);
+			let isHamburger = Selectors.find('.' + params.classes.hamburger, this._element);
 
 			if (isHamburger === null) {
 				let mTitle = '',
@@ -186,14 +187,14 @@ class VGNav extends BaseModule {
 		function setCollapse(_this) {
 			let width_navigation_responsive = _this.navigation.clientWidth,
 				width_all_links_responsive = 0,
-				$dots = Selectors.findOne('.dots', _this.navigation),
+				$dots = Selectors.find('.dots', _this.navigation),
 				_dots = getSVG('dots');
 
 			if (_this.$links.length) {
 				if ($dots) {
 					width_all_links_responsive = $dots.clientWidth
 				} else {
-					let $a = Selectors.findOne('a', _this.$links[0]),
+					let $a = Selectors.find('a', _this.$links[0]),
 						$linkStyle = getComputedStyle($a),
 						paddingLeft = normalizeData($linkStyle.paddingLeft.slice(0, -2)),
 						paddingRight =  normalizeData($linkStyle.paddingRight.slice(0, -2)),
@@ -269,7 +270,7 @@ class VGNav extends BaseModule {
 		const showEvent = EventHandler.trigger(target, EVENT_KEY_SHOW, { relatedTarget });
 		if (showEvent.defaultPrevented) return;
 
-		let drop = Selectors.findOne('.dropdown-content', target),
+		let drop = Selectors.find('.dropdown-content', target),
 			link = target.firstElementChild;
 
 		if (link) link.setAttribute('aria-expanded', 'true');

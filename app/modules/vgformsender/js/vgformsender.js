@@ -53,7 +53,7 @@ class VGFormSender extends BaseModule {
 
 		this._params.ajax.route = Manipulator.get(this._element, 'action').toLowerCase();
 		this._params.ajax.method = Manipulator.get(this._element, 'method').toLowerCase();
-		this._button = Selectors.findOne('[type="submit"]', this._element) || Selectors.findOne('[form="' + this._element.id + '"]') || null;
+		this._button = Selectors.find('[type="submit"]', this._element) || Selectors.find('[form="' + this._element.id + '"]') || null;
 
 		this._params.isBtnText   = Manipulator.get(this._element, 'data-btn-text') !== 'false';
 		this._params.isJsonParse = Manipulator.get(this._element, 'data-json-parse') !== 'false';
