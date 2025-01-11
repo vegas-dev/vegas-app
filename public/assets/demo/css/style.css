@@ -10,6 +10,11 @@
 	--vg-sidebar-backdrop-opacity: 0.15;
 }
 
+[data-bs-theme="dark"] .vg-loader {
+	--vg-loader-border-color: rgba(255, 255, 255, .2);
+	--vg-loader-color: rgba(255, 255, 255, 1);
+}
+
 [data-bs-theme="dark"] .vg-dropdown {
 	--vg-dropdown-bg-color: var(--bs-secondary-bg);
 	--vg-dropdown-color: var(--bs-body-color);

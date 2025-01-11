@@ -33,6 +33,10 @@ class BaseModule {
 		const _this = this;
 		let $content = null;
 
+		const setData = (data) => {
+			if ($content) $content.innerHTML = data;
+		};
+
 		if (!_this._params.hasOwnProperty('ajax')) {
 			return;
 		}
@@ -49,9 +53,9 @@ class BaseModule {
 			$content = Selectors.find(_this._params.ajax.target);
 		}
 
-		const setData = (data) => {
-			if ($content) $content.innerHTML = data;
-		};
+		if ('loader' in _this._params.ajax && _this._params.ajax.loader) {
+			setData('<div class="vg-loader"></div>');
+		}
 
 		Ajax[_this._params.ajax.method](_this._params.ajax.route, _this._params.ajax.data || {}, function (status, data) {
 			setData(data);

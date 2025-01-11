@@ -233,8 +233,20 @@ const triggerTransitionEnd = element => {
 }
 
 /**
+ * Трюк для перезапуска анимации элемента
+ *
+ * @param {HTMLElement} element
+ * @return void
+ *
+ * @смотри https://www.charistheo.io/blog/2021/02/restart-a-css-animation-with-javascript/#restarting-a-css-animation
+ */
+const reflow = element => {
+	element.offsetHeight // eslint-disable-line no-unused-expressions
+}
+
+/**
  * Noop
  */
 const noop = () => {};
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, noop}
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop}

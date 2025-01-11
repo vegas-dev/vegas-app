@@ -32,7 +32,7 @@
 	<div class="vg-sidebar-footer"></div>
 </div>
 
-<div class="vg-sidebar right" id="sidebar-right" data-params='{"ajax": {"route": "/core/server.php?sidebar=right", "target": "#sidebar-ajax-content"}}'>
+<div class="vg-sidebar right" id="sidebar-right" data-params='{"ajax": {"route": "/core/server.php?sidebar=right", "target": "#sidebar-ajax-content", "loader": true}}'>
 	<div class="vg-sidebar-header">
 		<div class="vg-sidebar-header--title">Панель справа</div>
 		<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" aria-label="Close"></button>
@@ -45,12 +45,14 @@
 	</div>
 </div>
 
-<div class="vg-sidebar top" id="sidebar-top" data-backdrop="false" data-overflow="true">
+<div class="vg-sidebar top" id="sidebar-top" data-backdrop="false" data-overflow="false" data-params='{"ajax": {"route": "/core/server.php?sidebar=top", "target": "#sidebar-ajax-content-top", "loader": true}}'>
 	<div class="vg-sidebar-header">
 		<div class="vg-sidebar-header--title">Панель сверху</div>
 		<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" data-vg-target="#sidebar-top" aria-label="Close"></button>
 	</div>
-	<div class="vg-sidebar-body"></div>
+	<div class="vg-sidebar-body">
+		<div id="sidebar-ajax-content-top"></div>
+	</div>
 	<div class="vg-sidebar-footer"></div>
 </div>
 

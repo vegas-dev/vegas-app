@@ -6,7 +6,6 @@ import "./app/modules/vgsidebar/scss/vgsidebar.scss";
 import VGSidebar from "./app/modules/vgsidebar/js/vgsidebar";
 
 // vgcollapse
-import "./app/modules/vgcollapse/scss/vgcollapse.scss";
 import VGCollapse from "./app/modules/vgcollapse/js/vgcollapse";
 
 // nav

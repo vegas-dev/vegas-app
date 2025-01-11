@@ -8,6 +8,7 @@
 	$get = $_GET;
 
 	if (isset($_GET['sidebar'])) {
+		sleep(2);
 		if ($_GET['sidebar'] == 'right') {
 			echo 'Привет мир справа';
 		}
@@ -39,5 +40,13 @@
 		}
 		if ($_GET['form'] == 'modal') {
 			echo json_encode(['error' => 'false', 'data' => 'Форма из модалки']);
+		}
+	}
+	
+	if (isset($_GET['collapse'])) {
+		sleep(2);
+		
+		if ($_GET['collapse'] == 'ajax') {
+			echo '<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci cum debitis deserunt dolore ipsa iure maiores neque odit, optio placeat praesentium quam, quasi quo.</p><p>Consequatur neque nulla praesentium quisquam similique?</p>';
 		}
 	}

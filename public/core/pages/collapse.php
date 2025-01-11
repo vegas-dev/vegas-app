@@ -10,8 +10,10 @@
 			<h3>Как это работает</h3>
 
 			<div class="mt-5">
-				<a href="#example-simple" data-vg-toggle="collapse" aria-expanded="true" class="btn btn-primary">Скрыть контент</a>
+				<a href="#example-simple" data-vg-toggle="collapse" aria-expanded="true" class="btn btn-primary" data-hide-text="Скрыть контент" data-show-text="Показать контент">Скрыть контент</a>
+				<a href="#example-ajax" data-vg-toggle="collapse" aria-expanded="false" class="btn btn-primary vg-collapsed">С загрузкой контента</a>
 			</div>
+
 			<div class="vg-collapse show mt-3" id="example-simple">
 				<div class="p-3 bordered">
 					<p>
@@ -35,6 +37,12 @@
 						Asperiores dolore dolorem eligendi eos eveniet expedita itaque nesciunt nisi obcaecati pariatur
 						praesentium recusandae rerum, sapiente sequi soluta suscipit totam veniam voluptatibus.
 					</p>
+				</div>
+			</div>
+
+			<div class="vg-collapse mt-3" data-params='{"ajax": {"route": "/core/server.php?collapse=ajax", "target": "#example-ajax-content", "loader": true}}' id="example-ajax">
+				<div class="p-3 bordered">
+					<div class="position-relative" id="example-ajax-content"></div>
 				</div>
 			</div>
 		</div>
