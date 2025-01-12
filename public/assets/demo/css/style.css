@@ -34,6 +34,11 @@
 	--vg-nav-drop-item-border-color-hover: var(--bs-border-color);
 }
 
+[data-bs-theme="dark"] .vg-modal {
+	--vg-modal-bg-color: var(--bs-secondary-bg);
+	--vg-modal-color: var(--bs-body-color);
+}
+
 [data-bs-theme="dark"] .vg-btn-close svg polygon {
 	fill: var(--bs-body-color);
 }

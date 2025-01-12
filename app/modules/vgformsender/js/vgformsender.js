@@ -250,29 +250,22 @@ class VGFormSender extends BaseModule {
 		});
 
 		let $modal = Selectors.find('.' + _this._params.classes.alertModal);
-		if (!$modal) {
-			$modal = document.createElement('div');
-			$modal.classList.add('vg-modal', 'fade', _this._params.classes.alertModal);
-			$modal.id = _this._params.classes.general + '-' + makeRandomString();
+		if ($modal) $modal.remove();
 
-			let dialog = document.createElement('div');
-			dialog.classList.add('vg-modal-dialog', 'vg-modal-md');
+		let id = _this._params.classes.general + '-' + makeRandomString();
+		VGModal.init(id, {
+			classes: {
+				alert: _this._params.classes.alertModal
+			}
+		}, function (self) {
+			let element = self._element;
+			element.classList.add(_this._params.classes.alertModal);
 
-			let content = document.createElement('div');
-			content.classList.add('vg-modal-content');
+			let $body = Selectors.find('.vg-modal-body', element);
+			if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
 
-			let body = document.createElement('div');
-			body.classList.add('vg-modal-body');
-
-			content.append(body);
-			dialog.append(content);
-			$modal.append(dialog);
-		}
-
-		$modal.append(_this.setDataRelationStatus($modal, status, data, 'modal'));
-		document.body.append($modal);
-
-		VGModal.getOrCreateInstance($modal).toggle();
+			self.toggle();
+		});
 	}
 
 	_alertCollapse(data, status) {

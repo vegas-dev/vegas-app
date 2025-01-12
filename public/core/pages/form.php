@@ -110,7 +110,7 @@
 	</div>
 </div>
 
-<!--<div class="modal fade" id="modal-form">
+<div class="modal fade" id="modal-form">
 	<div class="modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header">
@@ -186,4 +186,4 @@
 			</div>
 		</div>
 	</div>
-</div>-->
+</div>

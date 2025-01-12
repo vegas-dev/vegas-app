@@ -1,14 +1,16 @@
 $modal-map: (
-        width: 				500px,
-        height: 			100vh,
-        bg-color: 			$bg-color,
-        color: 				$color,
-        box-shadow: 		$box-shadow,
-        header-height: 		60px,
-        footer-height: 		70px,
-        padding: 			1rem,
-        border: 			1px solid #{$border-color},
-        z-index: 			$sidebar-index,
-        transition: 		0.4s,
-        border-radius: 		5px,
+		z-index: $modal-index,
+		transition: $transition-base,
+		margin: auto,
+		bg-color: $bg-color,
+		color: $color,
+		border-radius: $border-radius,
+		box-shadow: $box-shadow,
+		border-width: $border-width,
+		border-color: transparent
 );
+
+$modal-sm: 400px !default;
+$modal-md: 600px !default;
+$modal-lg: 800px !default;
+$modal-xl: 1140px !default;

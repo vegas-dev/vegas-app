@@ -9,74 +9,53 @@
 @import "../../../utils/scss/functions";
 @import "../../../utils/scss/mixin";
 @import "../../../utils/scss/variables";
+@import "../../../utils/scss/animate";
 @import "variables";
 
 .vg-modal {
 	@include mix-vars('modal', $modal-map);
-
 	position: fixed;
-	top: 0;
 	left: 0;
-	z-index: var(--vg-modal-z-index);
+	top: 0;
 	width: 100%;
 	height: 100%;
+	z-index: var(--vg-modal-z-index);
+	display: none;
 	overflow-x: hidden;
 	overflow-y: auto;
-	//display: none;
-	opacity: 0;
-	transform: translateY(-50px);
-	//transition: all 0.5s;
-	transition: var(--vg-modal-transition);
-	pointer-events: none;
+	outline: 0;
 
 	&.show {
 		display: block;
-		pointer-events: auto;
-		opacity: 1;
-		transform: translateY(0px);
 	}
+}
 
-	&-dialog {
-		margin-top: 250px;
-		max-width: var(--vg-modal-width);
-		margin-right: auto;
-		margin-left: auto;
-	}
+.vg-modal-dialog {
+	position: relative;
+	margin: var(--vg-modal-margin);
+	pointer-events: none;
+}
 
-	&-content {
-		border-radius: var(--vg-modal-border-radius);
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-		pointer-events: auto;
-		background-color: var(--vg-modal-bg-color);
+.vg-modal-dialog-centered {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: auto;
+	width: 100%;
+	height: 100%;
+}
 
-		.vg-btn-close {
-			right: -45px;
-			top: -45px;
-			opacity: .9;
-			background: transparent;
-			border: none;
-			font-size: 18px;
-			cursor: pointer;
-			transition: transform .8s ease-in-out;
-			width: 35px;
-			height: 30px;
-			display: block;
-
-
-			svg {
-				width: 25px;
-
-				polygon, path {
-					fill: white !important;
-				}
-			}
-
-			&:hover {
-				transform: rotate(360deg);
-			}
-		}
-	}
+.vg-modal-content {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: #{$modal-md};
+	color: var(--vg-modal-color);
+	pointer-events: auto;
+	background-color: var(--vg-modal-bg-color);
+	background-clip: padding-box;
+	border: var(--vg-modal-border-width) solid var(--vg-modal-border-color);
+	border-radius: var(--vg-modal-border-radius);
+	box-shadow: var(--vg-modal-box-shadow);
+	outline: 0;
 }

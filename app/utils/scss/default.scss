@@ -123,8 +123,15 @@
 	}
 
 	&-modal {
+		--vg-alert-icon-width: 150px;
+		--vg-alert-icon-height: 150px;
+		--vg-alert-padding: 5rem 2rem;
+		--vg-alert-border-width: 0;
+		margin: 0;
+
 		.vg-alert-content {
 			flex-direction: column;
+			text-align: center;
 		}
 	}
 }

@@ -4,7 +4,8 @@ import Selectors from "../../../utils/js/dom/selectors";
 import Backdrop from "../../../utils/js/components/backdrop";
 import Overflow from "../../../utils/js/components/overflow";
 import EventHandler from "../../../utils/js/dom/event";
-import {isDisabled, mergeDeepObject} from "../../../utils/js/functions";
+import {execute, isDisabled, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
+import {Manipulator} from "../../../utils/js/dom/manipulator";
 
 /**
  * Constants
@@ -12,8 +13,6 @@ import {isDisabled, mergeDeepObject} from "../../../utils/js/functions";
 const NAME = 'modal';
 const NAME_KEY = 'vg.modal';
 const CLASS_NAME_SHOW = 'show';
-const CLASS_NAME_FADE = 'fade'
-const SELECTOR_DIALOG = '.vg-modal-dialog'
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]'
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
@@ -38,12 +37,27 @@ class VGModal extends BaseModule {
 				route: '',
 				target: '',
 				method: 'get'
+			},
+			animation: {
+				name: 'animate__backInUp',
+				duration: '1s',
+				delay: '1s',
+				repeat: 1
+			},
+			classes: {
+				general: 'vg-modal',
+				dialog: 'vg-modal-dialog',
+				content: 'vg-modal-content',
+				header: 'vg-modal-header',
+				title: 'vg-modal-title',
+				body: 'vg-modal-body',
+				footer: 'vg-modal-footer',
+				animated: 'animate__animated'
 			}
 		}, params));
 
-		this._dialog = Selectors.find(SELECTOR_DIALOG, this._element)
-
 		this._addEventListeners();
+		this._dismissElement();
 		this._dismissElement();
 	}
 
@@ -53,6 +67,45 @@ class VGModal extends BaseModule {
 
 	static get NAME_KEY() {
 		return NAME_KEY;
+	}
+
+	static init(element, params, callback) {
+		VGModal.build(element, params, callback);
+	}
+
+	static build(id, params, callback) {
+		if (typeof id !== "string") return;
+
+		let _element = document.createElement('div');
+		_element.classList.add('vg-modal');
+		_element.id = id;let dialog = document.createElement('div');
+		dialog.classList.add('vg-modal-dialog', 'vg-modal-dialog-centered');
+
+		let content = document.createElement('div');
+		content.classList.add('vg-modal-content');
+
+		let btnClose = document.createElement('button');
+		Manipulator.set(btnClose, 'type', 'button');
+		Manipulator.set(btnClose, 'data-vg-dismiss', 'modal');
+		Manipulator.set(btnClose, 'data-vg-target', '#' + id);
+		Manipulator.set(btnClose, 'aria-label', 'close');
+		btnClose.classList.add('vg-btn-close');
+
+		content.append(btnClose);
+
+		let body = document.createElement('div');
+		body.classList.add('vg-modal-body');
+
+		content.append(body);
+		dialog.append(content);
+		_element.append(dialog);
+
+		document.body.append(_element);
+
+		const modal = VGModal.getOrCreateInstance(_element, params);
+		_element.classList.add(modal._params.animation.name)
+
+		execute(callback, [modal]);
 	}
 
 	toggle(relatedTarget) {
@@ -76,15 +129,12 @@ class VGModal extends BaseModule {
 			Overflow.append();
 		}
 
-		if (this._isAnimated()) {
-			this._element.classList.add(CLASS_NAME_FADE);
-		}
-
 		_this._element.classList.add(CLASS_NAME_SHOW);
+		_this._element.classList.add(_this._params.classes.animated);
 
 		const completeCallBack = () => {
 			EventHandler.on(_this._element, 'mousedown.vg.modal', function (event) {
-				const modalContent = Selectors.get('.vg-modal-content', this);
+				const modalContent = Selectors.find('.' + _this._params.classes.content, this);
 				if (!modalContent.contains(event.target)) {
 					_this.hide();
 				}
@@ -116,12 +166,9 @@ class VGModal extends BaseModule {
 
 		_this._element.setAttribute('aria-expanded', false);
 		_this._element.classList.remove(CLASS_NAME_SHOW);
+		this._element.classList.remove(_this._params.classes.animated);
 
 		const completeCallback = () => {
-			if (this._isAnimated()) {
-				this._element.classList.remove(CLASS_NAME_FADE);
-			}
-
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		};
 
@@ -130,10 +177,6 @@ class VGModal extends BaseModule {
 
 	_isShown() {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
-	}
-
-	_isAnimated() {
-		return this._element.classList.contains(CLASS_NAME_FADE)
 	}
 
 	_addEventListeners() {
