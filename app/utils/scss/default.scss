@@ -44,6 +44,9 @@
 	transition: $transition-base;
 }
 
+/**
+* Loader
+ */
 .vg-loader, .vg.loader:after {
 	border-radius: 50%;
 	width: 7em;
@@ -64,7 +67,132 @@
 }
 
 /**
-* Animation
+* Alert
+ */
+.vg-alert {
+	@include mix-vars('alert', $alert-map);
+	@include mix-vars('alert-success', $alert-success-map);
+	@include mix-vars('alert-error', $alert-error-map);
+	@include mix-vars('alert-waiting', $alert-waiting-map);
+	padding: var(--vg-alert-padding);
+	margin: var(--vg-alert-margin);
+	border: var(--vg-alert-border-width) var(--vg-alert-border-style) var(--vg-alert-border-color);
+	border-radius: var(--vg-alert-border-radius);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&-success {
+		color: var(--vg-alert-success-color);
+		border-color: var(--vg-alert-success-border-color);
+		background-color: var(--vg-alert-success-background-color);
+	}
+
+	&-error {
+		color: var(--vg-alert-error-color);
+		border-color: var(--vg-alert-error-border-color);
+		background-color: var(--vg-alert-error-background-color);
+	}
+
+	&-content {
+		display: flex;
+		align-items: var(--vg-alert-content-align);
+		justify-content: var(--vg-alert-content-justify);
+		gap: var(--vg-alert-gap);
+		width: var(--vg-alert-content-width);
+
+		&--icon {
+			width: var(--vg-alert-icon-width);
+			height: var(--vg-alert-icon-height);
+
+			svg {
+				width: 100%;
+				height: 100%;
+			}
+
+			.ui-success {
+				&-circle {
+					stroke: var(--vg-alert-success-stroke);
+				}
+
+				&-path {
+					stroke: var(--vg-alert-success-color);
+				}
+			}
+		}
+	}
+
+	&-modal {
+		.vg-alert-content {
+			flex-direction: column;
+		}
+	}
+}
+
+/**
+* UI before Animation
+ */
+.ui-success {
+	&-circle {
+		stroke-dasharray: 260.75219024795285px, 260.75219024795285px;
+		stroke-dashoffset: 270.75219024795285px;
+		transform: rotate(0);
+		transform-origin: center center;
+		stroke-linecap: round;
+		animation: ani-success-circle 1s ease-in both;
+	}
+	&-path {
+		stroke-dasharray: 60px 64px;
+		stroke-dashoffset: 62px;
+		stroke-linecap: round;
+		animation: ani-success-path 0.4s 1s ease-in both;
+	}
+}
+
+.ui-error {
+	&-circle {
+		stroke-dasharray: 260.75219024795285px, 260.75219024795285px;
+		stroke-dashoffset: 260.75219024795285px;
+		animation: ani-error-circle 1.2s linear;
+	}
+	&-line1 {
+		stroke-dasharray: 54px 55px;
+		stroke-dashoffset: 55px;
+		stroke-linecap: round;
+		animation: ani-error-line 0.15s 1.2s linear both;
+	}
+	&-line2 {
+		stroke-dasharray: 54px 55px;
+		stroke-dashoffset: 55px;
+		stroke-linecap: round;
+		animation: ani-error-line 0.2s 0.9s linear both;
+	}
+}
+
+.ui-waiting {
+	&-circle {
+		stroke-dasharray: 260.75219024795285px, 260.75219024795285px;
+		stroke-dashoffset: 260.75219024795285px;
+		animation: ani-waiting-circle 1.2s linear;
+	}
+	&-line1 {
+		stroke-dasharray: 280.75219024795285px, 200.75219024795285px;
+		stroke-dashoffset: 280.75219024795285px;
+		animation: ani-waiting-line 0.8s 0.3s linear both;
+		transform: rotate(0);
+		transform-origin: center center;
+	}
+	&-line2 {
+		stroke-dasharray: 54px 55px;
+		stroke-dashoffset: 55px;
+		animation: ani-waiting-line2 0.85s .6s ease-in both;
+		transform: rotate(0) scale(0.9);
+		transform-origin: center center;
+	}
+}
+
+/**
+* Animation Loader
  */
 @keyframes vgLoader {
 	0% {
@@ -72,5 +200,71 @@
 	}
 	100% {
 		transform: rotate(360deg);
+	}
+}
+
+// success animation
+@keyframes ani-success-circle {
+	to {
+		stroke-dashoffset: 782.2565707438586px;
+	}
+}
+
+@keyframes ani-success-path {
+	0% {
+		stroke-dashoffset: 62px;
+	}
+	65% {
+		stroke-dashoffset: -5px;
+	}
+	84% {
+		stroke-dashoffset: 4px;
+	}
+	100% {
+		stroke-dashoffset: -2px;
+	}
+}
+
+// error animation
+@keyframes ani-error-line {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@keyframes ani-error-circle {
+	0% {
+		stroke-dasharray: 0, 260.75219024795285px;
+		stroke-dashoffset: 0;
+	}
+	35% {
+		stroke-dasharray: 120px, 120px;
+		stroke-dashoffset: -120px;
+	}
+	70% {
+		stroke-dasharray: 0, 260.75219024795285px;
+		stroke-dashoffset: -260.75219024795285px;
+	}
+	100% {
+		stroke-dasharray: 260.75219024795285px, 0;
+		stroke-dashoffset: -260.75219024795285px;
+	}
+}
+
+// waiting animation
+@keyframes ani-waiting-circle {
+	to {
+		stroke-dashoffset: 782.2565707438586px;
+	}
+}
+@keyframes ani-waiting-line {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+@keyframes ani-waiting-line2 {
+	to {
+		stroke-dashoffset: 0;
+		transform: rotate(360deg) scale(1);
 	}
 }

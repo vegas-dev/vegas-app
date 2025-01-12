@@ -106,7 +106,6 @@ class VGCollapse extends BaseModule {
 		_this._addAriaAndCollapsedClass(_this._triggerArray, true);
 		_this._isTransitioning = true;
 
-		console.log(_this._params)
 		_this._route();
 
 		const complete = () => {

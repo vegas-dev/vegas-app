@@ -1,21 +1,58 @@
 // -- Backgrounds
-$bg-color:          #fff !default;
+$bg-color:           #fff !default;
 
 // -- Colors
-$color:             #000000 !default;
+$color:              #000000 !default;
 
 // -- Shadows
-$box-shadow:        0 8px 14px 5px rgba(0, 0, 0, 0.2) !default;
+$box-shadow:         0 8px 14px 5px rgba(0, 0, 0, 0.2) !default;
 
 // -- Borders
-$border-color:      rgba(0, 0, 0, .2) !default;
+$border-color:       rgba(0, 0, 0, .2) !default;
+$border-radius:      .375rem !default;
+$border-width:       1px !default;
+$border-style:       solid;
 
 // -- Transitions
-$transition-base:   all .5s ease-in-out !default;
+$transition-base:    all .5s ease-in-out !default;
 
 // -- Backdrop
-$backdrop-bg:       rgba(0, 0, 0, 1) !default;
-$backdrop-opacity:  .4 !default;
+$backdrop-bg:        rgba(0, 0, 0, 1) !default;
+$backdrop-opacity:   .4 !default;
+
+// -- alert
+$alert-map: (
+		padding: 2rem,
+		margin: 0 0 2rem,
+		border-width: $border-width,
+		border-style: $border-style,
+		border-color: transparent,
+		border-radius: $border-radius,
+		gap: 1.5rem,
+		icon-width: 80px,
+		icon-height: 80px,
+		content-width: 100%,
+		content-align: center,
+		content-justify: flex-start
+);
+$alert-success-map: (
+		color: darken(#A5DC86, 10%),
+		border-color: #A5DC86,
+		background-color: rgba(lighten(#A5DC86, 10%), .15),
+		stroke: rgba(117, 183, 152, 0.4)
+);
+
+$alert-error-map: (
+		color: darken(#F74444, 10%),
+		border-color: #F74444,
+		background-color: rgba(lighten(#F74444, 25%), .075)
+);
+
+$alert-waiting-map: (
+		color: darken(#ffda6a, 10%),
+		border-color: #ffda6a,
+		background-color: rgba(lighten(#ffda6a, 15%), .1)
+);
 
 // Z-indexes
 $sidebar-index:  1040;

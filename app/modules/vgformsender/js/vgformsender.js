@@ -2,14 +2,15 @@ import BaseModule from "../../base-module";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
-import {mergeDeepObject} from "../../../utils/js/functions";
+import {makeRandomString, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
+import VGCollapse from "../../vgcollapse/js/vgcollapse";
+import {getSVG} from "../../module-fn";
 
 /**
  * Constants
  */
 const NAME = 'form-sender';
-const NAME_FULL = 'vgformsender';
 const NAME_KEY = 'vg.fs';
 
 /**
@@ -46,6 +47,8 @@ class VGFormSender extends BaseModule {
 			},
 			classes: {
 				general: 'vg-form-sender',
+				alertCollapse: 'vg-form-sender-collapse',
+				alertModal: 'vg-form-sender-modal',
 				validation: 'needs-validation',
 				wasValidate: 'was-validated'
 			}
@@ -107,6 +110,14 @@ class VGFormSender extends BaseModule {
 
 	_alertBefore() {
 		const _this = this;
+
+		if (_this._params.alert.type === 'collapse') {
+			[...document.getElementsByClassName(_this._params.classes.alertCollapse)].forEach(function (element) {
+				if (element && element.classList.contains('show')) {
+					VGCollapse.getOrCreateInstance(element, {toggle: false}).hide();
+				}
+			});
+		}
 
 		_this._statusButton('before');
 		EventHandler.trigger(_this._element, EVENT_KEY_BEFORE, _this);
@@ -201,6 +212,12 @@ class VGFormSender extends BaseModule {
 	alert(data, status) {
 		const _this = this;
 
+		if (typeof data === "object") {
+			if ('errors' in data) {
+				status = normalizeData(data.errors) ? 'error' : 'success';
+			}
+		}
+
 		if (!_this._params.alert.enabled) {
 			return;
 		}
@@ -232,13 +249,98 @@ class VGFormSender extends BaseModule {
 			}
 		});
 
-		// Формируем новую модалку и открываем её
+		let $modal = Selectors.find('.' + _this._params.classes.alertModal);
+		if (!$modal) {
+			$modal = document.createElement('div');
+			$modal.classList.add('vg-modal', 'fade', _this._params.classes.alertModal);
+			$modal.id = _this._params.classes.general + '-' + makeRandomString();
+
+			let dialog = document.createElement('div');
+			dialog.classList.add('vg-modal-dialog', 'vg-modal-md');
+
+			let content = document.createElement('div');
+			content.classList.add('vg-modal-content');
+
+			let body = document.createElement('div');
+			body.classList.add('vg-modal-body');
+
+			content.append(body);
+			dialog.append(content);
+			$modal.append(dialog);
+		}
+
+		$modal.append(_this.setDataRelationStatus($modal, status, data, 'modal'));
+		document.body.append($modal);
+
+		VGModal.getOrCreateInstance($modal).toggle();
 	}
 
 	_alertCollapse(data, status) {
 		const _this = this;
 
-		console.log(_this._params.alert.type)
+		let $collapse = Selectors.find('.' + _this._params.classes.alertCollapse);
+		if (!$collapse) {
+			$collapse = document.createElement('div');
+			$collapse.classList.add(_this._params.classes.alertCollapse);
+			$collapse.classList.add('vg-collapse');
+			$collapse.id = _this._params.classes.general + '-' + makeRandomString();
+			$collapse.append(_this.setDataRelationStatus($collapse, status, data, 'collapse'));
+
+			_this._element.prepend($collapse);
+		}
+
+		VGCollapse.getOrCreateInstance($collapse, {toggle: false}).toggle();
+	}
+
+	setDataRelationStatus($element, status, data, type) {
+		let $alert = Selectors.find('.vg-alert-' + status, $element);
+
+		if (typeof data === 'object') {
+			if ('view' in data && typeof data.view === 'object') {
+				let txt = '';
+
+				if ('title' in data.view) {
+					txt += '<h4 class="vg-alert-content--title">' + data.view.title + '</h4>'
+				}
+
+				if ('message' in data.view) {
+					txt += '<div class="vg-alert-content--message">' + data.view.message + '</div>'
+				}
+
+				data = txt;
+			} else if ('view' in data && typeof data.view === "string") {
+				data = data.view;
+			}
+		}
+
+		if (!$alert) {
+			$alert = document.createElement('div');
+			$alert.classList.add('vg-alert', 'vg-alert-' + status, 'vg-alert-' + type);
+
+			let content = document.createElement('div');
+			content.classList.add('vg-alert-content');
+
+			let icon = document.createElement('div');
+			icon.classList.add('vg-alert-content--icon');
+
+			let i = document.createElement('i');
+			i.innerHTML = getSVG(status);
+
+			icon.append(i);
+			content.append(icon);
+
+			let text = document.createElement('div');
+			text.classList.add('vg-alert-content--text');
+			text.innerHTML = data;
+
+			content.append(text);
+			$alert.append(content);
+		} else {
+			let text = Selectors.find('.vg-alert-content--text', $alert);
+			text.innerHTML = data;
+		}
+
+		return $alert;
 	}
 
 	/**

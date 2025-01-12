@@ -33,13 +33,13 @@
 		sleep(2);
 		
 		if ($_GET['form'] == 'simple') {
-			echo json_encode(['error' => 'false', 'data' => 'Всё прошло успешно']);
+			echo json_encode(['errors' => 'false', 'view' => ['title' => 'Всё прошло успешно', 'message' => 'Ваша заявка отправлена, очень скоро мы с Вами свяжемся']]);
 		}
 		if ($_GET['form'] == 'feedback') {
-			echo json_encode(['error' => 'false', 'data' => 'Заявка отправлена']);
+			echo json_encode(['errors' => 'false', 'view' => 'Заявка отправлена']);
 		}
 		if ($_GET['form'] == 'modal') {
-			echo json_encode(['error' => 'false', 'data' => 'Форма из модалки']);
+			echo json_encode(['errors' => 'false', 'view' => 'Форма из модалки']);
 		}
 	}
 	
