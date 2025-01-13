@@ -40,6 +40,7 @@ class VGModal extends BaseModule {
 			},
 			animation: {
 				name: 'animate__backInUp',
+				nameOut: 'animate__backOutUp',
 				duration: '1s',
 				delay: '1s',
 				repeat: 1
@@ -55,6 +56,16 @@ class VGModal extends BaseModule {
 				animated: 'animate__animated'
 			}
 		}, params));
+
+		if (this._element.classList.contains(this._params.classes.animated)) {
+			this._element.classList.remove(this._params.classes.animated);
+		}
+
+		if (this._element.classList.contains(this._params.animation.nameOut)) {
+			this._element.classList.remove(this._params.animation.nameOut);
+		}
+
+		this._element.classList.add(this._params.animation.name);
 
 		this._addEventListeners();
 		this._dismissElement();
@@ -103,7 +114,6 @@ class VGModal extends BaseModule {
 		document.body.append(_element);
 
 		const modal = VGModal.getOrCreateInstance(_element, params);
-		_element.classList.add(modal._params.animation.name)
 
 		execute(callback, [modal]);
 	}
@@ -152,27 +162,34 @@ class VGModal extends BaseModule {
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
-		if (_this._params.backdrop) {
-			Backdrop.hide(function () {
+		_this._element.setAttribute('aria-expanded', false);
+		_this._element.classList.remove(_this._params.animation.name);
+		_this._element.classList.remove(_this._params.classes.animated);
+
+		setTimeout(() => {
+			_this._element.classList.add(_this._params.animation.nameOut);
+			_this._element.classList.add(_this._params.classes.animated);
+		}, 100);
+
+		const completeCallback = () => {
+			setTimeout(() => {
+				_this._element.classList.remove(CLASS_NAME_SHOW);
+				if (_this._params.backdrop) {
+					Backdrop.hide(function () {
+						if (_this._params.overflow) {
+							Overflow.destroy();
+						}
+					});
+				}
+
 				if (_this._params.overflow) {
 					Overflow.destroy();
 				}
-			});
-		}
-
-		if (_this._params.overflow) {
-			Overflow.destroy();
-		}
-
-		_this._element.setAttribute('aria-expanded', false);
-		_this._element.classList.remove(CLASS_NAME_SHOW);
-		this._element.classList.remove(_this._params.classes.animated);
-
-		const completeCallback = () => {
-			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+			}, 500);
+			EventHandler.trigger(_this._element, EVENT_KEY_HIDDEN);
 		};
 
-		this._queueCallback(completeCallback, this._element, this._isAnimated());
+		_this._queueCallback(completeCallback, _this._element, true, 500);
 	}
 
 	_isShown() {
