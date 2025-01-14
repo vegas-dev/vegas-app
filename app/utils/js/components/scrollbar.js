@@ -105,7 +105,7 @@ class ScrollBarHelper {
 			return
 		}
 
-		for (const sel of Selectors.find(selector, this._element)) {
+		for (const sel of Selectors.findAll(selector, this._element)) {
 			callBack(sel)
 		}
 	}

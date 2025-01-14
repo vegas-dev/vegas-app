@@ -14,15 +14,15 @@ import {dismissTrigger} from "../../module-fn";
 const NAME = 'modal';
 const NAME_KEY = 'vg.modal';
 
-const OPEN_SELECTOR = '.modal.show'
-const SELECTOR_DIALOG = '.modal-dialog'
-const SELECTOR_MODAL_BODY = '.modal-body'
+const OPEN_SELECTOR = '.vg-modal.show'
+const SELECTOR_DIALOG = '.vg-modal-dialog'
+const SELECTOR_MODAL_BODY = '.vg-modal-body'
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]';
 
-const CLASS_NAME_OPEN = 'modal-open';
+const CLASS_NAME_OPEN = 'vg-modal-open';
 const CLASS_NAME_SHOW = 'show';
 const CLASS_NAME_FADE = 'fade';
-const CLASS_NAME_STATIC = 'modal-static'
+const CLASS_NAME_STATIC = 'vg-modal-static'
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
@@ -145,34 +145,33 @@ class VGModal extends BaseModule {
 	}
 
 	hide() {
-		const _this = this;
-		if (isDisabled(_this._element)) return;
+		if (!this._isShown || this._isTransitioning) return;
 
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE)
 		if (hideEvent.defaultPrevented) return;
 
-		_this._element.setAttribute('aria-expanded', false);
-		_this._element.classList.remove(CLASS_NAME_FADE);
+		this._isShown = false
+		this._isTransitioning = true
+		//this._focustrap.deactivate()
 
-		const completeCallback = () => {
-			setTimeout(() => {
-				_this._element.classList.remove(CLASS_NAME_SHOW);
-				if (_this._params.backdrop) {
-					Backdrop.hide(function () {
-						if (_this._params.overflow) {
-							Overflow.destroy();
-						}
-					});
-				}
+		this._element.classList.remove(CLASS_NAME_SHOW)
 
-				if (_this._params.overflow) {
-					Overflow.destroy();
-				}
-			}, 500);
-			EventHandler.trigger(_this._element, EVENT_KEY_HIDDEN);
-		};
+		this._queueCallback(() => this._hideModal(), this._element, this._isAnimated())
+	}
 
-		_this._queueCallback(completeCallback, _this._element, _this._isAnimated(), 500);
+	_hideModal() {
+		this._element.style.display = 'none'
+		this._element.setAttribute('aria-hidden', true)
+		this._element.removeAttribute('aria-modal')
+		this._element.removeAttribute('role')
+		this._isTransitioning = false
+
+		Backdrop.hide(() => {
+			document.body.classList.remove(CLASS_NAME_OPEN)
+			this._resetAdjustments()
+			this._scrollBar.reset()
+			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN)
+		})
 	}
 
 	_showElement(relatedTarget) {
@@ -186,12 +185,12 @@ class VGModal extends BaseModule {
 		this._element.setAttribute('role', 'dialog');
 		this._element.scrollTop = 0;
 
-		const modalBody = Selectors.find(SELECTOR_MODAL_BODY, this._dialog)
+		const modalBody = Selectors.find(SELECTOR_MODAL_BODY, this._dialog);
 		if (modalBody) {
-			modalBody.scrollTop = 0
+			modalBody.scrollTop = 0;
 		}
 
-		reflow(this._element)
+		reflow(this._element);
 
 		this._element.classList.add(CLASS_NAME_SHOW)
 
@@ -207,21 +206,6 @@ class VGModal extends BaseModule {
 		}
 
 		this._queueCallback(transitionComplete, this._dialog, this._isAnimated())
-	}
-
-	_addEventListeners() {
-		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
-			if (event.key !== 'Escape') {
-				return
-			}
-
-			if (this._params.keyboard) {
-				this.hide()
-				return
-			}
-
-			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
-		})
 	}
 
 	_isAnimated() {
@@ -247,6 +231,21 @@ class VGModal extends BaseModule {
 	_resetAdjustments() {
 		this._element.style.paddingLeft = ''
 		this._element.style.paddingRight = ''
+	}
+
+	_addEventListeners() {
+		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
+			if (event.key !== 'Escape') {
+				return
+			}
+
+			if (this._params.keyboard) {
+				this.hide()
+				return
+			}
+
+			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
+		})
 	}
 }
 

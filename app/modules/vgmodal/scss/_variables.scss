@@ -1,6 +1,22 @@
+$modal-sm: 300px !default;
+$modal-md: 500px !default;
+$modal-lg: 800px !default;
+$modal-xl: 1140px !default;
+
+$modal-dialog-margin-y-sm-up: 1.75rem !default;
+$modal-content-box-shadow-sm-up: $box-shadow !default;
+
 $modal-map: (
 		z-index: $modal-index,
 		margin: .5rem,
+		width: $modal-md,
+		color: $color,
+		background-color: $bg-color,
+		border-width: $border-width,
+		border-color: $border-color,
+		border-style: $border-style,
+		border-radius: $border-radius,
+		box-shadow: $box-shadow,
 		transition: $transition-base,
 		fade-transform:  translate(0, -50px),
 		show-transform:  none,
