@@ -71,12 +71,13 @@
 		width: 100%;
 		color: var(--vg-modal-color);
 		pointer-events: auto;
-		background-color: var(--vg-modal-bg);
+		background-color: var(--vg-modal-background-color);
 		background-clip: padding-box;
 		border: var(--vg-modal-border-width) var(--vg-modal-border-style) var(--vg-modal-border-color);
 		border-radius: var(--vg-modal-border-radius);
 		box-shadow: var(--vg-modal-box-shadow);
 		outline: 0;
+		padding: var(--vg-modal-padding);
 	}
 }
 

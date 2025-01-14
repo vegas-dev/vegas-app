@@ -5,7 +5,7 @@ import Overflow from "../../../utils/js/components/overflow";
 import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
-import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
+import {execute, isDisabled, isRTL, isVisible, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
 
 /**
@@ -14,9 +14,11 @@ import {dismissTrigger} from "../../module-fn";
 const NAME = 'modal';
 const NAME_KEY = 'vg.modal';
 
-const OPEN_SELECTOR = '.vg-modal.show'
-const SELECTOR_DIALOG = '.vg-modal-dialog'
-const SELECTOR_MODAL_BODY = '.vg-modal-body'
+const ESCAPE_KEY = 'Escape';
+
+const OPEN_SELECTOR = '.vg-modal.show';
+const SELECTOR_DIALOG = '.vg-modal-dialog';
+const SELECTOR_MODAL_BODY = '.vg-modal-body';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]';
 
 const CLASS_NAME_OPEN = 'vg-modal-open';
@@ -28,10 +30,13 @@ const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
+const EVENT_KEY_RESIZE = `${NAME_KEY}.resize`
 
-const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
-const EVENT_KEY_HIDE_PREVENTED  = `hidePrevented.${NAME_KEY}`;
-const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_KEYDOWN_DISMISS     = `keydown.dismiss.${NAME_KEY}`;
+const EVENT_KEY_HIDE_PREVENTED      = `hidePrevented.${NAME_KEY}`;
+const EVENT_KEY_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_MOUSEDOWN_DISMISS   = `mousedown.dismiss${NAME_KEY}`
+const EVENT_KEY_CLICK_DISMISS           = `click.dismiss${NAME_KEY}`
 
 class VGModal extends BaseModule {
 	constructor(element, params = {}) {
@@ -234,18 +239,57 @@ class VGModal extends BaseModule {
 	}
 
 	_addEventListeners() {
-		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
-			if (event.key !== 'Escape') {
-				return
-			}
+		EventHandler.on(this._element, EVENT_KEY_KEYDOWN_DISMISS, event => {
+			if (event.key !== ESCAPE_KEY) return;
 
 			if (this._params.keyboard) {
-				this.hide()
-				return
+				this.hide();
+				return;
 			}
 
-			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
+			this._triggerBackdropTransition();
 		})
+
+		EventHandler.on(window, EVENT_KEY_RESIZE, () => {
+			if (this._isShown && !this._isTransitioning) this._adjustDialog();
+		})
+
+		EventHandler.on(this._element, EVENT_KEY_MOUSEDOWN_DISMISS, event => {
+			EventHandler.one(this._element, EVENT_KEY_CLICK_DISMISS, event2 => {
+				if (this._element !== event.target || this._element !== event2.target) return;
+
+				if (this._params.backdrop === 'static') {
+					this._triggerBackdropTransition();
+					return;
+				}
+
+				if (this._params.backdrop) {
+					this.hide();
+				}
+			})
+		})
+	}
+
+	_triggerBackdropTransition() {
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED);
+		if (hideEvent.defaultPrevented) return;
+
+		const isModalOverflowing = this._element.scrollHeight > document.documentElement.clientHeight;
+		const initialOverflowY = this._element.style.overflowY;
+
+		if (initialOverflowY === 'hidden' || this._element.classList.contains(CLASS_NAME_STATIC)) return;
+		if (!isModalOverflowing) this._element.style.overflowY = 'hidden';
+
+		this._element.classList.add(CLASS_NAME_STATIC);
+
+		this._queueCallback(() => {
+			this._element.classList.remove(CLASS_NAME_STATIC);
+			this._queueCallback(() => {
+				this._element.style.overflowY = initialOverflowY;
+			}, this._dialog);
+		}, this._dialog);
+
+		this._element.focus();
 	}
 }
 
@@ -259,27 +303,21 @@ dismissTrigger(VGModal)
 EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
 	const target = Selectors.getElementFromSelector(this);
 
-	if (['A', 'AREA'].includes(this.tagName)) {
-		event.preventDefault()
-	}
+	if (['A', 'AREA'].includes(this.tagName)) event.preventDefault();
 
-	if (isDisabled(this)) {
-		return
-	}
+	EventHandler.one(target, EVENT_KEY_SHOW, showEvent => {
+		if (showEvent.defaultPrevented) return;
 
-	this.setAttribute('aria-expanded', true);
+		EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
+			if (isVisible(this)) this.focus();
+		});
+	});
 
-	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
-		this.setAttribute('aria-expanded', false);
-	})
+	const alreadyOpen = Selectors.find(OPEN_SELECTOR);
+	if (alreadyOpen) VGModal.getInstance(alreadyOpen).hide();
 
-	const alreadyOpen = Selectors.find('.vg-modal.show')
-	if (alreadyOpen && alreadyOpen !== target) {
-		VGModal.getInstance(alreadyOpen).hide()
-	}
-
-	const data = VGModal.getOrCreateInstance(target)
-	data.toggle(this)
+	const data = VGModal.getOrCreateInstance(target);
+	data.toggle(this);
 })
 
 export default VGModal;

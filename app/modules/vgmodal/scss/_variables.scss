@@ -9,11 +9,12 @@ $modal-content-box-shadow-sm-up: $box-shadow !default;
 $modal-map: (
 		z-index: $modal-index,
 		margin: .5rem,
+		padding: 1rem,
 		width: $modal-md,
 		color: $color,
 		background-color: $bg-color,
 		border-width: $border-width,
-		border-color: $border-color,
+		border-color: transparent,
 		border-style: $border-style,
 		border-radius: $border-radius,
 		box-shadow: $box-shadow,

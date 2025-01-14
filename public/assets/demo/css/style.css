@@ -35,7 +35,7 @@
 }
 
 [data-bs-theme="dark"] .vg-modal {
-	--vg-modal-bg-color: var(--bs-secondary-bg);
+	--vg-modal-background-color: var(--bs-secondary-bg);
 	--vg-modal-color: var(--bs-body-color);
 }
 
