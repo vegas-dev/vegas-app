@@ -1,16 +1,8 @@
 $modal-map: (
 		z-index: $modal-index,
+		margin: .5rem,
 		transition: $transition-base,
-		margin: auto,
-		bg-color: $bg-color,
-		color: $color,
-		border-radius: $border-radius,
-		box-shadow: $box-shadow,
-		border-width: $border-width,
-		border-color: transparent
+		fade-transform:  translate(0, -50px),
+		show-transform:  none,
+		scale-transform: scale(1.02),
 );
-
-$modal-sm: 400px !default;
-$modal-md: 600px !default;
-$modal-lg: 800px !default;
-$modal-xl: 1140px !default;

@@ -264,4 +264,9 @@ function makeRandomString(length = 7) {
 	return result;
 }
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString}
+/**
+ *
+ */
+const isRTL = () => document.documentElement.dir === 'rtl'
+
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL}

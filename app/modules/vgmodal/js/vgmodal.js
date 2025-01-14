@@ -1,19 +1,28 @@
 import BaseModule from "../../base-module";
-import {dismissTrigger} from "../../module-fn";
-import Selectors from "../../../utils/js/dom/selectors";
+import ScrollBarHelper from "../../../utils/js/components/scrollbar";
 import Backdrop from "../../../utils/js/components/backdrop";
 import Overflow from "../../../utils/js/components/overflow";
+import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
-import {execute, isDisabled, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
+import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
+import {dismissTrigger} from "../../module-fn";
 
 /**
  * Constants
  */
 const NAME = 'modal';
 const NAME_KEY = 'vg.modal';
+
+const OPEN_SELECTOR = '.modal.show'
+const SELECTOR_DIALOG = '.modal-dialog'
+const SELECTOR_MODAL_BODY = '.modal-body'
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]';
+
+const CLASS_NAME_OPEN = 'modal-open';
 const CLASS_NAME_SHOW = 'show';
-const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]'
+const CLASS_NAME_FADE = 'fade';
+const CLASS_NAME_STATIC = 'modal-static'
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
@@ -31,7 +40,7 @@ class VGModal extends BaseModule {
 		this._params = this._getParams(element, mergeDeepObject({
 			button: null,
 			backdrop: true,
-			overflow: true,
+			focus: true,
 			keyboard: true,
 			ajax: {
 				route: '',
@@ -39,10 +48,9 @@ class VGModal extends BaseModule {
 				method: 'get'
 			},
 			animation: {
-				name: 'animate__backInUp',
-				nameOut: 'animate__backOutUp',
-				duration: '1s',
-				delay: '1s',
+				name: ['animate__backInUp', 'animate__backOutUp'], // до / после не более двух элементов
+				duration: 1000, // ms
+				delay: 1000, // ms
 				repeat: 1
 			},
 			classes: {
@@ -56,19 +64,12 @@ class VGModal extends BaseModule {
 				animated: 'animate__animated'
 			}
 		}, params));
-
-		if (this._element.classList.contains(this._params.classes.animated)) {
-			this._element.classList.remove(this._params.classes.animated);
-		}
-
-		if (this._element.classList.contains(this._params.animation.nameOut)) {
-			this._element.classList.remove(this._params.animation.nameOut);
-		}
-
-		this._element.classList.add(this._params.animation.name);
+		this._dialog = Selectors.find(SELECTOR_DIALOG, this._element);
+		this._isShown = false;
+		this._isTransitioning = false;
+		this._scrollBar = new ScrollBarHelper();
 
 		this._addEventListeners();
-		this._dismissElement();
 		this._dismissElement();
 	}
 
@@ -88,9 +89,9 @@ class VGModal extends BaseModule {
 		if (typeof id !== "string") return;
 
 		let _element = document.createElement('div');
-		_element.classList.add('vg-modal');
+		_element.classList.add('vg-modal', 'fade');
 		_element.id = id;let dialog = document.createElement('div');
-		dialog.classList.add('vg-modal-dialog', 'vg-modal-dialog-centered');
+		dialog.classList.add('vg-modal-dialog');
 
 		let content = document.createElement('div');
 		content.classList.add('vg-modal-content');
@@ -119,7 +120,7 @@ class VGModal extends BaseModule {
 	}
 
 	toggle(relatedTarget) {
-		return !this._isShown() ? this.show(relatedTarget) : this.hide();
+		return !this._isShown ? this.show(relatedTarget) : this.hide();
 	}
 
 	show(relatedTarget) {
@@ -131,28 +132,16 @@ class VGModal extends BaseModule {
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
 
-		if (_this._params.backdrop) {
-			Backdrop.show();
-		}
+		this._isShown = true;
+		this._isTransitioning = true;
 
-		if (_this._params.overflow) {
-			Overflow.append();
-		}
+		this._scrollBar.hide();
 
-		_this._element.classList.add(CLASS_NAME_SHOW);
-		_this._element.classList.add(_this._params.classes.animated);
+		document.body.classList.add(CLASS_NAME_OPEN);
 
-		const completeCallBack = () => {
-			EventHandler.on(_this._element, 'mousedown.vg.modal', function (event) {
-				const modalContent = Selectors.find('.' + _this._params.classes.content, this);
-				if (!modalContent.contains(event.target)) {
-					_this.hide();
-				}
-			});
+		this._adjustDialog();
 
-			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
-		}
-		this._queueCallback(completeCallBack, this._element, true, 50)
+		Backdrop.show(() => this._showElement(relatedTarget));
 	}
 
 	hide() {
@@ -163,13 +152,7 @@ class VGModal extends BaseModule {
 		if (hideEvent.defaultPrevented) return;
 
 		_this._element.setAttribute('aria-expanded', false);
-		_this._element.classList.remove(_this._params.animation.name);
-		_this._element.classList.remove(_this._params.classes.animated);
-
-		setTimeout(() => {
-			_this._element.classList.add(_this._params.animation.nameOut);
-			_this._element.classList.add(_this._params.classes.animated);
-		}, 100);
+		_this._element.classList.remove(CLASS_NAME_FADE);
 
 		const completeCallback = () => {
 			setTimeout(() => {
@@ -189,11 +172,41 @@ class VGModal extends BaseModule {
 			EventHandler.trigger(_this._element, EVENT_KEY_HIDDEN);
 		};
 
-		_this._queueCallback(completeCallback, _this._element, true, 500);
+		_this._queueCallback(completeCallback, _this._element, _this._isAnimated(), 500);
 	}
 
-	_isShown() {
-		return this._element.classList.contains(CLASS_NAME_SHOW);
+	_showElement(relatedTarget) {
+		if (!document.body.contains(this._element)) {
+			document.body.append(this._element);
+		}
+
+		this._element.style.display = 'block';
+		this._element.removeAttribute('aria-hidden');
+		this._element.setAttribute('aria-modal', true);
+		this._element.setAttribute('role', 'dialog');
+		this._element.scrollTop = 0;
+
+		const modalBody = Selectors.find(SELECTOR_MODAL_BODY, this._dialog)
+		if (modalBody) {
+			modalBody.scrollTop = 0
+		}
+
+		reflow(this._element)
+
+		this._element.classList.add(CLASS_NAME_SHOW)
+
+		const transitionComplete = () => {
+			if (this._params.focus) {
+				// TODO сделать фокус
+			}
+
+			this._isTransitioning = false
+			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, {
+				relatedTarget
+			})
+		}
+
+		this._queueCallback(transitionComplete, this._dialog, this._isAnimated())
 	}
 
 	_addEventListeners() {
@@ -209,6 +222,31 @@ class VGModal extends BaseModule {
 
 			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
 		})
+	}
+
+	_isAnimated() {
+		return this._element.classList.contains(CLASS_NAME_FADE)
+	}
+
+	_adjustDialog() {
+		const isModalOverflowing = this._element.scrollHeight > document.documentElement.clientHeight
+		const scrollbarWidth = this._scrollBar.getWidth()
+		const isBodyOverflowing = scrollbarWidth > 0
+
+		if (isBodyOverflowing && !isModalOverflowing) {
+			const property = isRTL() ? 'paddingLeft' : 'paddingRight'
+			this._element.style[property] = `${scrollbarWidth}px`
+		}
+
+		if (!isBodyOverflowing && isModalOverflowing) {
+			const property = isRTL() ? 'paddingRight' : 'paddingLeft'
+			this._element.style[property] = `${scrollbarWidth}px`
+		}
+	}
+
+	_resetAdjustments() {
+		this._element.style.paddingLeft = ''
+		this._element.style.paddingRight = ''
 	}
 }
 
