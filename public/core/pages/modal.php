@@ -6,19 +6,18 @@
 		<div class="col-lg-3">
 			<ul class="list-group">
 				<li class="list-group-item">
-					<button class="btn btn-primary" data-vg-target="#exampleModal" data-vg-toggle="modal">Открыть
+					<button class="btn btn-primary" data-fields='[{"name": "text", "value": "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Facere, vitae."}]' data-vg-target="#exampleModal" data-vg-toggle="modal">Открыть
 						модальное окно
 					</button>
 				</li>
 			</ul>
 		</div>
 		<div class="col-lg-9">
-			<!--            <h3>Как это работает</h3>-->
+			<h3>Как это работает</h3>
 			<div style="height: 2000px"></div>
 		</div>
 	</div>
 </div>
-
 
 <div class="vg-modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
 	<div class="vg-modal-dialog">
@@ -29,6 +28,7 @@
 				<h1 class="modal-title fs-5" id="exampleModalLabel">New message</h1>
 			</div>
 			<div class="vg-modal-body">
+				<div data-text></div>
 				<form>
 					<div class="mb-3">
 						<label for="recipient-name" class="col-form-label">Recipient:</label>

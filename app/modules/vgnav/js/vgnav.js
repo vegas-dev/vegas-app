@@ -451,11 +451,11 @@ class VGNav extends BaseModule {
 
 		if (vgNavSidebar && hamburger) {
 			vgNavSidebar.addEventListener('vg.sidebar.show', function () {
-				hamburger.classList.add(instance.params.classes.hamburgerActive);
+				hamburger.classList.add(instance._params.classes.hamburgerActive);
 			});
 
 			vgNavSidebar.addEventListener('vg.sidebar.hide', function () {
-				hamburger.classList.remove(instance.params.classes.hamburgerActive);
+				hamburger.classList.remove(instance._params.classes.hamburgerActive);
 			});
 		}
 	}

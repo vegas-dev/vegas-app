@@ -43,10 +43,10 @@ class VGModal extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			button: null,
 			backdrop: true,
 			focus: true,
 			keyboard: true,
+			fields: [],
 			ajax: {
 				route: '',
 				target: '',
@@ -69,6 +69,7 @@ class VGModal extends BaseModule {
 				animated: 'animate__animated'
 			}
 		}, params));
+		this._button = null;
 		this._dialog = Selectors.find(SELECTOR_DIALOG, this._element);
 		this._isShown = false;
 		this._isTransitioning = false;
@@ -144,6 +145,7 @@ class VGModal extends BaseModule {
 
 		document.body.classList.add(CLASS_NAME_OPEN);
 
+		this._addFieldsInModal(relatedTarget);
 		this._adjustDialog();
 
 		Backdrop.show(() => this._showElement(relatedTarget));
@@ -152,30 +154,29 @@ class VGModal extends BaseModule {
 	hide() {
 		if (!this._isShown || this._isTransitioning) return;
 
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE)
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
-		this._isShown = false
-		this._isTransitioning = true
-		//this._focustrap.deactivate()
+		this._isShown = false;
+		this._isTransitioning = true;
 
-		this._element.classList.remove(CLASS_NAME_SHOW)
+		this._element.classList.remove(CLASS_NAME_SHOW);
 
-		this._queueCallback(() => this._hideModal(), this._element, this._isAnimated())
+		this._queueCallback(() => this._hideModal(), this._element, this._isAnimated());
 	}
 
 	_hideModal() {
-		this._element.style.display = 'none'
-		this._element.setAttribute('aria-hidden', true)
-		this._element.removeAttribute('aria-modal')
-		this._element.removeAttribute('role')
-		this._isTransitioning = false
+		this._element.style.display = 'none';
+		this._element.setAttribute('aria-hidden', true);
+		this._element.removeAttribute('aria-modal');
+		this._element.removeAttribute('role');
+		this._isTransitioning = false;
 
 		Backdrop.hide(() => {
-			document.body.classList.remove(CLASS_NAME_OPEN)
-			this._resetAdjustments()
-			this._scrollBar.reset()
-			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN)
+			document.body.classList.remove(CLASS_NAME_OPEN);
+			this._resetAdjustments();
+			this._scrollBar.reset();
+			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		})
 	}
 
@@ -291,9 +292,30 @@ class VGModal extends BaseModule {
 
 		this._element.focus();
 	}
+
+	_addFieldsInModal(relatedTarget) {
+		this._params = this._getParams(relatedTarget, this._params);
+
+		if (!this._params.fields.length) return;
+
+		this._params.fields.forEach(function (item) {
+			if (!'name' in item && !'value' in item) return;
+
+			let elements = Selectors.findAll('[data-' + item.name + ']');
+			if (!elements.length) return;
+
+			for (const elm of elements) {
+				switch (elm.tagName) {
+					case 'INPUT': elm.value = item.value; break;
+					case 'IMG': Manipulator.set(elm, 'src', item.value); break;
+					default: elm.innerHTML = item.value;
+				}
+			}
+		});
+	}
 }
 
-dismissTrigger(VGModal)
+dismissTrigger(VGModal);
 
 
 /**
