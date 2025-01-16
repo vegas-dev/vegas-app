@@ -50,7 +50,8 @@ class VGModal extends BaseModule {
 			ajax: {
 				route: '',
 				target: '',
-				method: 'get'
+				method: 'get',
+				loader: false
 			},
 			animation: {
 				name: ['animate__backInUp', 'animate__backOutUp'], // до / после не более двух элементов
@@ -133,7 +134,7 @@ class VGModal extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this._element)) return;
 
-		//this._route();
+		this._route();
 
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;

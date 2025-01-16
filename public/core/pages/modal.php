@@ -10,6 +10,11 @@
 						модальное окно
 					</button>
 				</li>
+				<li class="list-group-item">
+					<button class="btn btn-primary" data-vg-target="#routeModal" data-vg-toggle="modal">
+						С загрузкой контента
+					</button>
+				</li>
 			</ul>
 		</div>
 		<div class="col-lg-9">
@@ -44,6 +49,15 @@
 				<button type="button" data-vg-dismiss="modal" aria-label="Close" class="btn btn-primary">закрыть
 				</button>
 			</div>
+		</div>
+	</div>
+</div>
+
+<div class="vg-modal fade" id="routeModal" data-ajax-route="/core/server.php?modal=ajax" data-ajax-loader="true" data-ajax-target="#routeModal-content" tabindex="-1" aria-hidden="true">
+	<div class="vg-modal-dialog">
+		<div class="vg-modal-content">
+			<button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal" aria-label="Close"></button>
+			<div id="routeModal-content"></div>
 		</div>
 	</div>
 </div>
