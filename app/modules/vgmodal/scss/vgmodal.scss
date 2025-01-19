@@ -79,6 +79,19 @@
 		outline: 0;
 		padding: var(--vg-modal-padding);
 	}
+
+	&-fullscreen {
+		width: 100vw;
+		max-width: none !important;
+		height: 100%;
+		margin: 0;
+
+		.vg-modal-content {
+			height: 100%;
+			border: 0;
+			border-radius: 0;
+		}
+	}
 }
 
 @media screen and (min-width: 576px){

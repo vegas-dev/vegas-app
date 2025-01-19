@@ -39,10 +39,11 @@ class VGNav extends BaseModule {
 		super(element);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			breakpoint: 'lg',
+			breakpoint: false,
 			placement: 'horizontal',
 			classes: {
 				hamburgerActive: 'vg-nav-hamburger-active',
+				hamburgerAlways: 'vg-nav-hamburger-always',
 				hamburger: 'vg-nav-hamburger',
 				container: 'vg-nav-container',
 				wrapper: 'vg-nav-wrapper',
@@ -65,6 +66,7 @@ class VGNav extends BaseModule {
 			collapse: true,
 			toggle: '<span class="default"></span>',
 			hamburger: {
+				always: false,
 				title: '',
 				body: null
 			},
@@ -121,10 +123,14 @@ class VGNav extends BaseModule {
 			params.expand = false;
 		}
 
-		if (params.breakpoint === null || !params.expand) {
-			this._element.classList.add(params.classes.expand);
+		if (!params.hamburger.always) {
+			if (params.breakpoint === null || !params.expand) {
+				this._element.classList.add(params.classes.expand);
+			} else if (params.breakpoint !== false) {
+				this._element.classList.add('vg-nav-' + params.breakpoint);
+			}
 		} else {
-			this._element.classList.add('vg-nav-' + params.breakpoint);
+			this._element.classList.add(params.classes.hamburgerAlways);
 		}
 
 		// Меню срабатывает при наведении, если это не мобильное устройство

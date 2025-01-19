@@ -147,4 +147,14 @@
 			}
 		}
 	}
+
+	&.vg-nav-hamburger-always {
+		.vg-nav-hamburger {
+			display: flex;
+		}
+
+		.vg-nav-wrapper {
+			display: none;
+		}
+	}
 }

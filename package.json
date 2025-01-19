@@ -1,6 +1,6 @@
 {
 	"name": "vgapp",
-	"version": "0.0.1",
+	"version": "0.0.4",
 	"description": "",
 	"author": {
 		"name": "Vegas Studio",
@@ -12,7 +12,7 @@
 	"homepage": "https://vegas-dev.com/",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/vegas-dev/vegas-sidebar.git"
+		"url": ""
 	},
 	"bugs": {
 		"url": "https://github.com/vegas-dev/vegas-sidebar/issues"

@@ -10,7 +10,9 @@ class BaseModule {
 		if (!element) return
 
 		this._element = Selectors.find(element);
-		if (!this._element) return;
+		if (!this._element){
+			throw new Error('Товарищ! Первый параметр не должен быть пустым!');
+		}
 
 		this._params = {};
 		Data.set(this._element, this.constructor.NAME_KEY, this)

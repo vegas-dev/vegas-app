@@ -1,11 +1,11 @@
 // css классы по умолчанию
 import "./app/utils/scss/default.scss";
 
-// vgsidebar
+// sidebar
 import "./app/modules/vgsidebar/scss/vgsidebar.scss";
 import VGSidebar from "./app/modules/vgsidebar/js/vgsidebar";
 
-// vgcollapse
+// collapse
 import VGCollapse from "./app/modules/vgcollapse/js/vgcollapse";
 
 // nav
