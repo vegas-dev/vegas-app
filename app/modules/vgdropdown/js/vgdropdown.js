@@ -27,7 +27,7 @@ class VGDropdown extends BaseModule {
 	constructor(element, params) {
 		super(element, params);
 
-		this._params = this._getParams(element, mergeDeepObject({
+		let defaultParams = {
 			offset: [0, 2],
 			over: false,
 			backdrop: true,
@@ -35,14 +35,20 @@ class VGDropdown extends BaseModule {
 			keyboard: true,
 			placement: 'bottom',
 			animation: true,
-			timeoutAnimation: 300,
+			timeoutAnimation: 350,
 			hover: false,
 			ajax: {
 				route: '',
 				target: '',
 				method: 'get'
 			}
-		}, params));
+		}
+
+		if ('offset' in params && Array.isArray(params.offset)) {
+			defaultParams.offset = params.offset;
+		}
+
+		this._params = this._getParams(element, mergeDeepObject(defaultParams, params));
 
 		this._parent = this._element.parentNode;
 		this._drop = Selectors.find('.' + TARGET_CONTAINER, this._parent);
