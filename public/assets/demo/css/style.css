@@ -135,6 +135,18 @@ a {
 	margin-right: 0;
 }
 
+.list-group {
+	--bs-list-group-border-width: 0;
+
+	.list-group-item {
+		border-bottom: 1px solid var(--bs-border-color);
+
+		&:last-child {
+			border-bottom: none;
+		}
+	}
+}
+
 /* Theme */
 .theme-area .list a svg path {
 	fill: rgba(var(--bs-body-color-rgb), 0.3);

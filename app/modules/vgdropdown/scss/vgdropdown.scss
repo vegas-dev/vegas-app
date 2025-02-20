@@ -13,14 +13,14 @@
 
 .vg-dropdown {
 	position: relative;
+	@include mix-vars('dropdown', $dropdown-map);
 
 	&-content {
-		@include mix-vars('dropdown', $dropdown-map);
 		z-index: var(--vg-dropdown-z-index);
 		position: absolute;
 		opacity: 0;
 		transform: translateY(20%);
-		transition: var(--vg-dropdonw-transition);
+		transition: var(--vg-dropdown-transition);
 		min-width: var(--vg-dropdown-min-width);
 
 		&:not(.show) {
@@ -31,11 +31,15 @@
 			opacity: 1;
 			transform: translateY(0);
 		}
+	}
 
-		&-container {
-			background-color: var(--vg-dropdown-bg-color);
-			color: var(--vg-dropdown-color);
-			border: var(--vg-dropdown-border);
-		}
+	&-container {
+		background-color: var(--vg-dropdown-bg-color);
+		color: var(--vg-dropdown-color);
+		border-width: var(--vg-dropdown-border-width);
+		border-style: var(--vg-dropdown-border-style);
+		border-color: var(--vg-dropdown-border-color);
+		border-radius: var(--vg-dropdown-border-radius);
+		box-shadow: var(--vg-dropdown-box-shadow);
 	}
 }

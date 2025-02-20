@@ -2,8 +2,11 @@ $dropdown-map: (
 		bg-color:                  $bg-color,
 		color:                     $color,
 		box-shadow:                $box-shadow,
-		border:                    1px solid #{$border-color},
+		border-width:              1px,
+		border-style:              solid,
+		border-color:              $border-color,
+		border-radius:             $border-radius,
 		z-index:                   $dropdown-index,
 		transition:                $transition-base,
-		min-width:                 300px
+		min-width:                 225px
 );
