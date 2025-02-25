@@ -83,14 +83,15 @@ const Ajax = {
 		}
 		let x = Ajax.x();
 		x.open(method, url, async);
+		x.setRequestHeader("X-Requested-With", "XMLHttpRequest");
 		x.onreadystatechange = function () {
 			if (x.readyState === 4) {
 				switch (x.status) {
 					case 200:
-						callback('success', x.responseText)
+						callback('success', {text: x.statusText, response: x.responseText, code: x.status})
 						break;
 					default:
-						callback('error', x.statusText)
+						callback('error', {text: x.statusText, response: x.responseText, code: x.status})
 						break;
 				}
 			}

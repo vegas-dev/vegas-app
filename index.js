@@ -24,6 +24,10 @@ import VGModal from "./app/modules/vgmodal/js/vgmodal";
 import "./app/modules/vgformsender/scss/vgformsender.scss";
 import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
 
+// rollup
+import "./app/modules/vgrollup/scss/vgrollup.scss";
+import VGRollup from "./app/modules/vgrollup/js/vgrollup";
+
 export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup
 }

@@ -60,7 +60,7 @@ class BaseModule {
 		}
 
 		Ajax[_this._params.ajax.method](_this._params.ajax.route, _this._params.ajax.data || {}, function (status, data) {
-			setData(data);
+			setData(data.response);
 			execute(callback, [status, data]);
 		});
 	}

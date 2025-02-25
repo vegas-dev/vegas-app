@@ -79,6 +79,12 @@
 												<small>Отправка данных на сервер</small>
 											</a>
 										</li>
+										<li>
+											<a href="/?module=rollup">
+												<span>VGRollup</span>
+												<small>Сворачивание контента</small>
+											</a>
+										</li>
 									</ul>
 								</li>
 								<li class="dropdown">

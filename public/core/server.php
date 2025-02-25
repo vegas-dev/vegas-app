@@ -2,6 +2,8 @@
 	ini_set("display_errors", "1");
 	error_reporting(E_ALL);
 	
+	http_response_code(500);
+	
 	/**
 	 * Created by vegas s.
 	 */
@@ -33,13 +35,17 @@
 		sleep(2);
 		
 		if ($_GET['form'] == 'simple') {
-			echo json_encode(['errors' => 'false', 'view' => ['title' => 'Всё прошло успешно', 'message' => 'Ваша заявка отправлена, очень скоро мы с Вами свяжемся']]);
+			echo json_encode([
+				'errors' => false,
+				'title' => 'Все ОК',
+				'message' => 'Все будет классно!'
+			]);
 		}
 		if ($_GET['form'] == 'feedback') {
-			echo json_encode(['errors' => 'false', 'view' => 'Заявка отправлена']);
+			echo json_encode(['errors' => 'false', 'message' => 'Заявка отправлена']);
 		}
 		if ($_GET['form'] == 'modal') {
-			echo json_encode(['errors' => 'false', 'view' => 'Форма из модалки']);
+			echo json_encode(['errors' => 'false', 'title' => 'Форма из модалки']);
 		}
 	}
 	
