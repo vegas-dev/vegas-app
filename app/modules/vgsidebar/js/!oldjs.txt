@@ -1,0 +1,143 @@
+build(isFirstInit = true) {
+		let self_height = this._element.clientHeight,
+			set_height = parseInt(this._params.height) || (self_height / 2);
+
+		if (isFirstInit) this._element.classList.add('vg-rollup');
+
+		if (self_height > set_height && this._params.content === 'text') {
+			this._element.classList.add(this._params.classes.hidden);
+			this._element.style.height = set_height + "px";
+
+			this.ellipsis();
+			this.fade();
+			if (isFirstInit) this.button();
+		} else if (this._params.content === 'elements') {
+			let elementClass = this._params.elements,
+				items = this._element.querySelectorAll('.' + elementClass),
+				cnt = this._params.cnt,
+				i = 1;
+
+			this.total = items.length;
+			this.count = cnt;
+
+			for (const item of items) {
+				if (i > cnt) {
+					item.classList.add(CLASS_NAME_HIDE)
+				}
+
+				i++;
+			}
+
+			if (this._params.button === true) this._params.button = (i - 1) > cnt;
+
+			this.ellipsis();
+			this.fade();
+			if (isFirstInit) this.button();
+		}
+
+		if (isFirstInit) {
+			this._button = document.querySelector('[data-vg-target="'+ this._element.id +'"]');
+			execute(this._params.callback.afterInit, [this]);
+		}
+	}
+
+	ellipsis() {
+		if (this._params.ellipsis.line) {
+			this._element.classList.add(this._params.classes.ellipsis);
+			this._element.style.webkitLineClamp = this._params.ellipsis.line;
+		}
+	}
+
+	fade() {
+		if (this._params.fade) {
+			if (this._element.classList.contains(this._params.classes.ellipsis)) {
+				this._element.classList.remove(this._params.classes.fade)
+			} else {
+				this._element.classList.add(this._params.classes.fade);
+			}
+		}
+	}
+
+	button() {
+		if (this._params.button) {
+			let target = this._element.id,
+				button = document.querySelector('[data-vg-target="'+ target +'"]');
+
+			console.log(button)
+
+			if (!button) {
+				let textShowNum = '', btnTextShow = this._params.text.show;
+
+				if (this._params.number) {
+					let sum = (this.total) - (this.count);
+
+					if (sum > 0) {
+						textShowNum = this._params.text.more + sum;
+					}
+				}
+
+				this._element.insertAdjacentHTML("afterend", '<div  class="' + this._params.classes.button + '"><a href="#" aria-expanded="false" data-vg-target="#' + target + '" data-vg-toggle="rollup">' + btnTextShow + textShowNum + '</a></div>');
+			}
+		}
+	}
+
+	toggle(relatedTarget) {
+		return !this._isShown() ? this.show(relatedTarget) : this.hide();
+	}
+
+	show(relatedTarget) {
+		if (isDisabled(this._element)) return;
+
+		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
+		if (showEvent.defaultPrevented) return;
+
+		this._element.classList.add(CLASS_NAME_SHOW);
+
+		const completeCallBack = () => {
+			if (this._params.content === 'elements') {
+				[... Selectors.findAll('.' + this._params.elements, this._element)].forEach(el => {
+					if (el.classList.contains(CLASS_NAME_HIDE)) {
+						el.classList.remove(CLASS_NAME_HIDE)
+					}
+				});
+			} else {
+				this._element.style.height = this.self_height + "px";
+				this._element.classList.remove(this._params.classes.fade);
+
+				if (this._element.classList.contains(this._params.classes.ellipsis)) {
+					this._element.classList.remove(this._params.classes.ellipsis)
+				}
+			}
+
+			relatedTarget.innerHTML = this._params.text.hide;
+
+			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+		}
+
+		this._button = relatedTarget;
+		execute(this._params.callback.show, [this]);
+		this._queueCallback(completeCallBack, this._element, true, 50)
+	}
+
+	hide() {
+		if (isDisabled(this._element)) return;
+
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
+		if (hideEvent.defaultPrevented) return;
+
+		this._element.setAttribute('aria-expanded', 'false');
+
+		this.build(false)
+
+		const completeCallback = () => {
+			this._element.classList.remove(CLASS_NAME_SHOW);
+			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN)
+		};
+
+		execute(this._params.callback.hide, [this]);
+		this._queueCallback(completeCallback, this._element, true);
+	}
+
+	_isShown() {
+		return this._element.classList.contains(CLASS_NAME_SHOW);
+	}

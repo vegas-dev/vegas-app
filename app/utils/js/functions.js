@@ -51,6 +51,11 @@ const isDisabled = element => {
 	return element.hasAttribute('disabled') && element.getAttribute('disabled') !== 'false'
 }
 
+/**
+ * isVisible
+ * @param element
+ * @returns {boolean}
+ */
 function isVisible (element) {
 	if (!isElement(element) || element.getClientRects().length === 0) {
 		return false

@@ -149,7 +149,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	this.setAttribute('aria-expanded', true);
 	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
-		if (isVisible(this)) this.focus();
+		//if (isVisible(this)) this.focus();
 		this.setAttribute('aria-expanded', false);
 	})
 

@@ -1,0 +1,49 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGRollup
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-rollup {
+	@include mix-vars('rollup', $rollup-map);
+	transform: var(--vg-rollup-transition);
+
+	&-button {
+		@include mix-vars('rollup-button', $rollup-button-map);
+		text-align: var(--vg-rollup-button-align);
+	}
+
+	&-content {
+		&--hidden {
+			overflow: hidden;
+		}
+
+		&--fade {
+			position: relative;
+
+			&:after {
+				content: '';
+				position: absolute;
+				left: 0;
+				bottom: 0;
+				width: 100%;
+				height: var(--vg-rollup-fade-height);
+				background: var(--vg-rollup-fade-background);
+			}
+		}
+
+		&--ellipsis {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+		}
+	}
+}

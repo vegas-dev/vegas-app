@@ -15,6 +15,11 @@ function onReady() {
 	[...document.querySelectorAll('[data-vgformsender]')].forEach(el => {
 		vg.VGFormSender.init(el);
 	});
+
+	// VGRollup
+	[...document.querySelectorAll(('[data-vgrollup]'))].forEach(el => {
+		vg.VGRollup.init(el);
+	})
 }
 
 document.addEventListener('DOMContentLoaded', onReady);

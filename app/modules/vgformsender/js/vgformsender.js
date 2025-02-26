@@ -2,7 +2,7 @@ import BaseModule from "../../base-module";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
-import {makeRandomString, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import {isObject, makeRandomString, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import {getSVG} from "../../module-fn";
@@ -212,9 +212,27 @@ class VGFormSender extends BaseModule {
 	alert(data, status) {
 		const _this = this;
 
-		if (typeof data === "object") {
-			if ('errors' in data) {
-				status = normalizeData(data.errors) ? 'error' : 'success';
+		if (isObject(data)) {
+			if (('code' in data) && data.code && data.code === 200) {
+				if ('response' in data && data.response) {
+					let response = normalizeData(data.response);
+					if (typeof response === 'string') {
+						if (response.indexOf("Parse error") !== -1 || response.indexOf("syntax error") !== -1) {
+							status = 'error';
+							data = {
+								response: {
+									title: 'Error',
+									message: 'Something went wrong, please repeat later'
+								},
+								text: 'Something went wrong, please repeat later'
+							}
+						}
+					} else {
+						if ('errors' in response && normalizeData(response.errors)) {
+							status = normalizeData(response.errors) ? 'error' : 'success';
+						}
+					}
+				}
 			}
 		}
 
@@ -288,21 +306,79 @@ class VGFormSender extends BaseModule {
 	setDataRelationStatus($element, status, data, type) {
 		let $alert = Selectors.find('.vg-alert-' + status, $element);
 
-		if (typeof data === 'object') {
-			if ('view' in data && typeof data.view === 'object') {
-				let txt = '';
+		if (isObject(data)) {
+			if (status === 'error') {
+				if ('code' in data && data.code !== 200) {
+					if ('text' in data && !data.text) {
+						data.text = 'Something went wrong, please repeat later';
 
-				if ('title' in data.view) {
-					txt += '<h4 class="vg-alert-content--title">' + data.view.title + '</h4>'
+						switch (data.code) {
+							case 400:
+								data.text = 'Bad Request'
+								break;
+							case 401:
+								data.text = 'Unauthorized'
+								break;
+							case 403:
+								data.text = 'Unauthorized'
+								break;
+							case 413:
+								data.text = 'Forbidden'
+								break;
+							case 404:
+								data.text = 'Not Found'
+								break;
+							case 422:
+								data.text = 'Unprocessable Entity'
+								break;
+							case 500:
+								data.text = 'Internal Server Error'
+								break;
+							case 504:
+								data.text = 'Gateway Timeout'
+								break;
+						}
+					}
 				}
+			}
 
-				if ('message' in data.view) {
-					txt += '<div class="vg-alert-content--message">' + data.view.message + '</div>'
+			if ('response' in data) {
+				let response = normalizeData(data.response), title = '', txt = '', code = '';
+				if (typeof response !== 'string') {
+					if (!('view' in response)) {
+						if ('title' in response) title = response.title;
+						if (status === 'error' && data.code !== 200) {
+							code = ' ' + data.text + ' (' + data.code + ')';
+						}
+
+						txt += '<h4 class="vg-alert-content--title">' + title + code + '</h4>';
+
+						if ('message' in response) {
+							txt += '<div class="vg-alert-content--message">' + response.message + '</div>'
+						}
+
+						if ('errors' in response) {
+							let errors = normalizeData(response.errors) || null;
+							if (isObject(errors)) {
+								for (const error in errors) {
+									if (Array.isArray(errors[error])) {
+										errors[error].forEach(function (t) {
+											txt += '<div>'+ t +'</div>';
+										})
+									} else {
+										txt = '<div>'+ errors[error] +'</div>';
+									}
+								}
+							}
+						}
+
+						data = {
+							view: txt
+						}
+					}
+				} else {
+					data.view = response;
 				}
-
-				data = txt;
-			} else if ('view' in data && typeof data.view === "string") {
-				data = data.view;
 			}
 		}
 
@@ -324,13 +400,13 @@ class VGFormSender extends BaseModule {
 
 			let text = document.createElement('div');
 			text.classList.add('vg-alert-content--text');
-			text.innerHTML = data;
+			text.innerHTML = data.view;
 
 			content.append(text);
 			$alert.append(content);
 		} else {
 			let text = Selectors.find('.vg-alert-content--text', $alert);
-			text.innerHTML = data;
+			text.innerHTML = data.view;
 		}
 
 		return $alert;

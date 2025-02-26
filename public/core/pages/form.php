@@ -10,7 +10,7 @@
 			<h3>Как это работает</h3>
 			
 			<div class="d-flex mt-5 pb-5">
-				<form action="/core/server.php?form=simple" method="POST" class="form" id="form-simple" data-vgformsender>
+				<form action="/core/server.php?form=simple" method="POST" class="form" id="form-simple" data-vgformsender data-alert-type="collapse">
 					<input type="hidden" name="form" value="simple">
 					
 					<div class="row">
@@ -148,7 +148,7 @@
 	</div>
 </div>
 
-<div class="vg-modal" id="exampleModal" tabindex="-1" aria-hidden="true">
+<div class="vg-modal fade" id="exampleModal" tabindex="-1" aria-hidden="true">
 	<div class="vg-modal-dialog vg-modal-dialog-centered">
 		<div class="vg-modal-content">
 			<button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal"
