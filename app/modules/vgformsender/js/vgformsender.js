@@ -14,11 +14,6 @@ const NAME = 'form-sender';
 const NAME_KEY = 'vg.fs';
 
 /**
- * Constants Classes
- */
-
-
-/**
  * Constants Events
  */
 const EVENT_KEY_SUCCESS = 'vg.fs.success';
@@ -89,7 +84,7 @@ class VGFormSender extends BaseModule {
 
 		_this._alertBefore();
 
-		_this._params.ajax.fields = data;
+		_this._params.ajax.data = data;
 
 		_this._route(function (status, data) {
 			_this._element.classList.remove('was-validated');
@@ -270,20 +265,22 @@ class VGFormSender extends BaseModule {
 		let $modal = Selectors.find('.' + _this._params.classes.alertModal);
 		if ($modal) $modal.remove();
 
-		let id = _this._params.classes.general + '-' + makeRandomString();
-		VGModal.init(id, {
-			classes: {
-				alert: _this._params.classes.alertModal
-			}
-		}, function (self) {
-			let element = self._element;
-			element.classList.add(_this._params.classes.alertModal);
+		setTimeout(() => {
+			let id = _this._params.classes.general + '-' + makeRandomString();
+			VGModal.init(id, {
+				classes: {
+					alert: _this._params.classes.alertModal
+				}
+			}, function (self) {
+				let element = self._element;
+				element.classList.add(_this._params.classes.alertModal);
 
-			let $body = Selectors.find('.vg-modal-body', element);
-			if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
+				let $body = Selectors.find('.vg-modal-body', element);
+				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
 
-			self.toggle();
-		});
+				self.toggle();
+			});
+		}, 175)
 	}
 
 	_alertCollapse(data, status) {
@@ -465,9 +462,11 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		event.preventDefault();
 
 		let data = new FormData(instance._element);
-		if (typeof instance._params.ajax.fields === 'object') {
+
+		// TODO доделать
+		/*if (Array.isArray(instance._params.ajax.fields) && instance._params.ajax.fields.length) {
 			data = collectData(data, instance._params.ajax.fields);
-		}
+		}*/
 
 		return instance.request(data, event);
 	}

@@ -2,7 +2,7 @@
 	ini_set("display_errors", "1");
 	error_reporting(E_ALL);
 	
-	http_response_code(500);
+	//http_response_code(500);
 	
 	/**
 	 * Created by vegas s.
