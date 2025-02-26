@@ -10,7 +10,7 @@
 			<h3>Как это работает</h3>
 			
 			<div class="d-flex mt-5 pb-5">
-				<!--<div class="vg-dropdown">
+				<div class="vg-dropdown">
 					<a href="#" class="btn btn-primary" data-vg-toggle="dropdown" data-hover="true" data-keyboard="true">Открыть дроп</a>
 					<div class="vg-dropdown-content">
 						<div class="vg-dropdown-container">
@@ -59,7 +59,7 @@
 							</ul>
 						</div>
 					</div>
-				</div>-->
+				</div>
 				<div class="vg-dropdown ms-auto">
 					<a href="#" class="btn btn-info" data-vg-toggle="dropdown">Открыть дроп</a>
 					<div class="vg-dropdown-content">
@@ -82,7 +82,7 @@
 			</p>
 			
 			<div class="mt-5 overflow-hidden">
-				<!--<div class="vg-dropdown">
+				<div class="vg-dropdown">
 					<a href="#" class="btn btn-primary" data-vg-toggle="dropdown" data-keyboard="true">Открыть дроп</a>
 					<div class="vg-dropdown-content">
 						<div class="vg-dropdown-container">
@@ -94,7 +94,7 @@
 							</ul>
 						</div>
 					</div>
-				</div>-->
+				</div>
 			</div>
 		</div>
 	</div>

@@ -66,6 +66,7 @@ class VGNav extends BaseModule {
 			collapse: true,
 			toggle: '<span class="default"></span>',
 			hamburger: {
+				enable: true,
 				always: false,
 				title: '',
 				body: null
@@ -119,12 +120,12 @@ class VGNav extends BaseModule {
 		this._element.classList.add('vg-nav-' + params.placement);
 
 		// Если нужно оставить список меню или установить медиа точку
-		if (params.breakpoint === null) {
+		if (!params.breakpoint) {
 			params.expand = false;
 		}
 
 		if (!params.hamburger.always) {
-			if (params.breakpoint === null || !params.expand) {
+			if (!params.breakpoint || !params.expand) {
 				this._element.classList.add(params.classes.expand);
 			} else if (params.breakpoint !== false) {
 				this._element.classList.add('vg-nav-' + params.breakpoint);
