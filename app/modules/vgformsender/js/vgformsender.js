@@ -6,6 +6,7 @@ import {isObject, makeRandomString, mergeDeepObject, normalizeData} from "../../
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import {getSVG} from "../../module-fn";
+import Backdrop from "../../../utils/js/components/backdrop";
 
 /**
  * Constants
@@ -262,11 +263,25 @@ class VGFormSender extends BaseModule {
 			}
 		});
 
-		let $modal = Selectors.find('.' + _this._params.classes.alertModal);
-		if ($modal) $modal.remove();
+		let m = document.querySelector('.vg-modal'),
+			id = _this._params.classes.general + '-' + makeRandomString();
+
+		m?.addEventListener('vg.modal.hidden', function () {
+			showModal();
+		});
 
 		setTimeout(() => {
-			let id = _this._params.classes.general + '-' + makeRandomString();
+			const newModal = document.getElementById(id);
+			if (!newModal) {
+				console.log('asd');
+				showModal(false);
+			}
+		}, 500);
+
+		function showModal(isBackDrop = true) {
+			let $modal = Selectors.find('.' + _this._params.classes.alertModal);
+			if ($modal) $modal.remove();
+
 			VGModal.init(id, {
 				classes: {
 					alert: _this._params.classes.alertModal
@@ -279,8 +294,14 @@ class VGFormSender extends BaseModule {
 				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
 
 				self.toggle();
+
+				if (isBackDrop) {
+					setTimeout(() => {
+						Backdrop.show();
+					}, 50)
+				}
 			});
-		}, 175)
+		}
 	}
 
 	_alertCollapse(data, status) {

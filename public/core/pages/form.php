@@ -102,7 +102,7 @@
 				</form>
 			</div>
 			
-			<div class="mt-5">
+			<div class="mt-5 mb-5">
 				<a href="#modal-form" class="btn btn-primary" data-bs-toggle="modal">Открыть форму в bs модалке</a>
 				<a href="#exampleModal" class="btn btn-danger" data-vg-toggle="modal">Открыть форму в vg модалке</a>
 			</div>

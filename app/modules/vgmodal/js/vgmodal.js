@@ -291,7 +291,7 @@ class VGModal extends BaseModule {
 			}, this._dialog);
 		}, this._dialog);
 
-		this._element.focus();
+		//this._element.focus();
 	}
 
 	_addFieldsInModal(relatedTarget) {
@@ -330,10 +330,10 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	EventHandler.one(target, EVENT_KEY_SHOW, showEvent => {
 		if (showEvent.defaultPrevented) return;
-
+/*
 		EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
 			if (isVisible(this)) this.focus();
-		});
+		});*/
 	});
 
 	const alreadyOpen = Selectors.find(OPEN_SELECTOR);
