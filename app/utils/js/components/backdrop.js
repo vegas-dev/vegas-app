@@ -3,10 +3,10 @@ import Selectors from "../dom/selectors";
 import EventHandler from "../dom/event";
 import Overflow from "./overflow";
 
-const NAME = 'backdrop'
-const CLASS_NAME = 'vg-backdrop'
-const CLASS_NAME_FADE = 'fade'
-const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`
+const NAME = 'backdrop';
+const CLASS_NAME = 'vg-backdrop';
+const CLASS_NAME_FADE = 'fade';
+const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 
 class Backdrop {
 	static show(callback) {
@@ -47,7 +47,7 @@ class Backdrop {
 
 		setTimeout(() => {
 			element.remove();
-		}, 500);
+		}, 100);
 	}
 }
 

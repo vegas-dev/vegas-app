@@ -263,25 +263,12 @@ class VGFormSender extends BaseModule {
 			}
 		});
 
-		let m = document.querySelector('.vg-modal'),
-			id = _this._params.classes.general + '-' + makeRandomString();
+		let id = _this._params.classes.general + '-' + makeRandomString();
 
-		m?.addEventListener('vg.modal.hidden', function () {
-			showModal();
-		});
+		let $modal = Selectors.find('.' + _this._params.classes.alertModal);
+		if ($modal) $modal.remove();
 
 		setTimeout(() => {
-			const newModal = document.getElementById(id);
-			if (!newModal) {
-				console.log('asd');
-				showModal(false);
-			}
-		}, 500);
-
-		function showModal(isBackDrop = true) {
-			let $modal = Selectors.find('.' + _this._params.classes.alertModal);
-			if ($modal) $modal.remove();
-
 			VGModal.init(id, {
 				classes: {
 					alert: _this._params.classes.alertModal
@@ -294,14 +281,8 @@ class VGFormSender extends BaseModule {
 				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
 
 				self.toggle();
-
-				if (isBackDrop) {
-					setTimeout(() => {
-						Backdrop.show();
-					}, 50)
-				}
 			});
-		}
+		}, 300)
 	}
 
 	_alertCollapse(data, status) {

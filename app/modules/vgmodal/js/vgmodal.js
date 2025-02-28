@@ -7,6 +7,8 @@ import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import {execute, isDisabled, isRTL, isVisible, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
+import Animation from "../../../utils/js/components/animation";
+import event from "../../../utils/js/dom/event";
 
 /**
  * Constants
@@ -54,9 +56,10 @@ class VGModal extends BaseModule {
 				loader: false
 			},
 			animation: {
-				name: ['animate__backInUp', 'animate__backOutUp'], // до / после не более двух элементов
-				duration: 1000, // ms
-				delay: 1000, // ms
+				in: 'animate__backInUp',
+				out: 'animate__backOutUp',
+				duration: 1000,
+				delay: 1000,
 				repeat: 1
 			},
 			classes: {
@@ -67,7 +70,6 @@ class VGModal extends BaseModule {
 				title: 'vg-modal-title',
 				body: 'vg-modal-body',
 				footer: 'vg-modal-footer',
-				animated: 'animate__animated'
 			}
 		}, params));
 		this._button = null;
@@ -78,6 +80,7 @@ class VGModal extends BaseModule {
 
 		this._addEventListeners();
 		this._dismissElement();
+		this._animation();
 	}
 
 	static get NAME() {
@@ -161,6 +164,7 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = true;
 
+		this._animation(false);
 		this._element.classList.remove(CLASS_NAME_SHOW);
 
 		this._queueCallback(() => this._hideModal(), this._element, this._isAnimated());
@@ -177,6 +181,7 @@ class VGModal extends BaseModule {
 			document.body.classList.remove(CLASS_NAME_OPEN);
 			this._resetAdjustments();
 			this._scrollBar.reset();
+
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		})
 	}
@@ -202,14 +207,10 @@ class VGModal extends BaseModule {
 		this._element.classList.add(CLASS_NAME_SHOW)
 
 		const transitionComplete = () => {
-			if (this._params.focus) {
-				// TODO сделать фокус
-			}
-
-			this._isTransitioning = false
+			this._isTransitioning = false;
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, {
 				relatedTarget
-			})
+			});
 		}
 
 		this._queueCallback(transitionComplete, this._dialog, this._isAnimated())
@@ -217,6 +218,18 @@ class VGModal extends BaseModule {
 
 	_isAnimated() {
 		return this._element.classList.contains(CLASS_NAME_FADE)
+	}
+
+	_animation(state = true) {
+		if (!this._isAnimated()) {
+			let animation = new Animation(this._element, this._params.animation);
+
+			if (state) {
+				animation.in();
+			} else {
+				animation.out();
+			}
+		}
 	}
 
 	_adjustDialog() {
@@ -250,11 +263,11 @@ class VGModal extends BaseModule {
 			}
 
 			this._triggerBackdropTransition();
-		})
+		});
 
 		EventHandler.on(window, EVENT_KEY_RESIZE, () => {
 			if (this._isShown && !this._isTransitioning) this._adjustDialog();
-		})
+		});
 
 		EventHandler.on(this._element, EVENT_KEY_MOUSEDOWN_DISMISS, event => {
 			EventHandler.one(this._element, EVENT_KEY_CLICK_DISMISS, event2 => {
@@ -269,7 +282,7 @@ class VGModal extends BaseModule {
 					this.hide();
 				}
 			})
-		})
+		});
 	}
 
 	_triggerBackdropTransition() {
@@ -290,8 +303,6 @@ class VGModal extends BaseModule {
 				this._element.style.overflowY = initialOverflowY;
 			}, this._dialog);
 		}, this._dialog);
-
-		//this._element.focus();
 	}
 
 	_addFieldsInModal(relatedTarget) {
@@ -330,10 +341,6 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	EventHandler.one(target, EVENT_KEY_SHOW, showEvent => {
 		if (showEvent.defaultPrevented) return;
-/*
-		EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
-			if (isVisible(this)) this.focus();
-		});*/
 	});
 
 	const alreadyOpen = Selectors.find(OPEN_SELECTOR);
