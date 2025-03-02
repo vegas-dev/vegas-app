@@ -21,6 +21,14 @@ class Animation {
 		}
 	}
 
+	toggle() {
+		if (this._element.classList.contains(this._params.in)) {
+			this.out();
+		} else {
+			this.in();
+		}
+	}
+
 	in(callback) {
 		this._element.classList.remove(this._params.out);
 		this._element.classList.add(this._params.in);

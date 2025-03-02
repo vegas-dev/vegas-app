@@ -163,11 +163,13 @@ class VGModal extends BaseModule {
 
 		this._isShown = false;
 		this._isTransitioning = true;
+		this._animation();
 
-		this._animation(false);
-		this._element.classList.remove(CLASS_NAME_SHOW);
+		setTimeout(() => {
+			this._element.classList.remove(CLASS_NAME_SHOW);
 
-		this._queueCallback(() => this._hideModal(), this._element, this._isAnimated());
+			this._queueCallback(() => this._hideModal(), this._element, this._isAnimated());
+		}, 800);
 	}
 
 	_hideModal() {
@@ -220,15 +222,10 @@ class VGModal extends BaseModule {
 		return this._element.classList.contains(CLASS_NAME_FADE)
 	}
 
-	_animation(state = true) {
+	_animation() {
 		if (!this._isAnimated()) {
 			let animation = new Animation(this._element, this._params.animation);
-
-			if (state) {
-				animation.in();
-			} else {
-				animation.out();
-			}
+			animation.toggle();
 		}
 	}
 

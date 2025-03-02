@@ -54,7 +54,7 @@
 </div>
 
 <div class="vg-modal fade" id="routeModal" data-ajax-route="/core/server.php?modal=ajax" data-ajax-loader="true" data-ajax-target="#routeModal-content" tabindex="-1" aria-hidden="true">
-	<div class="vg-modal-dialog vg-modal-fullscreen">
+	<div class="vg-modal-dialog">
 		<div class="vg-modal-content">
 			<button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal" aria-label="Close"></button>
 			<div id="routeModal-content"></div>
