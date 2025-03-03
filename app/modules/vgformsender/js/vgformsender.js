@@ -282,7 +282,7 @@ class VGFormSender extends BaseModule {
 
 				self.toggle();
 			});
-		}, 300)
+		}, 800);
 	}
 
 	_alertCollapse(data, status) {

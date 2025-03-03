@@ -9,15 +9,16 @@ class Animation {
 		this._params = mergeDeepObject({
 			in: 'animate__backInUp',
 			out: 'animate__backOutUp',
-			duration: 1000,
-			delay: 1000,
-			repeat: 1
+			delay: 800,
 		}, params);
 
+		this.classes = {
+			animated: 'animate__animated'
+		}
 		this._element = element;
 
-		if (!this._element.classList.contains('animate__animated')) {
-			this._element.classList.add('animate__animated');
+		if (!this._element.classList.contains(this.classes.animated)) {
+			this._element.classList.add(this.classes.animated);
 		}
 	}
 
@@ -29,14 +30,18 @@ class Animation {
 		}
 	}
 
-	in(callback) {
+	in() {
 		this._element.classList.remove(this._params.out);
 		this._element.classList.add(this._params.in);
 	}
 
-	out(callback) {
+	out() {
 		this._element.classList.remove(this._params.in);
 		this._element.classList.add(this._params.out);
+	}
+
+	dispose() {
+		this._element.classList.remove(this._params.out);
 	}
 }
 

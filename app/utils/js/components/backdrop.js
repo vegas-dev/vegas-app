@@ -8,6 +8,8 @@ const CLASS_NAME = 'vg-backdrop';
 const CLASS_NAME_FADE = 'fade';
 const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 
+let backdrop_delay = 500;
+
 class Backdrop {
 	static show(callback) {
 		Backdrop._append()
@@ -47,7 +49,7 @@ class Backdrop {
 
 		setTimeout(() => {
 			element.remove();
-		}, 100);
+		}, backdrop_delay);
 	}
 }
 

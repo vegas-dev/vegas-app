@@ -1,14 +1,12 @@
 import BaseModule from "../../base-module";
 import ScrollBarHelper from "../../../utils/js/components/scrollbar";
 import Backdrop from "../../../utils/js/components/backdrop";
-import Overflow from "../../../utils/js/components/overflow";
 import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
-import {execute, isDisabled, isRTL, isVisible, mergeDeepObject, reflow} from "../../../utils/js/functions";
+import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
 import Animation from "../../../utils/js/components/animation";
-import event from "../../../utils/js/dom/event";
 
 /**
  * Constants
@@ -56,11 +54,9 @@ class VGModal extends BaseModule {
 				loader: false
 			},
 			animation: {
-				in: 'animate__backInUp',
-				out: 'animate__backOutUp',
-				duration: 1000,
-				delay: 1000,
-				repeat: 1
+				in: 'animate__rollIn',
+				out: 'animate__rollOut',
+				delay: 800,
 			},
 			classes: {
 				general: 'vg-modal',
@@ -72,6 +68,7 @@ class VGModal extends BaseModule {
 				footer: 'vg-modal-footer',
 			}
 		}, params));
+
 		this._button = null;
 		this._dialog = Selectors.find(SELECTOR_DIALOG, this._element);
 		this._isShown = false;
@@ -165,11 +162,15 @@ class VGModal extends BaseModule {
 		this._isTransitioning = true;
 		this._animation();
 
-		setTimeout(() => {
+		if (this._isAnimatedFade()) {
 			this._element.classList.remove(CLASS_NAME_SHOW);
-
-			this._queueCallback(() => this._hideModal(), this._element, this._isAnimated());
-		}, 800);
+			this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
+		} else {
+			setTimeout(() => {
+				this._element.classList.remove(CLASS_NAME_SHOW);
+				this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
+			}, this._params.animation.delay);
+		}
 	}
 
 	_hideModal() {
@@ -183,6 +184,8 @@ class VGModal extends BaseModule {
 			document.body.classList.remove(CLASS_NAME_OPEN);
 			this._resetAdjustments();
 			this._scrollBar.reset();
+
+			if (!this._isAnimatedFade()) this._animation().dispose();
 
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		})
@@ -215,18 +218,21 @@ class VGModal extends BaseModule {
 			});
 		}
 
-		this._queueCallback(transitionComplete, this._dialog, this._isAnimated())
+		this._queueCallback(transitionComplete, this._dialog, this._isAnimatedFade())
 	}
 
-	_isAnimated() {
+	_isAnimatedFade() {
 		return this._element.classList.contains(CLASS_NAME_FADE)
 	}
 
 	_animation() {
-		if (!this._isAnimated()) {
+		if (!this._isAnimatedFade()) {
 			let animation = new Animation(this._element, this._params.animation);
 			animation.toggle();
+			return animation;
 		}
+
+		return null;
 	}
 
 	_adjustDialog() {
