@@ -185,7 +185,7 @@ class VGModal extends BaseModule {
 			this._resetAdjustments();
 			this._scrollBar.reset();
 
-			if (!this._isAnimatedFade()) this._animation().dispose();
+			if (!this._isAnimatedFade()) this._animation().reset();
 
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		})

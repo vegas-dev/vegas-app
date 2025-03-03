@@ -40,7 +40,7 @@ class Animation {
 		this._element.classList.add(this._params.out);
 	}
 
-	dispose() {
+	reset() {
 		this._element.classList.remove(this._params.out);
 	}
 }
