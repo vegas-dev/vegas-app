@@ -4,6 +4,7 @@ import Data from "../utils/js/dom/data";
 import Params from "../utils/js/components/params";
 import EventHandler from "../utils/js/dom/event";
 import {Ajax, getSVG} from "./module-fn";
+import Animation from "../utils/js/components/animation";
 
 class BaseModule {
 	constructor(element) {
@@ -77,6 +78,10 @@ class BaseModule {
 
 	_queueCallback(callback, element, isAnimated = true, timeOutMs) {
 		executeAfterTransition(callback, element, isAnimated, timeOutMs);
+	}
+
+	_animation() {
+		new Animation(this._element, this._params.animation || {});
 	}
 
 	static getInstance(element) {

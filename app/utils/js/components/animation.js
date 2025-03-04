@@ -7,6 +7,7 @@ import {mergeDeepObject} from "../functions";
 class Animation {
 	constructor(element, params = {}) {
 		this._params = mergeDeepObject({
+			enable: true,
 			in: 'animate__backInUp',
 			out: 'animate__backOutUp',
 			delay: 800,
@@ -20,6 +21,8 @@ class Animation {
 		if (!this._element.classList.contains(this.classes.animated)) {
 			this._element.classList.add(this.classes.animated);
 		}
+
+		console.log(this._params)
 	}
 
 	toggle() {

@@ -6,7 +6,6 @@ import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
-import Animation from "../../../utils/js/components/animation";
 
 /**
  * Constants
@@ -54,6 +53,7 @@ class VGModal extends BaseModule {
 				loader: false
 			},
 			animation: {
+				enable: false,
 				in: 'animate__rollIn',
 				out: 'animate__rollOut',
 				delay: 800,
@@ -160,17 +160,9 @@ class VGModal extends BaseModule {
 
 		this._isShown = false;
 		this._isTransitioning = true;
-		this._animation();
 
-		if (this._isAnimatedFade()) {
-			this._element.classList.remove(CLASS_NAME_SHOW);
-			this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
-		} else {
-			setTimeout(() => {
-				this._element.classList.remove(CLASS_NAME_SHOW);
-				this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
-			}, this._params.animation.delay);
-		}
+		this._element.classList.remove(CLASS_NAME_SHOW);
+		this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
 	}
 
 	_hideModal() {
@@ -184,8 +176,6 @@ class VGModal extends BaseModule {
 			document.body.classList.remove(CLASS_NAME_OPEN);
 			this._resetAdjustments();
 			this._scrollBar.reset();
-
-			if (!this._isAnimatedFade()) this._animation().reset();
 
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		})
@@ -223,16 +213,6 @@ class VGModal extends BaseModule {
 
 	_isAnimatedFade() {
 		return this._element.classList.contains(CLASS_NAME_FADE)
-	}
-
-	_animation() {
-		if (!this._isAnimatedFade()) {
-			let animation = new Animation(this._element, this._params.animation);
-			animation.toggle();
-			return animation;
-		}
-
-		return null;
 	}
 
 	_adjustDialog() {
