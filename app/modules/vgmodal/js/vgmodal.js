@@ -77,7 +77,7 @@ class VGModal extends BaseModule {
 
 		this._addEventListeners();
 		this._dismissElement();
-		this._animation();
+		this._animation(this._element, VGModal.NAME_KEY, this._params.animation);
 	}
 
 	static get NAME() {

@@ -1,13 +1,13 @@
-import {mergeDeepObject} from "../functions";
+import {isElement, mergeDeepObject} from "../functions";
 
 /**
  * Классы для анимаций смотрим здесь
  * https://animate.style/
  */
 class Animation {
-	constructor(element, params = {}) {
+	constructor(element, key, params = {}) {
 		this._params = mergeDeepObject({
-			enable: true,
+			enable: false,
 			in: 'animate__backInUp',
 			out: 'animate__backOutUp',
 			delay: 800,
@@ -16,13 +16,23 @@ class Animation {
 		this.classes = {
 			animated: 'animate__animated'
 		}
+
+		if (!this._params.enable) return;
+
 		this._element = element;
+		this._name_key = key;
+
+		this.init();
+	}
+
+	init() {
+		if (!isElement(this._element)) return;
 
 		if (!this._element.classList.contains(this.classes.animated)) {
 			this._element.classList.add(this.classes.animated);
-		}
 
-		console.log(this._params)
+			this.toggle();
+		}
 	}
 
 	toggle() {
@@ -39,12 +49,16 @@ class Animation {
 	}
 
 	out() {
-		this._element.classList.remove(this._params.in);
-		this._element.classList.add(this._params.out);
+		console.log('as');
+		this._element.addEventListener(`${this._name_key}.hide`, event => {
+			event.preventDefault();
+
+			console.log('tada');
+		})
 	}
 
 	reset() {
-		this._element.classList.remove(this._params.out);
+		//this._element.classList.remove(this._params.out);
 	}
 }
 

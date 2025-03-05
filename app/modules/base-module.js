@@ -80,8 +80,8 @@ class BaseModule {
 		executeAfterTransition(callback, element, isAnimated, timeOutMs);
 	}
 
-	_animation() {
-		new Animation(this._element, this._params.animation || {});
+	_animation(element, key, params = {}) {
+		new Animation(element, key, params);
 	}
 
 	static getInstance(element) {
