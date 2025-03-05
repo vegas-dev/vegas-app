@@ -25,5 +25,7 @@
 		<div class="vg-sidebar-body"></div>
 		<div class="vg-sidebar-footer"></div>
 	</div>
+	
+	<?php include('./core/includes/_law_cookie.php') ?>
 </body>
 </html>

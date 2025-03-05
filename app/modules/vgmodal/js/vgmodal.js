@@ -74,9 +74,11 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = false;
 		this._scrollBar = new ScrollBarHelper();
+		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 
 		this._addEventListeners();
 		this._dismissElement();
+
 		this._animation(this._element, VGModal.NAME_KEY, this._params.animation);
 	}
 
@@ -161,8 +163,10 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = true;
 
-		this._element.classList.remove(CLASS_NAME_SHOW);
-		this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
+		setTimeout(() => {
+			this._element.classList.remove(CLASS_NAME_SHOW);
+			this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
+		}, this._params.animation.delay);
 	}
 
 	_hideModal() {

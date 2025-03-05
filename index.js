@@ -28,6 +28,9 @@ import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
 import "./app/modules/vgrollup/scss/vgrollup.scss";
 import VGRollup from "./app/modules/vgrollup/js/vgrollup";
 
+// law cookie
+import VGLawCookie from "./app/modules/vglawcookie/js/vglawcookie";
+
 export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie
 }

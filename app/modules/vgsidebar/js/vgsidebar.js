@@ -12,7 +12,7 @@ import Overflow from "../../../utils/js/components/overflow";
 const NAME = 'sidebar';
 const NAME_KEY = 'vg.sidebar';
 const CLASS_NAME_SHOW = 'show';
-const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]'
+const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]';
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
@@ -31,6 +31,12 @@ class VGSidebar extends BaseModule {
 			backdrop: true,
 			overflow: true,
 			keyboard: true,
+			animation: {
+				enable: false,
+				in: 'animate__rollIn',
+				out: 'animate__rollOut',
+				delay: 800,
+			},
 			ajax: {
 				route: '',
 				target: '',
@@ -40,6 +46,9 @@ class VGSidebar extends BaseModule {
 
 		this._addEventListeners();
 		this._dismissElement();
+
+		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
+		this._animation(this._element, VGSidebar.NAME_KEY, this._params.animation);
 	}
 
 	static get NAME() {
@@ -102,11 +111,13 @@ class VGSidebar extends BaseModule {
 			Overflow.destroy();
 		}
 
-		_this._element.setAttribute('aria-expanded', false);
-		_this._element.classList.remove(CLASS_NAME_SHOW);
+		setTimeout(() => {
+			_this._element.setAttribute('aria-expanded', false);
+			_this._element.classList.remove(CLASS_NAME_SHOW);
 
-		const completeCallback = () => EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
-		this._queueCallback(completeCallback, this._element, true);
+			const completeCallback = () => EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+			this._queueCallback(completeCallback, this._element, true);
+		}, this._params.animation.delay);
 	}
 
 	dispose() {

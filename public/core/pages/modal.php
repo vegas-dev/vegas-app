@@ -24,7 +24,7 @@
 	</div>
 </div>
 
-<div class="vg-modal" id="exampleModal" tabindex="-1" aria-hidden="true" data-animation='{"enable": true, "in": "animate__tada", "out": "animate__hinge"}'>
+<div class="vg-modal" id="exampleModal" tabindex="-1" aria-hidden="true" data-animation='{"enable": true, "in": "animate__jackInTheBox", "out": "animate__hinge"}'>
 	<div class="vg-modal-dialog">
 		<div class="vg-modal-content">
 			<button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal"

@@ -18,7 +18,7 @@
 	</div>
 </div>
 
-<div class="vg-sidebar left" id="sidebar-left">
+<div class="vg-sidebar left" id="sidebar-left"  data-animation='{"enable": true, "in": "animate__fadeInLeft", "out": "animate__fadeOutLeft"}'>
 	<div class="vg-sidebar-header">
 		<div class="vg-sidebar-header--title">Панель слева</div>
 		<button type="button" class="vg-btn-close" data-vg-dismiss="sidebar" data-vg-target="#sidebar-left" aria-label="Close"></button>

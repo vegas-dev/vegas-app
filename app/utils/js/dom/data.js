@@ -24,7 +24,7 @@ export default {
 			return
 		}
 
-		instanceMap.set(key, instance)
+		instanceMap.set()
 	},
 
 	get(element, key) {

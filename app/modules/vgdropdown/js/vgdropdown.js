@@ -34,14 +34,19 @@ class VGDropdown extends BaseModule {
 			overflow: true,
 			keyboard: true,
 			placement: 'bottom',
-			animation: true,
 			timeoutAnimation: 350,
 			hover: false,
 			ajax: {
 				route: '',
 				target: '',
 				method: 'get'
-			}
+			},
+			animation: {
+				enable: false,
+				in: 'animate__flipInY',
+				out: 'animate__flipOutY',
+				delay: 800,
+			},
 		}
 
 		if ('offset' in params && Array.isArray(params.offset)) {
@@ -54,9 +59,8 @@ class VGDropdown extends BaseModule {
 		this._drop = Selectors.find('.' + TARGET_CONTAINER, this._parent);
 		this._isPlacement = false;
 
-		if (this._params.animation === false) {
-			this._params.timeoutAnimation = 10
-		}
+		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
+		this._animation(this._drop, VGDropdown.NAME_KEY, this._params.animation);
 	}
 
 	static get NAME() {
@@ -137,11 +141,13 @@ class VGDropdown extends BaseModule {
 		this._element.classList.remove(CLASS_NAME_SHOW);
 		this._element.setAttribute('aria-expanded', 'false');
 
-		const completeCallback = () => {
-			this._drop.classList.remove(CLASS_NAME_SHOW);
-			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
-		}
-		this._queueCallback(completeCallback, this._parent, true, this._params.timeoutAnimation);
+		setTimeout(() => {
+			const completeCallback = () => {
+				this._drop.classList.remove(CLASS_NAME_SHOW);
+				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
+			}
+			this._queueCallback(completeCallback, this._parent, true, 10);
+		}, this._params.animation.delay);
 	}
 
 	// TODO class Placement isn't done

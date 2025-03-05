@@ -1,8 +1,11 @@
 import {isElement, mergeDeepObject} from "../functions";
+import EventHandler from "../dom/event";
 
 /**
  * Классы для анимаций смотрим здесь
  * https://animate.style/
+ *
+ * Работает с модулями у которых есть события show, hide, hidden
  */
 class Animation {
 	constructor(element, key, params = {}) {
@@ -10,7 +13,7 @@ class Animation {
 			enable: false,
 			in: 'animate__backInUp',
 			out: 'animate__backOutUp',
-			delay: 800,
+			delay: 0,
 		}, params);
 
 		this.classes = {
@@ -18,47 +21,32 @@ class Animation {
 		}
 
 		if (!this._params.enable) return;
+		if (!isElement(element)) return;
 
 		this._element = element;
 		this._name_key = key;
 
-		this.init();
-	}
-
-	init() {
-		if (!isElement(this._element)) return;
-
 		if (!this._element.classList.contains(this.classes.animated)) {
 			this._element.classList.add(this.classes.animated);
-
-			this.toggle();
 		}
+
+		this._triggers();
 	}
 
-	toggle() {
-		if (this._element.classList.contains(this._params.in)) {
-			this.out();
-		} else {
-			this.in();
-		}
-	}
+	_triggers() {
+		EventHandler.one(this._element, this._name_key + '.show', () => {
+			this._element.classList.remove(this._params.out);
+			this._element.classList.add(this._params.in);
+		});
 
-	in() {
-		this._element.classList.remove(this._params.out);
-		this._element.classList.add(this._params.in);
-	}
+		EventHandler.one(this._element, this._name_key + '.hide', () => {
+			this._element.classList.remove(this._params.in);
+			this._element.classList.add(this._params.out);
+		});
 
-	out() {
-		console.log('as');
-		this._element.addEventListener(`${this._name_key}.hide`, event => {
-			event.preventDefault();
-
-			console.log('tada');
-		})
-	}
-
-	reset() {
-		//this._element.classList.remove(this._params.out);
+		EventHandler.one(this._element, this._name_key + '.hidden', () => {
+			this._element.classList.remove(this._params.out);
+		});
 	}
 }
 
