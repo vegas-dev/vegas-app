@@ -19,16 +19,17 @@ const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 
 const EVENT_KEY_DOCUMENT_LOADED = `DOMContentLoaded`;
-const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="lawcookie"]';
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="lawcookie"]';
+const SELECTOR_DATA_TOGGLE_CLEAR = '[data-vg-toggle="lawcookie-clear"]';
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
-const SELECTOR_DATA_ID = `vg-${NAME_KEY}`;
+const SELECTOR_DATA_ID = `vg-${NAME}`;
 
 class VGLawCookie extends BaseModule  {
 	constructor(element, params = {}) {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			storage: 'cookie', // cookie or local
+			storage: 'local', // cookie or local
 			delay: 500,
 			cookie: {
 				name: 'lawCookie',
@@ -65,14 +66,6 @@ class VGLawCookie extends BaseModule  {
 	}
 
 	_isShown() {
-		if (this._isCookie() === undefined) {
-			return this._element.classList.contains(CLASS_NAME_SHOW);
-		}
-
-		return false;
-	}
-
-	_isCookie() {
 		return this.storage().get();
 	}
 
@@ -91,7 +84,15 @@ class VGLawCookie extends BaseModule  {
 	}
 
 	hide() {
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
+		if (hideEvent.defaultPrevented) return;
 
+		setTimeout(() => {
+			this._element.classList.remove(CLASS_NAME_SHOW);
+
+			const completeCallback = () => EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+			this._queueCallback(completeCallback, this._element, true);
+		}, this._params.animation.delay);
 	}
 
 	storage() {
@@ -122,32 +123,50 @@ class VGLawCookie extends BaseModule  {
 		}
 	}
 
-	dispose() {
+	dispose(isAll = true) {
+		if (isAll) {
+			Cookies.remove(this._params.cookie.name);
+			localStorage.clear();
+		} else {
+			if (this._params.storage === 'cookie') {
+				Cookies.remove(this._params.cookie.name);
+			} else {
+				localStorage.clear();
+			}
+		}
+
 		super.dispose();
 	}
 }
-
-dismissTrigger(VGLawCookie);
-
-EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-	const target = Selectors.find('#' + SELECTOR_DATA_ID);
-
-	if (['A', 'AREA'].includes(this.tagName)) {
-		event.preventDefault()
-	}
-
-	if (isDisabled(this)) return;
-
-	const cookie = VGLawCookie.getOrCreateInstance(target);
-	cookie.toggle();
-});
 
 EventHandler.on(document, EVENT_KEY_DOCUMENT_LOADED, () => {
 	let target = Selectors.find('#' + SELECTOR_DATA_ID);
 	if (!target) return;
 
-	const cookie = VGLawCookie.getOrCreateInstance(target);
-	cookie.toggle();
+	const data = VGLawCookie.getOrCreateInstance(target);
+	data.toggle();
+
+	EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+		if (['A', 'AREA'].includes(this.tagName)) {
+			event.preventDefault()
+		}
+
+		if (isDisabled(this)) return;
+
+		data.storage().set();
+		data.hide();
+	});
+
+	EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE_CLEAR, function (event) {
+		if (['A', 'AREA'].includes(this.tagName)) {
+			event.preventDefault()
+		}
+
+		if (isDisabled(this)) return;
+		data.dispose();
+
+		location.reload();
+	});
 })
 
 export default VGLawCookie;

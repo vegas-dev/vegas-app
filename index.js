@@ -29,6 +29,7 @@ import "./app/modules/vgrollup/scss/vgrollup.scss";
 import VGRollup from "./app/modules/vgrollup/js/vgrollup";
 
 // law cookie
+import "./app/modules/vglawcookie/scss/vglawcookie.scss";
 import VGLawCookie from "./app/modules/vglawcookie/js/vglawcookie";
 
 export {
