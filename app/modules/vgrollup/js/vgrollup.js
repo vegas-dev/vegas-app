@@ -39,16 +39,6 @@ class VGRollup  extends BaseModule {
 		return NAME_KEY
 	}
 
-	/**
-	 * Инициализация
-	 * @param element
-	 * @param params
-	 */
-	static init(element, params = {}) {
-		const instance = VGRollup.getOrCreateInstance(element, params);
-		instance.build();
-	}
-
 	build() {
 
 	}
@@ -63,6 +53,16 @@ class VGRollup  extends BaseModule {
 
 	_isShown() {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
+	}
+
+	/**
+	 * Инициализация
+	 * @param element
+	 * @param params
+	 */
+	static init(element, params = {}) {
+		const instance = VGRollup.getOrCreateInstance(element, params);
+		instance.toggle();
 	}
 }
 

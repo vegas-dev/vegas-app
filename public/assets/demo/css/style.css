@@ -39,6 +39,11 @@
 	--vg-modal-color: var(--bs-body-color);
 }
 
+[data-bs-theme="dark"] .vg-lawcookie {
+	--vg-lawcookie-background-color: var(--bs-secondary-bg);
+	--vg-lawcookie-color: var(--bs-body-color);
+}
+
 [data-bs-theme="dark"] .vg-btn-close svg polygon {
 	fill: var(--bs-body-color);
 }

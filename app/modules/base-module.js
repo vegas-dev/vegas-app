@@ -16,7 +16,7 @@ class BaseModule {
 		}
 
 		this._params = {};
-		Data.set(this._element, this.constructor.NAME_KEY, this)
+		Data.set(this._element, this.constructor.NAME_KEY, this);
 	}
 
 	_getParams(element, params) {

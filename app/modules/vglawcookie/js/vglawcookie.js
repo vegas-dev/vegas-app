@@ -4,11 +4,11 @@ import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import Cookies from "../../../utils/js/dom/cookie";
 import {dismissTrigger} from "../../module-fn";
-import VGSidebar from "../../vgsidebar/js/vgsidebar";
+
 /**
  * Constants
  */
-const NAME = 'lawcookie';
+const NAME     = 'lawcookie';
 const NAME_KEY = 'vg.lawcookie';
 
 const CLASS_NAME_SHOW = 'show';
@@ -18,13 +18,13 @@ const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 
-const EVENT_KEY_DOCUMENT_LOADED = `DOMContentLoaded`;
-const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="lawcookie"]';
+const SELECTOR_DATA_TOGGLE       = '[data-vg-toggle="lawcookie"]';
 const SELECTOR_DATA_TOGGLE_CLEAR = '[data-vg-toggle="lawcookie-clear"]';
-const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
-const SELECTOR_DATA_ID = `vg-${NAME}`;
+const EVENT_KEY_CLICK_DATA_API   = `click.${NAME_KEY}.data.api`;
 
-class VGLawCookie extends BaseModule  {
+class VGLawCookie extends BaseModule {
+	static sParams = {};
+
 	constructor(element, params = {}) {
 		super(element, params);
 
@@ -49,6 +49,8 @@ class VGLawCookie extends BaseModule  {
 			}
 		}, params));
 
+		VGLawCookie.sParams = this._params;
+
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGLawCookie.NAME_KEY, this._params.animation);
 	}
@@ -58,7 +60,7 @@ class VGLawCookie extends BaseModule  {
 	}
 
 	static get NAME_KEY() {
-		return NAME_KEY
+		return NAME_KEY;
 	}
 
 	toggle() {
@@ -123,50 +125,58 @@ class VGLawCookie extends BaseModule  {
 		}
 	}
 
-	dispose(isAll = true) {
-		if (isAll) {
-			Cookies.remove(this._params.cookie.name);
-			localStorage.clear();
-		} else {
-			if (this._params.storage === 'cookie') {
-				Cookies.remove(this._params.cookie.name);
-			} else {
-				localStorage.clear();
-			}
-		}
-
+	dispose() {
 		super.dispose();
+	}
+
+	static reset() {
+		Cookies.remove(VGLawCookie.sParams.cookie.name);
+		localStorage.clear();
+		location.reload();
+	}
+
+	/**
+	 * Инициализация
+	 * @param element
+	 * @param params
+	 */
+	static init(element, params = {}) {
+		const instance = VGLawCookie.getOrCreateInstance(element, params);
+		instance.toggle();
 	}
 }
 
-EventHandler.on(document, EVENT_KEY_DOCUMENT_LOADED, () => {
-	let target = Selectors.find('#' + SELECTOR_DATA_ID);
-	if (!target) return;
+dismissTrigger(VGLawCookie);
 
-	const data = VGLawCookie.getOrCreateInstance(target);
-	data.toggle();
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault()
+	}
 
-	EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-		if (['A', 'AREA'].includes(this.tagName)) {
-			event.preventDefault()
-		}
+	if (isDisabled(this)) return;
 
-		if (isDisabled(this)) return;
+	const element = Selectors.find('#vg-lawcookie');
+	if (!element) return;
 
-		data.storage().set();
-		data.hide();
-	});
+	const instance = VGLawCookie.getOrCreateInstance(element);
+	instance.storage().set();
+	instance.hide();
+});
 
-	EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE_CLEAR, function (event) {
-		if (['A', 'AREA'].includes(this.tagName)) {
-			event.preventDefault()
-		}
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE_CLEAR, function (event) {
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault()
+	}
 
-		if (isDisabled(this)) return;
-		data.dispose();
+	if (isDisabled(this)) return;
 
-		location.reload();
-	});
-})
+	const element = Selectors.find('#vg-lawcookie');
+	if (!element) return;
+
+	const instance = VGLawCookie.getOrCreateInstance(element);
+	instance.dispose();
+
+	location.reload();
+});
 
 export default VGLawCookie;

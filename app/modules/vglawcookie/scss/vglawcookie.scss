@@ -1,9 +1,28 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGLawCookie
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
 .vg-lawcookie {
+	@include mix-vars('lawcookie', $lawcookie-map);
 	position: fixed;
-	padding: 1rem;
-	z-index: 2000;
 	display: none;
-	max-width: 50%;
+	padding: var(--vg-lawcookie-padding-outer);
+	z-index: var(--vg-lawcookie-z-index);
+	max-width: var(--vg-lawcookie-max-width);
+
+	@media screen and (max-width: 600px){
+		width: 100%;
+		--vg-lawcookie-max-width: 100%;
+	}
 
 	&.show {
 		display: block;
@@ -25,10 +44,48 @@
 		bottom: 0;
 	}
 
+	&.center {
+		top: 50%;
+		left: 50%;
+
+		&.left {
+			left: 0;
+		}
+
+		&.top {
+			top: 0;
+			left: 50%;
+		}
+
+		&.bottom {
+			top: auto;
+			bottom: 0;
+		}
+
+		&.right {
+			right: 0;
+			left: auto;
+		}
+	}
+
+	&.fullwidth {
+		max-width: 100%;
+		width: 100%;
+		--vg-lawcookie-padding-outer: 0;
+		--vg-lawcookie-border-radius: 0;
+		--vg-lawcookie-box-shadow: none;
+	}
+
 	&--content {
-		background-color: white;
-		border-radius: 10px;
-		padding: 1rem;
-		color: black;
+		background-color: var(--vg-lawcookie-background-color);
+		border-radius: var(--vg-lawcookie-border-radius);
+		padding: var(--vg-lawcookie-padding);
+		color: var(--vg-lawcookie-color);
+		box-shadow: var(--vg-lawcookie-box-shadow);
+		font-size: var(--vg-lawcookie-font-size);
+
+		.title {
+			font-size: var(--vg-lawcookie-title-font-size);
+		}
 	}
 }

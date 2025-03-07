@@ -34,17 +34,15 @@ const dismissTrigger = (module, method = 'hide') => {
 
 	EventHandler.on(document, clickEvent, `[data-vg-dismiss="${name}"]`, function (event) {
 		if (['A', 'AREA'].includes(this.tagName)) {
-			event.preventDefault()
+			event.preventDefault();
 		}
 
-		if (isDisabled(this)) {
-			return
-		}
+		if (isDisabled(this)) return;
 
-		const target = Selectors.getSelectorFromElement(this) || this.closest(`.vg-${name}`)
-		const instance = module.getOrCreateInstance(target)
+		const target = Selectors.getSelectorFromElement(this) || this.closest(`.vg-${name}`);
+		const instance = module.getOrCreateInstance(target);
 
-		instance[method]()
+		instance[method]();
 	})
 }
 

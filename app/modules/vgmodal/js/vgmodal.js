@@ -74,11 +74,11 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = false;
 		this._scrollBar = new ScrollBarHelper();
-		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 
 		this._addEventListeners();
 		this._dismissElement();
 
+		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGModal.NAME_KEY, this._params.animation);
 	}
 

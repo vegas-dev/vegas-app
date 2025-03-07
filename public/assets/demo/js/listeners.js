@@ -19,7 +19,13 @@ function onReady() {
 	// VGRollup
 	[...document.querySelectorAll(('[data-vgrollup]'))].forEach(el => {
 		vg.VGRollup.init(el);
-	})
+	});
+
+	// VGLawCookie
+	let targetLawCookie = document.getElementById('vg-lawcookie');
+	if (targetLawCookie) {
+		vg.VGLawCookie.init(targetLawCookie);
+	}
 }
 
 document.addEventListener('DOMContentLoaded', onReady);

@@ -1,0 +1,14 @@
+$lawcookie-map: (
+		background-color:          $bg-color,
+		color:                     $color,
+		box-shadow:                $box-shadow,
+		padding:                   1rem,
+		border:                    1px solid #{$border-color},
+		border-radius:             $border-radius,
+		z-index:                   $lawcookie-index,
+		transition:                $transition-base,
+		max-width:                 50%,
+		padding-outer:             1rem,
+		font-size:                 14px,
+		title-font-size:           16px
+);

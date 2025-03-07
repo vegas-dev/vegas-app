@@ -34,17 +34,17 @@ class Animation {
 	}
 
 	_triggers() {
-		EventHandler.one(this._element, this._name_key + '.show', () => {
+		EventHandler.on(this._element, this._name_key + '.show', () => {
 			this._element.classList.remove(this._params.out);
 			this._element.classList.add(this._params.in);
 		});
 
-		EventHandler.one(this._element, this._name_key + '.hide', () => {
+		EventHandler.on(this._element, this._name_key + '.hide', () => {
 			this._element.classList.remove(this._params.in);
 			this._element.classList.add(this._params.out);
 		});
 
-		EventHandler.one(this._element, this._name_key + '.hidden', () => {
+		EventHandler.on(this._element, this._name_key + '.hidden', () => {
 			this._element.classList.remove(this._params.out);
 		});
 	}
