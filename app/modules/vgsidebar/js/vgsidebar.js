@@ -11,8 +11,10 @@ import Overflow from "../../../utils/js/components/overflow";
  */
 const NAME = 'sidebar';
 const NAME_KEY = 'vg.sidebar';
-const CLASS_NAME_SHOW = 'show';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]';
+
+const CLASS_NAME_SHOW = 'show';
+const CLASS_NAME_OPEN = 'vg-sidebar-open';
 
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
@@ -82,6 +84,7 @@ class VGSidebar extends BaseModule {
 		}
 
 		_this._element.classList.add(CLASS_NAME_SHOW);
+		document.body.classList.add(CLASS_NAME_OPEN);
 
 		const completeCallBack = () => {
 			EventHandler.on(Selectors.find('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
@@ -116,7 +119,10 @@ class VGSidebar extends BaseModule {
 			_this._element.setAttribute('aria-expanded', false);
 			_this._element.classList.remove(CLASS_NAME_SHOW);
 
-			const completeCallback = () => EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+			const completeCallback = () => {
+				document.body.classList.remove(CLASS_NAME_OPEN);
+				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+			}
 			this._queueCallback(completeCallback, this._element, true);
 		}, this._params.animation.delay);
 	}

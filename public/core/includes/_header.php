@@ -34,7 +34,7 @@
 						</div>
 					</div>
 					<div class="col-lg col-2">
-						<nav class="vg-nav vg-nav-header"  data-breakpoint="false">
+						<nav class="vg-nav vg-nav-header" data-breakpoint="md">
 							<ul class="vg-nav-wrapper">
 								<li>
 									<a href="/?page=about">О проекте</a>
