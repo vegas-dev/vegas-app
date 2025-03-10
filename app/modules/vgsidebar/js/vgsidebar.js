@@ -103,23 +103,23 @@ class VGSidebar extends BaseModule {
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
-		if (_this._params.backdrop) {
-			Backdrop.hide(function () {
-				if (_this._params.overflow) {
-					Overflow.destroy();
-				}
-			});
-		}
-
-		if (_this._params.overflow) {
-			Overflow.destroy();
-		}
-
 		setTimeout(() => {
 			_this._element.setAttribute('aria-expanded', false);
 			_this._element.classList.remove(CLASS_NAME_SHOW);
 
 			const completeCallback = () => {
+				if (_this._params.backdrop) {
+					Backdrop.hide(function () {
+						if (_this._params.overflow) {
+							Overflow.destroy();
+						}
+					});
+				}
+
+				if (_this._params.overflow) {
+					Overflow.destroy();
+				}
+
 				document.body.classList.remove(CLASS_NAME_OPEN);
 				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 			}
