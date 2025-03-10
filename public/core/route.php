@@ -34,6 +34,9 @@
 			case 'rollup':
 				$content = file_get_contents(__DIR__.'/pages/rollup.php');
 				break;
+			case 'select':
+				$content = file_get_contents(__DIR__.'/pages/select.php');
+				break;
 			default:
 				$content = file_get_contents(__DIR__.'/pages/home.php');
 				break;

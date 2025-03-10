@@ -26,6 +26,11 @@ function onReady() {
 	if (targetLawCookie) {
 		vg.VGLawCookie.init(targetLawCookie);
 	}
+
+	// VGSelect
+	[... document.querySelectorAll('select.vg-select')].forEach(el => {
+		vg.VGSelect.init(el);
+	})
 }
 
 document.addEventListener('DOMContentLoaded', onReady);

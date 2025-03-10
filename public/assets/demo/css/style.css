@@ -48,6 +48,28 @@
 	fill: var(--bs-body-color);
 }
 
+[data-bs-theme="dark"] .vg-select {
+	--vg-select-current-background-color: var(--bs-body-bg);
+	--vg-select-current-border-color: var(--bs-border-color);
+	--vg-select-current-color: var(--bs-body-color);
+	--vg-select-dropdown-border-color: var(--bs-border-color);
+	--vg-select-dropdown-background-color: var(--bs-tertiary-bg);
+	--vg-select-dropdown-box-shadow: var(--bs-box-shadow);
+	--vg-select-list-color: var(--bs-body-color);
+	--vg-select-list-border-bottom-color: var(--bs-border-color);
+	--vg-select-list-hover-background-color: var(--bs-link-hover-color);
+	--vg-select-list-hover-border-bottom-color: var(--bs-link-hover-color);
+	--vg-select-list-scrollbar-bg: var(--bs-tertiary-bg);
+	--vg-select-list-scrollbar-thumb: var(--bs-border-color);
+	--vg-select-search-background-color: var(--bs-body-bg);
+	--vg-select-search-color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] #form-monitor {
+	background-color: var(--bs-tertiary-bg);
+	border: 1px soild var(--bs-border-color);
+}
+
 a {
 	text-decoration: none;
 }
@@ -190,4 +212,33 @@ a {
 /* VGSidebar */
 #sidebar-nav {
 	--vg-sidebar-vertical-height: 100vh;
+}
+
+/* VGSelect */
+.form-floating [data-vg-toggle="show-pass"] {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 24px;
+	height: 24px;
+}
+
+#form-monitor {
+	margin-top: 2rem;
+	padding: 16px;
+	border-radius: 5px;
+}
+
+#form-monitor ul + ul {
+	margin-top: 1.25rem;
+}
+
+#form-monitor ul span {
+	display: inline-block;
+	margin-right: 1rem;
+}
+
+#form-monitor ul span:last-child {
+	margin-right: 0;
 }

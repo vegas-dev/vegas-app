@@ -1,0 +1,96 @@
+<div class="container pb-5">
+	<h1 class="mb-3 mt-3">VGSelect</h1>
+	<hr class="mb-4">
+
+	<div class="row">
+		<div class="col-lg-3">
+			...
+		</div>
+		<div class="col-lg-9">
+			<h3 class="mb-5">Как это работает</h3>
+			
+			<form action="#" method="post" id="form-countries">
+				<div class="row">
+					<div class="col-lg-3">
+						<label for="country" class="d-block mb-2">Выбрать страну</label>
+						<select id="country" class="vg-select w-100" name="country" data-max="10" required>
+							<option value="2" data-price="1">
+								Россия
+							</option>
+							<option value="3" data-price="2">Узбекистан</option>
+							<option value="4" data-price="3">
+								Казахстан
+							</option>
+							<option value="5" data-price="4" selected>
+								Белоруссия
+							</option>
+							<option value="6" data-price="5" disabled>
+								Китай
+							</option>
+						</select>
+					</div>
+					<div class="col">
+						<label for="region" class="d-block mb-2">Выбрать регион</label>
+						<select id="region" class="vg-select" name="region" data-search="true" data-route="/php/search.php">
+							<option value="1">Московская область</option>
+							<option value="2" selected>Ленинградская область</option>
+							<option value="3">Калужская область</option>
+							<option value="4">Тульская область</option>
+							<option value="5" hidden="hidden">Краснодарский край</option>
+						</select>
+					</div>
+					<div class="col">
+						<div id="select-ajax-loaded"></div>
+					</div>
+					<div class="col">
+						<label for="color" class="d-block mb-2">Выберите цвет</label>
+						<select id="color" class="vg-select w-100" name="color" data-search="true">
+							<optgroup label="Цвет">
+								<option value="c1">Апельсиновый</option>
+								<option value="c2">Лимонный</option>
+								<option value="c3">Персиковый</option>
+							</optgroup>
+							<optgroup label="Тон">
+								<option value="s1">Светлый</option>
+								<option value="s2">Нормальный</option>
+								<option value="s3">Темный</option>
+							</optgroup>
+						</select>
+					</div>
+					<div class="col-12 mt-3">
+						<button type="submit" class="btn btn-primary">Отправить</button>
+						<button type="reset" class="btn btn-outline-primary">Сбросить</button>
+						<button type="button" class="btn btn-outline-primary" id="add-region">Добавить регион</button>
+					</div>
+				</div>
+			</form>
+			
+			<form action="#" method="post" class="mt-5" id="form-brands">
+				<div class="row">
+					<div class="col-lg-4">
+						<label class="form-label" for="brand">Бренд</label>
+						<select name="brand" class="vg-select w-100" id="brand">
+							<option>-</option>
+							<option value="nike" data-clothes="2,4">Nike</option>
+							<option value="adidas" data-clothes="1,3">Adidas</option>
+						</select>
+					</div>
+					<div class="col-lg-4">
+						<label class="form-label" for="clothes">Одежда</label>
+						<select name="clothes" class="vg-select w-100" id="clothes" disabled>
+							<option>-</option>
+							<option value="1" hidden="">Шорты</option>
+							<option value="2" hidden>Кроссовки</option>
+							<option value="3" hidden>Футболка</option>
+							<option value="4" hidden>Носки</option>
+							<option value="5" hidden>Перчатки</option>
+							<option value="6" hidden>Кеды</option>
+						</select>
+					</div>
+				</div>
+			</form>
+			
+			<div id="form-monitor"></div>
+		</div>
+	</div>
+</div>

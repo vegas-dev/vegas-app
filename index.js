@@ -32,6 +32,10 @@ import VGRollup from "./app/modules/vgrollup/js/vgrollup";
 import "./app/modules/vglawcookie/scss/vglawcookie.scss";
 import VGLawCookie from "./app/modules/vglawcookie/js/vglawcookie";
 
+// select
+import "./app/modules/vgselect/scss/vgselect.scss";
+import VGSelect from "./app/modules/vgselect/js/vgselect";
+
 export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect
 }

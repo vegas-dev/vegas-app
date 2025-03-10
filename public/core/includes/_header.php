@@ -85,6 +85,12 @@
 												<small>Сворачивание контента</small>
 											</a>
 										</li>
+										<li>
+											<a href="/?module=select">
+												<span>VGSelect</span>
+												<small>Стилизованный HTML Select</small>
+											</a>
+										</li>
 									</ul>
 								</li>
 								<li class="dropdown">

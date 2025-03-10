@@ -1,0 +1,216 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGSELECT
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+select {
+	&.vg-select {
+		position: absolute;
+		left: 0;
+		top: 0;
+		opacity: 0;
+		z-index: -1000;
+		width: 100%;
+		height: 100%;
+		display: inline-block;
+		visibility: hidden;
+	}
+}
+
+.vg-select {
+	@include mix-vars('select-current', $select-current-map);
+	@include mix-vars('select-dropdown', $select-dropdown-map);
+	@include mix-vars('select-list', $select-list-map);
+	@include mix-vars('select-optgroup', $select-optgroup-map);
+	@include mix-vars('select-optgroup-hover', $select-optgroup-hover-map);
+	@include mix-vars('select-list-hover', $select-list-hover-map);
+	@include mix-vars('select-search', $select-search-map);
+	--vg-select-list-max-height: #{$select-list-max-height};
+	--vg-select-list-scrollbar-width: #{$select-list-scrollbar-width};
+	--vg-select-list-scrollbar-bg: #{$select-list-scrollbar-bg};
+	--vg-select-list-scrollbar-thumb: #{$select-list-scrollbar-thumb};
+	position: relative;
+
+	&-current {
+		@each $key, $value in $select-current-map {
+			#{$key}: var(--vg-select-current-#{$key})
+		}
+		box-sizing: border-box;
+		cursor: pointer;
+		outline: none;
+		position: relative;
+		z-index: var(--vg-select-current-z-index);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+
+		&:after {
+			content: '';
+			position: absolute;
+			right: 16px;
+			top: 50%;
+			transform: translateY(-50%);
+			transition: all .4s ease-in-out;
+			background-image: url("data:image/svg+xml, " + $select-current-svg);
+			background-repeat: no-repeat;
+			width: 16px;
+			height: 16px;
+		}
+	}
+
+	&-dropdown {
+		@each $key, $value in $select-dropdown-map {
+			#{$key}: var(--vg-select-dropdown-#{$key})
+		}
+		position: absolute;
+		box-sizing: border-box;
+		opacity: 0;
+		overflow: hidden;
+		padding: 0;
+		top: 100%;
+		left: 0;
+		width: 100%;
+		height: 0;
+		pointer-events: auto;
+		transform-origin: 50% 0;
+		transform: scale(0.75) translateY(-21px);
+		transition: all 0.2s cubic-bezier(0.5, 0, 0, 1.25), opacity 0.15s ease-out;
+		z-index: var(--vg-select-dropdown-z-index);
+		margin-top: .25rem;
+	}
+
+	&-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		max-height: var(--vg-select-list-max-height);
+		overflow-y: auto;
+
+		&::-webkit-scrollbar-track {
+			-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+			background-color: var(--vg-select-list-scrollbar-bg);
+		}
+
+		&::-webkit-scrollbar
+		{
+			width: var(--vg-select-list-scrollbar-width);
+			background-color: var(--vg-select-list-scrollbar-bg);
+		}
+
+		&::-webkit-scrollbar-thumb
+		{
+			background-color: var(--vg-select-list-scrollbar-thumb);
+		}
+
+		&--option {
+			@each $key, $value in $select-list-map {
+				#{$key}: var(--vg-select-list-#{$key})
+			}
+			display: block;
+			width: 100%;
+			cursor: pointer;
+			transition: all .4s ease-in-out;
+
+			&:last-child {
+				border: none;
+			}
+
+			&:hover, &.selected {
+				@each $key, $value in $select-list-hover-map {
+					#{$key}: var(--vg-select-list-hover-#{$key})
+				}
+			}
+
+			&.disabled {
+				opacity: .6;
+				cursor: not-allowed;
+			}
+
+			&.hidden {
+				display: none !important;
+			}
+		}
+
+		&--optgroup {
+			list-style: none;
+			padding: 0;
+
+			+ .vg-select-list--optgroup {
+				border-top-width: var(--vg-select-optgroup-border-bottom-width);
+				border-top-style: var(--vg-select-optgroup-border-bottom-style);
+				border-top-color: var(--vg-select-optgroup-border-bottom-color);
+			}
+
+			> li {
+				--vg-select-list-padding-left: 16px;
+			}
+
+			&-title {
+				@each $key, $value in $select-optgroup-map {
+					#{$key}: var(--vg-select-optgroup-#{$key})
+				}
+			}
+		}
+	}
+
+	&-search {
+		input {
+			@each $key, $value in $select-search-map {
+				#{$key}: var(--vg-select-search-#{$key})
+			}
+			padding: 8px;
+			border: none;
+			outline: none;
+			width: 100%;
+		}
+	}
+
+	&.show {
+		.vg-select-current {
+			&:after {
+				transform: translateY(-50%) rotate(180deg);
+			}
+		}
+
+		.vg-select-dropdown {
+			transform: scale(1) translateY(0);
+			opacity: 1;
+			box-sizing: border-box;
+			height: auto;
+		}
+	}
+
+	&.is-invalid {
+		.vg-select-current {
+			background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+			background-repeat: no-repeat;
+			background-position: right calc(1.975em + 0.1875rem) center;
+			background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+			--vg-select-current-padding-right: 55px;
+		}
+	}
+
+	&.disabled {
+		&:before {
+			content: '';
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			z-index: 500;
+		}
+
+		> .vg-select-current {
+			opacity: .75;
+		}
+	}
+}
