@@ -63,6 +63,10 @@
 		if ($_GET['modal'] == 'ajax') {
 			echo '<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci cum debitis deserunt dolore ipsa iure maiores neque odit, optio placeat praesentium quam, quasi quo.</p><p>Consequatur neque nulla praesentium quisquam similique?</p>';
 		}
+		
+		if ($_GET['modal'] == 'ajax2') {
+			echo '<p>Hello World</p>';
+		}
 	}
 	
 	if (isset($_GET['select'])) {

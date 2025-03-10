@@ -15,6 +15,11 @@
 						С загрузкой контента
 					</button>
 				</li>
+				<li class="list-group-item">
+					<button class="btn btn-primary" data-vg-target="#routeModal" data-vg-toggle="modal" data-ajax-route="/core/server.php?modal=ajax2" data-ajax-loader="true" data-ajax-target="#routeModal-content">
+						С загрузкой контента 2
+					</button>
+				</li>
 			</ul>
 		</div>
 		<div class="col-lg-9">
@@ -24,7 +29,7 @@
 	</div>
 </div>
 
-<div class="vg-modal" id="exampleModal" tabindex="-1" aria-hidden="true" data-animation='{"enable": true, "in": "animate__jackInTheBox", "out": "animate__hinge"}'>
+<div class="vg-modal" id="exampleModal" tabindex="-1" data-animation='{"enable": true, "in": "animate__jackInTheBox", "out": "animate__hinge"}'>
 	<div class="vg-modal-dialog">
 		<div class="vg-modal-content">
 			<button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal"
@@ -53,7 +58,7 @@
 	</div>
 </div>
 
-<div class="vg-modal fade" id="routeModal" data-ajax-route="/core/server.php?modal=ajax" data-ajax-loader="true" data-ajax-target="#routeModal-content" tabindex="-1" aria-hidden="true">
+<div class="vg-modal fade" id="routeModal" tabindex="-1" data-ajax-route="/core/server.php?modal=ajax" data-ajax-loader="true" data-ajax-target="#routeModal-content">
 	<div class="vg-modal-dialog">
 		<div class="vg-modal-content">
 			<button type="button" class="vg-btn-close" data-vg-dismiss="modal" data-vg-target="#modal" aria-label="Close"></button>

@@ -67,9 +67,10 @@ class VGSidebar extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this._element)) return;
 
-		this._route();
+		_this._params = _this._getParams(relatedTarget, _this._params);
+		_this._route();
 
-		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
+		const showEvent = EventHandler.trigger(_this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
 
 		if (_this._params.backdrop) {
@@ -87,9 +88,9 @@ class VGSidebar extends BaseModule {
 				_this.hide();
 			});
 
-			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+			EventHandler.trigger(_this._element, EVENT_KEY_SHOWN, { relatedTarget });
 		}
-		this._queueCallback(completeCallBack, this._element, true, 50)
+		_this._queueCallback(completeCallBack, _this._element, true, 50)
 	}
 
 	hide() {

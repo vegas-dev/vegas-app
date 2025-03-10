@@ -6,6 +6,7 @@ import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
+import Params from "../../../utils/js/components/params";
 
 /**
  * Constants
@@ -136,6 +137,7 @@ class VGModal extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this._element)) return;
 
+		this._params = this._getParams(relatedTarget, this._params);
 		this._route();
 
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
