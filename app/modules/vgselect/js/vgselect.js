@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import {isEmptyObj, mergeDeepObject} from "../../../utils/js/functions";
+import {isEmptyObj, mergeDeepObject, transliterate} from "../../../utils/js/functions";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 
@@ -30,8 +30,6 @@ class VGSelect extends BaseModule {
 		this._params = this._getParams(element, mergeDeepObject({
 			search: false
 		}, params));
-
-		this._addEventListeners();
 	}
 
 	static get NAME() {
@@ -160,10 +158,97 @@ class VGSelect extends BaseModule {
 			this.search(select);
 		}
 
-		_this.toggle(select);
+		this._addEventListeners(select);
 	}
 
-	toggle(select) {
+	destroy(select) {
+		let element = select.nextElementSibling;
+
+		if (element) {
+			if (element.classList.contains(CLASS_NAME_CONTAINER)) {
+				element.remove();
+
+				select.selectedIndex = 0;
+				[...select.querySelectorAll('option')].forEach(function (el, index) {
+					if (el.hasAttribute('selected')) {
+						select.selectedIndex = index;
+					}
+				});
+			}
+		}
+	}
+
+	refresh(select) {
+		const _this = this;
+
+		let observer = new MutationObserver(() => {
+			clearTimeout(observerTimout);
+			observerTimout = setTimeout(() => {
+				_this.build(true, select);
+			}, 100);
+		});
+
+		observer.observe(select, {
+			attributeFilter: ['disabled', 'required', 'style', 'hidden'],
+			childList: true,
+			subtree: true,
+			characterDataOldValue: true,
+		});
+	}
+
+	search(select) {
+		const _this = this;
+
+		let dropdown = select.querySelector('.' + CLASS_NAME_DROPDOWN);
+
+		let search_container = document.createElement('div');
+		search_container.classList.add(CLASS_NAME_SEARCH);
+
+		let input = document.createElement('input');
+		input.setAttribute('name', 'vg-select-search');
+		input.setAttribute('type', 'text');
+		input.setAttribute('placeholder', 'Поиск...');
+
+		search_container.append(input);
+		dropdown.prepend(search_container);
+
+		search_container.querySelector('[name=vg-select-search]').addEventListener('keyup', (e) => {
+			e.preventDefault();
+
+			let el = e.target;
+
+			let selectList = el?.closest('.' + CLASS_NAME_DROPDOWN).querySelector('.' + CLASS_NAME_LIST);
+			if (selectList) {
+				let options = [...selectList.querySelectorAll('.' + CLASS_NAME_OPTION)],
+					optionsGroup = [...selectList.querySelectorAll('.' + CLASS_NAME_OPTGROUP)],
+					value = el?.value;
+
+				options = options.concat(optionsGroup);
+
+				for (const option of options) {
+					Manipulator.show(option);
+				}
+
+				if (value.length) {
+					value = value.trim();
+					value = value.toLowerCase();
+					value = transliterate(value, true);
+
+					for (const option of options) {
+						let text = option.innerText.toLowerCase();
+
+						if (text.indexOf(value) === -1) Manipulator.hide(option);
+					}
+				}
+			}
+		});
+	}
+
+	dispose() {
+		super.dispose();
+	}
+
+	_addEventListeners(select) {
 		const _this = this;
 
 		select.querySelector('.' + CLASS_NAME_CURRENT).onclick = function (e) {
@@ -231,52 +316,7 @@ class VGSelect extends BaseModule {
 				}
 			}
 		});
-	}
 
-	destroy(select) {
-		let element = select.nextElementSibling;
-
-		if (element) {
-			if (element.classList.contains(CLASS_NAME_CONTAINER)) {
-				element.remove();
-
-				select.selectedIndex = 0;
-				[...select.querySelectorAll('option')].forEach(function (el, index) {
-					if (el.hasAttribute('selected')) {
-						select.selectedIndex = index;
-					}
-				});
-			}
-		}
-	}
-
-	refresh(select) {
-		const _this = this;
-
-		let observer = new MutationObserver(() => {
-			clearTimeout(observerTimout);
-			observerTimout = setTimeout(() => {
-				_this.build(true, select);
-			}, 100);
-		});
-
-		observer.observe(select, {
-			attributeFilter: ['disabled', 'required', 'style', 'hidden'],
-			childList: true,
-			subtree: true,
-			characterDataOldValue: true,
-		});
-	}
-
-	search(select) {
-
-	}
-
-	dispose() {
-		super.dispose();
-	}
-
-	_addEventListeners() {
 		[...document.querySelectorAll('form')].forEach(function (form) {
 			form.addEventListener("reset", function () {
 				form.querySelectorAll('select.vg-select').forEach(function (select) {

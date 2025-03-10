@@ -56,7 +56,15 @@ const Manipulator = {
 		if (isElement(element) && nameAttribute) {
 			element.removeAttribute(nameAttribute);
 		}
-	}
+	},
+
+	hide(el) {
+		el.style.display = 'none';
+	},
+
+	show(el, state = 'block') {
+		el.style.display = state;
+	},
 }
 
 export {Manipulator}

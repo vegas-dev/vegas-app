@@ -81,7 +81,7 @@ select {
 		height: 0;
 		pointer-events: auto;
 		transform-origin: 50% 0;
-		transform: scale(0.75) translateY(-21px);
+		transform: scale(0.75) translateY(-11px);
 		transition: all 0.2s cubic-bezier(0.5, 0, 0, 1.25), opacity 0.15s ease-out;
 		z-index: var(--vg-select-dropdown-z-index);
 		margin-top: .25rem;

@@ -270,8 +270,27 @@ function makeRandomString(length = 7) {
 }
 
 /**
+ * Транслитерация символов с латиницы на кириллицу и обратно
+ * @param text
+ * @param enToRu
+ * @returns {*}
+ */
+function transliterate(text, enToRu) {
+	let ru = "й ц у к е н г ш щ з х ъ ф ы в а п р о л д ж э я ч с м и т ь б ю".split(/ +/g);
+	let en = "q w e r t y u i o p [ ] a s d f g h j k l ; ' z x c v b n m , .".split(/ +/g);
+	let x;
+
+	for (x = 0; x < ru.length; x++) {
+		text = text.split(enToRu ? en[x] : ru[x]).join(enToRu ? ru[x] : en[x]);
+		text = text.split(enToRu ? en[x].toUpperCase() : ru[x].toUpperCase()).join(enToRu ? ru[x].toUpperCase() : en[x].toUpperCase());
+	}
+
+	return text;
+}
+
+/**
  *
  */
 const isRTL = () => document.documentElement.dir === 'rtl'
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL}
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL, transliterate}

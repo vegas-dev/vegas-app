@@ -64,3 +64,14 @@
 			echo '<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci cum debitis deserunt dolore ipsa iure maiores neque odit, optio placeat praesentium quam, quasi quo.</p><p>Consequatur neque nulla praesentium quisquam similique?</p>';
 		}
 	}
+	
+	if (isset($_GET['select'])) {
+		$selects = [
+			[
+				'id' => 1,
+				'title' => 'Калуга'
+			]
+		];
+		
+		echo json_encode($selects);
+	}
