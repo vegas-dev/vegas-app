@@ -20,6 +20,7 @@ const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
+const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
 
 const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
@@ -71,7 +72,9 @@ class VGSidebar extends BaseModule {
 		if (isDisabled(_this._element)) return;
 
 		_this._params = _this._getParams(relatedTarget, _this._params);
-		_this._route();
+		_this._route(function (status, data) {
+			EventHandler.trigger(_this._element, EVENT_KEY_LOADED, {stats: status, data: data});
+		});
 
 		const showEvent = EventHandler.trigger(_this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;

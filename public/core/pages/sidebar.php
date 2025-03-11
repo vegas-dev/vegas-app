@@ -66,8 +66,13 @@
 </div>
 
 <script>
-	const mySidebarLeft = document.getElementById('sidebar-left')
+	const mySidebarLeft = document.getElementById('sidebar-left');
 	mySidebarLeft.addEventListener('vg.sidebar.shown', function () {
 		mySidebarLeft.querySelector('form input').focus();
+	});
+	
+	const mySidebarRight = document.getElementById('sidebar-right');
+	mySidebarRight.addEventListener('vg.sidebar.loaded', function (event) {
+		console.log(event)
 	});
 </script>

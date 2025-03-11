@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import {isDisabled, isEmptyObj, mergeDeepObject, noop, transliterate} from "../../../utils/js/functions";
+import {isDisabled, isEmptyObj, mergeDeepObject, noop, normalizeData, transliterate} from "../../../utils/js/functions";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -23,14 +23,14 @@ const CLASS_NAME_PLACEHOLDER    = 'vg-select-current--placeholder';
 const CLASS_NAME_SEARCH         = 'vg-select-search';
 
 const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
-const EVENT_KEY_HIDE_PREVENTED  = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
 const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN          = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW            = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN           = `${NAME_KEY}.shown`;
 
-const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="select"]';
+const SELECTOR_DATA_TOGGLE    = '[data-vg-toggle="select"]';
+const SELECTOR_OPTION_TOGGLE  = '[data-vg-toggle="select-option"]';
 
 
 let observerTimout;
@@ -47,6 +47,10 @@ class VGSelect extends BaseModule {
 				target: '',
 				method: 'get',
 				loader: false,
+			},
+			render: {
+				option: noop,
+				item: noop
 			}
 		}, params));
 
@@ -62,7 +66,7 @@ class VGSelect extends BaseModule {
 	}
 
 	toggle(relatedTarget) {
-		return !this._isShow() ? this.show(relatedTarget) : this.hide();
+		return !this._isShown() ? this.show(relatedTarget) : this.hide();
 	}
 
 	show(relatedTarget) {
@@ -77,7 +81,33 @@ class VGSelect extends BaseModule {
 			}
 		}
 
+		this._route((status, data) => {
+			let response = normalizeData(data.response),
+				select = this._element.previousSibling;
+
+			if (response.length) {
+				Selectors.findAll('option', select).forEach(option => {
+					option.remove();
+				});
+
+				response.forEach(el => {
+					let option = document.createElement('option');
+					option.innerText = el.title;
+					Manipulator.set(option, 'value', el.id);
+
+					select.append(option);
+				})
+
+				this.build(true, this._element);
+			}
+		});
+
 		this._element.classList.add(CLASS_NAME_SHOW);
+
+		if (this._params.search) {
+			let input = Selectors.find('input', this._element);
+			if (input) input.focus();
+		}
 
 		const completeCallBack = () => {
 			this._element.classList.add(CLASS_NAME_ACTIVE);
@@ -93,7 +123,28 @@ class VGSelect extends BaseModule {
 		this._completeHide();
 	}
 
-	_isShow() {
+	_completeHide() {
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE, {})
+		if (hideEvent.defaultPrevented) return;
+
+		this._element.classList.remove(CLASS_NAME_ACTIVE);
+		let toggle = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
+		Manipulator.set(toggle, 'aria-expanded', 'false');
+
+		if ('ontouchstart' in document.documentElement) {
+			for (const element of [].concat(...document.body.children)) {
+				EventHandler.off(element, 'mouseover', noop);
+			}
+		}
+
+		const completeCallback = () => {
+			this._element.classList.remove(CLASS_NAME_SHOW);
+			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, {});
+		}
+		this._queueCallback(completeCallback, this._element, true, 10);
+	}
+
+	_isShown() {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
@@ -170,7 +221,7 @@ class VGSelect extends BaseModule {
 
 				olOptGroup.prepend(liLabel)
 
-				let optGroupOptions = el.querySelectorAll('option');
+				let optGroupOptions = Selectors.findAll('option', el);
 
 				createLi(optGroupOptions, olOptGroup, isSelected);
 
@@ -190,6 +241,8 @@ class VGSelect extends BaseModule {
 				li.innerHTML = option.innerHTML.trim().replace(/<\/[^>]+(>|$)/g, "")
 				li.dataset.value = Manipulator.get(option, 'value');
 				li.classList.add(CLASS_NAME_OPTION);
+
+				Manipulator.set(li, 'data-vg-toggle', 'select-option');
 
 				let liData = Manipulator.get(option);
 				if (!isEmptyObj(liData)) {
@@ -309,82 +362,38 @@ class VGSelect extends BaseModule {
 		super.dispose();
 	}
 
-	_addEventListeners(select) {
-		const _this = this;
+	static hideOpenToggles(event) {
+		const openToggles = Selectors.findAll('.vg-select:not(.disabled):not(:disabled).show');
 
-		select.querySelector('.' + CLASS_NAME_CURRENT).onclick = function (e) {
-			let el = e.target,
-				container = el.closest('.' + CLASS_NAME_CONTAINER);
+		for (const toggle of openToggles) {
+			const context = VGSelect.getInstance(toggle);
+			if (!context) continue;
 
-			let selects = document.querySelectorAll('.' + CLASS_NAME_CONTAINER);
-			if (selects.length) {
-				for (const els of selects) {
-					if (els !== container) {
-						els?.classList.remove('show');
-					}
-				}
+			if (event.target.closest('.' + CLASS_NAME_CONTAINER) === context._element) {
+				return;
 			}
 
-			if (container.classList.contains('show')) {
-				container.classList.remove('show');
-			} else {
-				container.classList.add('show');
-
-				if (_this._params.search) {
-					let input = container.querySelector('input');
-					if (input) input.focus();
-				}
+			const composedPath = event.composedPath();
+			if (composedPath.includes(context._element)) {
+				continue
 			}
 
-			return false;
+			const relatedTarget = { relatedTarget: context._element }
+
+			if (event.type === 'click') {
+				relatedTarget.clickEvent = event
+			}
+
+			context._completeHide(relatedTarget)
+		}
+	}
+
+	static clearDrops(event) {
+		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) {
+			return
 		}
 
-		select.querySelectorAll('.' + CLASS_NAME_OPTION).forEach((option) => {
-			option.addEventListener('click', (e) => {
-				e.preventDefault();
-
-				let el = e.target;
-
-				if (!el.classList.contains('disabled')) {
-					let container = el.closest('.' + CLASS_NAME_CONTAINER),
-						options = container.querySelectorAll('.' + CLASS_NAME_OPTION);
-
-					if (options.length) {
-						for (const option of options) {
-							option.classList.remove('selected');
-						}
-					}
-
-					el.classList.add('selected');
-
-					container.querySelector('.' + CLASS_NAME_CURRENT).innerText = el.innerText;
-					container.classList.remove('show');
-
-					let select = container.previousSibling;
-					select.value = el.dataset.value;
-					EventHandler.trigger(select, EVENT_KEY_CHANGE)
-				}
-			});
-		});
-
-		window.addEventListener('click', function (e) {
-			if (!e?.target.closest('.' + CLASS_NAME_CONTAINER)) {
-				let selects = document.querySelectorAll('.' + CLASS_NAME_CONTAINER);
-				if (selects.length) {
-					for (const el of selects) {
-						el?.classList.remove('show');
-					}
-				}
-			}
-		});
-
-		[...document.querySelectorAll('form')].forEach(function (form) {
-			form.addEventListener("reset", function () {
-				form.querySelectorAll('select.vg-select').forEach(function (select) {
-					VGSelect.init(select, {}, true)
-				})
-			});
-		});
+		VGSelect.hideOpenToggles(event)
 	}
 
 	/**
@@ -398,6 +407,8 @@ class VGSelect extends BaseModule {
 		instance.build(isRebuild);
 	}
 }
+
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, VGSelect.clearDrops);
 
 EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function () {
 	const target = this.closest('.' + CLASS_NAME_CONTAINER);
@@ -415,6 +426,30 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	const instance = VGSelect.getOrCreateInstance(target);
 	instance.toggle(this);
+});
+
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_OPTION_TOGGLE, function (e) {
+	let el = e.target;
+
+	if (!el.classList.contains('disabled')) {
+		let container = el.closest('.' + CLASS_NAME_CONTAINER),
+			options = container.querySelectorAll('.' + CLASS_NAME_OPTION);
+
+		if (options.length) {
+			for (const option of options) {
+				option.classList.remove('selected');
+			}
+		}
+
+		el.classList.add('selected');
+
+		container.querySelector('.' + CLASS_NAME_CURRENT).innerText = el.innerText;
+		container.classList.remove('show');
+
+		let select = container.previousSibling;
+		select.value = el.dataset.value;
+		EventHandler.trigger(select, EVENT_KEY_CHANGE, {value: el.dataset.value});
+	}
 });
 
 

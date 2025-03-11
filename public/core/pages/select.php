@@ -41,7 +41,10 @@
 					</div>
 					<div class="col">
 						<label for="city" class="d-block mb-2">Выбрать город</label>
-						<select id="city" data-search="true" class="vg-select" name="city"  data-placeholder="Надо что-то выбрать...">
+						<select id="city" data-search="true" class="vg-select" name="city"
+								data-placeholder="Надо что-то выбрать..."
+								data-ajax-route="/core/server.php?select=ajax"
+						>
 							<option value="1">Москва</option>
 							<option value="2">Подольск</option>
 							<option value="3">Мытищи</option>
