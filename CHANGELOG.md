@@ -1,3 +1,8 @@
+# VEGAS-NAV 0.1.5 (Март, 12, 2025)
+## Модуль VGSelect
+### Добавлено:
+* data-placeholder
+
 # VEGAS-NAV 0.1.3 - 0.1.4 (Март, 10, 2025)
 * Перенесен плагин (<a href="https://github.com/vegas-dev/vegas-select">VGSelect</a>) в модуль VGSelect
 * для модулей VGSidebar и VGModal добавлена возможность собирать параметры с кнопки вызова элемента

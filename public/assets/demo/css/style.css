@@ -63,6 +63,8 @@
 	--vg-select-list-scrollbar-thumb: var(--bs-border-color);
 	--vg-select-search-background-color: var(--bs-body-bg);
 	--vg-select-search-color: var(--bs-body-color);
+	--vg-select-current-placehoder-color: rgba(var(--bs-body-color-rgb), .32);
+	--vg-select-optgroup-color: var(--bs-body-color);
 }
 
 [data-bs-theme="dark"] #form-monitor {

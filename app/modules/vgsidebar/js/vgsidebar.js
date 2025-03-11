@@ -42,7 +42,8 @@ class VGSidebar extends BaseModule {
 			ajax: {
 				route: '',
 				target: '',
-				method: 'get'
+				method: 'get',
+				loader: false,
 			}
 		}, params));
 

@@ -27,6 +27,7 @@ select {
 
 .vg-select {
 	@include mix-vars('select-current', $select-current-map);
+	@include mix-vars('select-current', $select-placeholder-map);
 	@include mix-vars('select-dropdown', $select-dropdown-map);
 	@include mix-vars('select-list', $select-list-map);
 	@include mix-vars('select-optgroup', $select-optgroup-map);
@@ -39,6 +40,12 @@ select {
 	--vg-select-list-scrollbar-thumb: #{$select-list-scrollbar-thumb};
 	position: relative;
 
+	&:not(.show) {
+		.vg-select-dropdown {
+			display: none;
+		}
+	}
+
 	&-current {
 		@each $key, $value in $select-current-map {
 			#{$key}: var(--vg-select-current-#{$key})
@@ -47,7 +54,6 @@ select {
 		cursor: pointer;
 		outline: none;
 		position: relative;
-		z-index: var(--vg-select-current-z-index);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -63,6 +69,11 @@ select {
 			background-repeat: no-repeat;
 			width: 16px;
 			height: 16px;
+		}
+
+		&--placeholder {
+			color: var(--vg-select-current-placehoder-color);
+			font-size: var(--vg-select-current-font-size);
 		}
 	}
 
@@ -183,6 +194,12 @@ select {
 		}
 
 		.vg-select-dropdown {
+			display: block;
+		}
+	}
+
+	&.active {
+		.vg-select-dropdown {
 			transform: scale(1) translateY(0);
 			opacity: 1;
 			box-sizing: border-box;
@@ -206,7 +223,7 @@ select {
 			position: absolute;
 			width: 100%;
 			height: 100%;
-			z-index: 500;
+			z-index: 12;
 		}
 
 		> .vg-select-current {

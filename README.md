@@ -1,1 +1,2 @@
-# VEGAS APP 0.1.3
+# VEGAS APP 
+[FUNC.TRUE?!](http://func-true.ru)

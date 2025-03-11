@@ -32,6 +32,8 @@ select.vg-select {
   --vg-select-current-line-height: 1.1 ;
   --vg-select-current-font-size: 16px ;
   --vg-select-current-z-index: 10 ;
+  --vg-select-current-placehoder-color: rgba(0, 0, 0, 0.32) ;
+  --vg-select-current-placehoder-font-size: 16px ;
   --vg-select-dropdown-background-color: white ;
   --vg-select-dropdown-color: black ;
   --vg-select-dropdown-border-width: 1px ;
@@ -50,7 +52,7 @@ select.vg-select {
   --vg-select-list-border-bottom-style: solid ;
   --vg-select-list-border-bottom-color: #f5f5f5 ;
   --vg-select-optgroup-background-color: transparent ;
-  --vg-select-optgroup-color: #fff ;
+  --vg-select-optgroup-color: #000 ;
   --vg-select-optgroup-padding-left: 8px ;
   --vg-select-optgroup-padding-right: 8px ;
   --vg-select-optgroup-padding-top: 8px ;
@@ -58,6 +60,7 @@ select.vg-select {
   --vg-select-optgroup-border-bottom-width: 1px ;
   --vg-select-optgroup-border-bottom-style: solid ;
   --vg-select-optgroup-border-bottom-color: #838383 ;
+  --vg-select-optgroup-font-weight: 500 ;
   --vg-select-optgroup-hover-background-color: #f7f7f7 ;
   --vg-select-optgroup-hover-color: black ;
   --vg-select-optgroup-hover-border-bottom-color: #f5f5f5 ;
@@ -71,6 +74,9 @@ select.vg-select {
   --vg-select-list-scrollbar-bg: #F5F5F5;
   --vg-select-list-scrollbar-thumb: #999;
   position: relative;
+}
+.vg-select:not(.show) .vg-select-dropdown {
+  display: none;
 }
 .vg-select-current {
   background-color: var(--vg-select-current-background-color);
@@ -90,7 +96,6 @@ select.vg-select {
   cursor: pointer;
   outline: none;
   position: relative;
-  z-index: var(--vg-select-current-z-index);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,6 +111,10 @@ select.vg-select {
   background-repeat: no-repeat;
   width: 16px;
   height: 16px;
+}
+.vg-select-current--placeholder {
+  color: var(--vg-select-current-placehoder-color);
+  font-size: var(--vg-select-current-font-size);
 }
 .vg-select-dropdown {
   background-color: var(--vg-select-dropdown-background-color);
@@ -204,6 +213,7 @@ select.vg-select {
   border-bottom-width: var(--vg-select-optgroup-border-bottom-width);
   border-bottom-style: var(--vg-select-optgroup-border-bottom-style);
   border-bottom-color: var(--vg-select-optgroup-border-bottom-color);
+  font-weight: var(--vg-select-optgroup-font-weight);
 }
 .vg-select-search input {
   background-color: var(--vg-select-search-background-color);
@@ -217,6 +227,9 @@ select.vg-select {
   transform: translateY(-50%) rotate(180deg);
 }
 .vg-select.show .vg-select-dropdown {
+  display: block;
+}
+.vg-select.active .vg-select-dropdown {
   transform: scale(1) translateY(0);
   opacity: 1;
   box-sizing: border-box;
@@ -234,7 +247,7 @@ select.vg-select {
   position: absolute;
   width: 100%;
   height: 100%;
-  z-index: 500;
+  z-index: 12;
 }
 .vg-select.disabled > .vg-select-current {
   opacity: 0.75;

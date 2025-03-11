@@ -1,7 +1,8 @@
 import BaseModule from "../../base-module";
-import {isEmptyObj, mergeDeepObject, transliterate} from "../../../utils/js/functions";
+import {isDisabled, isEmptyObj, mergeDeepObject, noop, transliterate} from "../../../utils/js/functions";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
+import Selectors from "../../../utils/js/dom/selectors";
 
 /**
  * Constants
@@ -9,6 +10,8 @@ import EventHandler from "../../../utils/js/dom/event";
 const NAME = 'select';
 const NAME_KEY = 'vg.select';
 
+const CLASS_NAME_SHOW           = 'show';
+const CLASS_NAME_ACTIVE         = 'active';
 const CLASS_NAME_CONTAINER      = 'vg-select';
 const CLASS_NAME_DROPDOWN       = 'vg-select-dropdown';
 const CLASS_NAME_LIST           = 'vg-select-list';
@@ -16,10 +19,19 @@ const CLASS_NAME_OPTION         = 'vg-select-list--option';
 const CLASS_NAME_OPTGROUP       = 'vg-select-list--optgroup';
 const CLASS_NAME_OPTGROUP_TITLE = 'vg-select-list--optgroup-title';
 const CLASS_NAME_CURRENT        = 'vg-select-current';
+const CLASS_NAME_PLACEHOLDER    = 'vg-select-current--placeholder';
 const CLASS_NAME_SEARCH         = 'vg-select-search';
-const CLASS_NAME_SELECTED       = 'selected';
 
+const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_HIDE_PREVENTED  = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
+const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
+const EVENT_KEY_HIDDEN          = `${NAME_KEY}.hidden`;
+const EVENT_KEY_SHOW            = `${NAME_KEY}.show`;
+const EVENT_KEY_SHOWN           = `${NAME_KEY}.shown`;
+
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="select"]';
+
 
 let observerTimout;
 
@@ -28,8 +40,17 @@ class VGSelect extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			search: false
+			search: false,
+			placeholder: '',
+			ajax: {
+				route: '',
+				target: '',
+				method: 'get',
+				loader: false,
+			}
 		}, params));
+
+		this._drop = Selectors.find('.' + CLASS_NAME_DROPDOWN, this._element);
 	}
 
 	static get NAME() {
@@ -38,6 +59,42 @@ class VGSelect extends BaseModule {
 
 	static get NAME_KEY() {
 		return NAME_KEY;
+	}
+
+	toggle(relatedTarget) {
+		return !this._isShow() ? this.show(relatedTarget) : this.hide();
+	}
+
+	show(relatedTarget) {
+		if (isDisabled(this._element)) return;
+
+		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
+		if (showEvent.defaultPrevented) return;
+
+		if ('ontouchstart' in document.documentElement) {
+			for (const element of [].concat(...document.body.children)) {
+				EventHandler.on(element, 'mouseover', noop);
+			}
+		}
+
+		this._element.classList.add(CLASS_NAME_SHOW);
+
+		const completeCallBack = () => {
+			this._element.classList.add(CLASS_NAME_ACTIVE);
+			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+		}
+
+		this._queueCallback(completeCallBack, this._drop, true, 50)
+	}
+
+	hide() {
+		if (isDisabled(this._element) || !this._isShown()) return;
+
+		this._completeHide();
+	}
+
+	_isShow() {
+		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
 	build(isRebuild, elm = null) {
@@ -54,8 +111,14 @@ class VGSelect extends BaseModule {
 
 		element.parentElement.style.position = 'relative';
 
-		let option_selected = element.options[element.selectedIndex].innerText,
+		let option_selected,
 			options = element.options;
+
+		if (_this._params.placeholder && element.selectedIndex === 0) {
+			option_selected = '<span class="'+ CLASS_NAME_PLACEHOLDER +'">' + _this._params.placeholder + '<span>';
+		} else {
+			option_selected = element.options[element.selectedIndex].innerText;
+		}
 
 		// Создаем основной элемент с классами селекта
 		let classes = Manipulator.get(element,'class'),
@@ -79,7 +142,9 @@ class VGSelect extends BaseModule {
 		// Создаем элемент с отображением выбранного варианта
 		let current = document.createElement('div');
 		current.classList.add(CLASS_NAME_CURRENT);
-		current.innerText = option_selected.trim();
+		Manipulator.set(current, 'data-vg-toggle', 'select');
+		Manipulator.set(current, 'aria-expanded', 'false');
+		current.innerHTML = option_selected.trim();
 		select.append(current);
 
 		// Создаем элемент выпадающего списка
@@ -157,8 +222,6 @@ class VGSelect extends BaseModule {
 		if (_this._params.search) {
 			this.search(select);
 		}
-
-		this._addEventListeners(select);
 	}
 
 	destroy(select) {
@@ -197,8 +260,6 @@ class VGSelect extends BaseModule {
 	}
 
 	search(select) {
-		const _this = this;
-
 		let dropdown = select.querySelector('.' + CLASS_NAME_DROPDOWN);
 
 		let search_container = document.createElement('div');
@@ -337,5 +398,24 @@ class VGSelect extends BaseModule {
 		instance.build(isRebuild);
 	}
 }
+
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function () {
+	const target = this.closest('.' + CLASS_NAME_CONTAINER);
+
+	Manipulator.set(this, 'aria-expanded', true);
+
+	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
+		Manipulator.set(this, 'aria-expanded', false);
+	})
+
+	const alreadyOpen = Selectors.find('.vg-select.show')
+	if (alreadyOpen && alreadyOpen !== target) {
+		VGSelect.getInstance(alreadyOpen).hide();
+	}
+
+	const instance = VGSelect.getOrCreateInstance(target);
+	instance.toggle(this);
+});
+
 
 export default VGSelect;

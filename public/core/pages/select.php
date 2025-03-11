@@ -41,7 +41,7 @@
 					</div>
 					<div class="col">
 						<label for="city" class="d-block mb-2">Выбрать город</label>
-						<select id="city" data-search="true" class="vg-select" name="city">
+						<select id="city" data-search="true" class="vg-select" name="city"  data-placeholder="Надо что-то выбрать...">
 							<option value="1">Москва</option>
 							<option value="2">Подольск</option>
 							<option value="3">Мытищи</option>
@@ -60,21 +60,7 @@
 							<option value="16">Зеленоград</option>
 						</select>
 					</div>
-					<div class="col">
-						<label for="color" class="d-block mb-2">Выберите цвет</label>
-						<select id="color" class="vg-select w-100" name="color" data-search="true">
-							<optgroup label="Цвет">
-								<option value="c1">Апельсиновый</option>
-								<option value="c2">Лимонный</option>
-								<option value="c3">Персиковый</option>
-							</optgroup>
-							<optgroup label="Тон">
-								<option value="s1">Светлый</option>
-								<option value="s2">Нормальный</option>
-								<option value="s3">Темный</option>
-							</optgroup>
-						</select>
-					</div>
+					
 					<div class="col-12 mt-3">
 						<button type="submit" class="btn btn-primary">Отправить</button>
 						<button type="reset" class="btn btn-outline-primary">Сбросить</button>
@@ -103,6 +89,22 @@
 							<option value="4" hidden>Носки</option>
 							<option value="5" hidden>Перчатки</option>
 							<option value="6" hidden>Кеды</option>
+						</select>
+					</div>
+					
+					<div class="col-lg-4 ms-auto">
+						<label for="color" class="d-block mb-2">Выберите цвет</label>
+						<select id="color" class="vg-select w-100" name="color" data-search="true">
+							<optgroup label="Цвет">
+								<option value="c1">Апельсиновый</option>
+								<option value="c2">Лимонный</option>
+								<option value="c3">Персиковый</option>
+							</optgroup>
+							<optgroup label="Тон">
+								<option value="s1">Светлый</option>
+								<option value="s2">Нормальный</option>
+								<option value="s3">Темный</option>
+							</optgroup>
 						</select>
 					</div>
 				</div>
