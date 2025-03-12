@@ -119,5 +119,91 @@
 </div>
 
 <script>
+	const MONITOR = document.getElementById('form-monitor');
 
+	/**
+	 *
+	 */
+
+	let formCountries = document.getElementById('form-countries');
+	formCountries.onsubmit = function () {
+		let data = new FormData(this);
+
+		let ul = document.createElement('ul');
+
+		for (let [key, value] of data) {
+			let li = document.createElement('li');
+
+			li.innerHTML = '<span>Элемент: <b>' + key + '</b></span><span>Выбрано: <b>' + value + '</b></span>'
+			ul.append(li);
+		}
+
+		MONITOR.append(ul);
+
+		return false;
+	}
+
+	/**
+	 *
+	 */
+	let selectBrand = document.getElementById('brand');
+
+	selectBrand.addEventListener('vg.select.change', function (event) {
+		let code = document.createElement('code');
+		code.innerHTML = event.value;
+		code.classList.add('d-block')
+		
+		MONITOR.append(code);
+	});
+
+	selectBrand.addEventListener('change', function (e) {
+		let selectClothes = document.getElementById('clothes');
+		selectClothes.removeAttribute('disabled');
+
+		let selectedIndex = selectBrand.selectedIndex;
+		let option = selectBrand[selectedIndex];
+		let clothesIds = (option.dataset.clothes || '').split(',');
+
+		[...selectClothes.querySelectorAll('option')].forEach(function (option) {
+			let vis = clothesIds.indexOf(option.value) !== -1;
+			if (vis) {
+				option.removeAttribute('hidden');
+			} else {
+				option.hidden = true;
+			}
+		});
+	});
+
+	/**
+	 *
+	 */
+	setTimeout(() => {
+		let opt = document.createElement('option');
+		opt.innerText = 'Puma';
+		opt.setAttribute('value', 'puma');
+		opt.setAttribute('data-clothes', '5,6');
+
+		selectBrand.append(opt)
+	}, 1000);
+
+	/**
+	 *
+	 */
+	const region = document.getElementById('region');
+
+	setTimeout(() => {
+		let opt = document.createElement('option');
+		opt.innerText = 'Смоленская область';
+		opt.setAttribute('value', '6');
+
+		region.append(opt)
+	}, 10000)
+	
+	document.getElementById('add-region').addEventListener('click', function () {
+		let opt = document.createElement('option');
+		opt.innerText = 'Липецкая область';
+		opt.setAttribute('value', '7');
+
+		region.append(opt)
+	});
 </script>

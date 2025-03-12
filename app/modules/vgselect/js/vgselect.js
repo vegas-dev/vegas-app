@@ -1,5 +1,13 @@
 import BaseModule from "../../base-module";
-import {isDisabled, isEmptyObj, mergeDeepObject, noop, normalizeData, transliterate} from "../../../utils/js/functions";
+import {
+	execute,
+	isDisabled,
+	isEmptyObj,
+	mergeDeepObject,
+	noop,
+	normalizeData,
+	transliterate
+} from "../../../utils/js/functions";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -23,6 +31,7 @@ const CLASS_NAME_PLACEHOLDER    = 'vg-select-current--placeholder';
 const CLASS_NAME_SEARCH         = 'vg-select-search';
 
 const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_UP_DATA_API     = `keyup.${NAME_KEY}.data.api`;
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
 const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN          = `${NAME_KEY}.hidden`;
@@ -31,6 +40,7 @@ const EVENT_KEY_SHOWN           = `${NAME_KEY}.shown`;
 
 const SELECTOR_DATA_TOGGLE    = '[data-vg-toggle="select"]';
 const SELECTOR_OPTION_TOGGLE  = '[data-vg-toggle="select-option"]';
+const SELECTOR_SEARCH_TOGGLE  = '[name=vg-select-search]';
 
 
 let observerTimout;
@@ -55,6 +65,7 @@ class VGSelect extends BaseModule {
 		}, params));
 
 		this._drop = Selectors.find('.' + CLASS_NAME_DROPDOWN, this._element);
+		this.refresh();
 	}
 
 	static get NAME() {
@@ -63,6 +74,159 @@ class VGSelect extends BaseModule {
 
 	static get NAME_KEY() {
 		return NAME_KEY;
+	}
+
+	static buildListOptions(selector, drop) {
+		let options = selector.options,
+			list = document.createElement('ul');
+
+		list.classList.add(CLASS_NAME_LIST);
+
+		let optGroup = selector.querySelectorAll('optgroup');
+
+		if (optGroup.length) {
+			let isSelected = false;
+			[...optGroup].forEach(function (el) {
+				let olOptGroup = document.createElement('ol');
+				olOptGroup.classList.add(CLASS_NAME_OPTGROUP);
+
+				let liLabel = document.createElement('li');
+				liLabel.innerHTML = el.label.trim();
+				liLabel.classList.add(CLASS_NAME_OPTGROUP_TITLE)
+
+				olOptGroup.prepend(liLabel)
+
+				let optGroupOptions = Selectors.findAll('option', el);
+
+				createLi(optGroupOptions, olOptGroup, isSelected);
+
+				list.append(olOptGroup);
+				isSelected = true;
+			});
+		} else {
+			let isSelected = false;
+			createLi(options, list, isSelected);
+		}
+
+		drop.append(list);
+
+		return list;
+
+		function createLi(options, list, isSelected) {
+			let i = 0;
+			for (const option of options) {
+				let li = document.createElement('li');
+
+				li.innerHTML = option.innerHTML.trim().replace(/<\/[^>]+(>|$)/g, "")
+				li.dataset.value = Manipulator.get(option, 'value');
+				li.classList.add(CLASS_NAME_OPTION);
+
+				Manipulator.set(li, 'data-vg-toggle', 'select-option');
+
+				let liData = Manipulator.get(option);
+				if (!isEmptyObj(liData)) {
+					for (const key of Object.keys(liData)) {
+						Manipulator.set(li, 'data-' + key, liData[key]);
+					}
+				}
+
+				if (i === selector.selectedIndex && !isSelected) {
+					li.classList.add('selected');
+				}
+
+				if (Manipulator.has(option, 'disabled')) li.classList.add('disabled');
+				if (Manipulator.has(option, 'hidden')) li.classList.add('hidden');
+
+				list.append(li);
+
+				i++;
+			}
+		}
+	}
+
+	static build(selector, reBuild) {
+		let option_selected,
+			placeholder = selector.dataset.placeholder || '',
+			isSearch = selector.dataset.search || false;
+
+		if (selector.dataset?.inited === 'true' && !reBuild) {
+			return;
+		} else if (reBuild) {
+			VGSelect.destroy(selector);
+		}
+
+		selector.parentElement.style.position = 'relative';
+
+		if (placeholder && selector.selectedIndex === 0) {
+			option_selected = '<span class="'+ CLASS_NAME_PLACEHOLDER +'">' + placeholder + '<span>';
+		} else {
+			option_selected = selector.options[selector.selectedIndex].innerText;
+		}
+
+		// Создаем основной элемент с классами селекта
+		let classes = Manipulator.get(selector,'class'),
+			element = document.createElement('div');
+
+		classes = classes.split(' ');
+
+		for (const _class of classes) {
+			element.classList.add(_class)
+		}
+
+		if (Manipulator.has(selector, 'disabled')) element.classList.add('disabled');
+
+		let elData = Manipulator.get(selector);
+		if (!isEmptyObj(elData)) {
+			for (const key of Object.keys(elData)) {
+				Manipulator.set(element,'data-' + key, elData[key]);
+			}
+		}
+
+		// Создаем элемент с отображением выбранного варианта
+		let current = document.createElement('div');
+		current.classList.add(CLASS_NAME_CURRENT);
+		Manipulator.set(current, 'data-vg-toggle', 'select');
+		Manipulator.set(current, 'aria-expanded', 'false');
+		current.innerHTML = option_selected.trim();
+		element.append(current);
+
+		// Создаем элемент выпадающего списка
+		let dropdown = document.createElement('div');
+		dropdown.classList.add(CLASS_NAME_DROPDOWN);
+		element.append(dropdown);
+
+		// Создаем список и варианты селекта
+		VGSelect.buildListOptions(selector, dropdown);
+
+		// Добавляем все созданный контейнер после селекта
+		selector.insertAdjacentElement('afterend', element);
+
+		// помечаем элемент инициализированным
+		selector.dataset.inited = 'true';
+
+		if (isSearch) {
+			let search_container = document.createElement('div');
+			search_container.classList.add(CLASS_NAME_SEARCH);
+
+			let input = document.createElement('input');
+			Manipulator.set(input, 'name', 'vg-select-search');
+			Manipulator.set(input, 'type', 'text');
+			Manipulator.set(input, 'placeholder', 'Поиск...');
+
+			search_container.append(input);
+			dropdown.prepend(search_container);
+		}
+
+		return element;
+	}
+
+	render(selector, callback) {
+		let list = Selectors.find('.' + CLASS_NAME_LIST, this._drop);
+		if (list) list.remove();
+
+		VGSelect.buildListOptions(selector, this._drop);
+
+		execute(callback, [this, selector]);
 	}
 
 	toggle(relatedTarget) {
@@ -81,8 +245,9 @@ class VGSelect extends BaseModule {
 			}
 		}
 
+		// TODO доделать
 		this._route((status, data) => {
-			let response = normalizeData(data.response),
+			/*let response = normalizeData(data.response),
 				select = this._element.previousSibling;
 
 			if (response.length) {
@@ -96,10 +261,10 @@ class VGSelect extends BaseModule {
 					Manipulator.set(option, 'value', el.id);
 
 					select.append(option);
-				})
+				});
 
-				this.build(true, this._element);
-			}
+				this.render(select)
+			}*/
 		});
 
 		this._element.classList.add(CLASS_NAME_SHOW);
@@ -148,136 +313,29 @@ class VGSelect extends BaseModule {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
-	build(isRebuild, elm = null) {
-		const _this = this;
-		let element = this._element;
+	refresh() {
+		const select = this._element.previousSibling;
 
-		if (elm) element = elm;
+		let observer = new MutationObserver(() => {
+			clearTimeout(observerTimout);
+			observerTimout = setTimeout(() => {
+				VGSelect.build(select, true);
+			}, 100);
+		});
 
-		if (element.dataset?.inited === 'true' && !isRebuild) {
-			return;
-		} else if (isRebuild) {
-			_this.destroy(element);
-		}
-
-		element.parentElement.style.position = 'relative';
-
-		let option_selected,
-			options = element.options;
-
-		if (_this._params.placeholder && element.selectedIndex === 0) {
-			option_selected = '<span class="'+ CLASS_NAME_PLACEHOLDER +'">' + _this._params.placeholder + '<span>';
-		} else {
-			option_selected = element.options[element.selectedIndex].innerText;
-		}
-
-		// Создаем основной элемент с классами селекта
-		let classes = Manipulator.get(element,'class'),
-			select = document.createElement('div');
-
-		classes = classes.split(' ');
-
-		for (const _class of classes) {
-			select.classList.add(_class)
-		}
-
-		if (Manipulator.has(element, 'disabled')) select.classList.add('disabled')
-
-		let elData = Manipulator.get(element);
-		if (!isEmptyObj(elData)) {
-			for (const key of Object.keys(elData)) {
-				Manipulator.set(select,'data-' + key, elData[key]);
-			}
-		}
-
-		// Создаем элемент с отображением выбранного варианта
-		let current = document.createElement('div');
-		current.classList.add(CLASS_NAME_CURRENT);
-		Manipulator.set(current, 'data-vg-toggle', 'select');
-		Manipulator.set(current, 'aria-expanded', 'false');
-		current.innerHTML = option_selected.trim();
-		select.append(current);
-
-		// Создаем элемент выпадающего списка
-		let dropdown = document.createElement('div');
-		dropdown.classList.add(CLASS_NAME_DROPDOWN);
-		select.append(dropdown);
-
-		// Создаем список и варианты селекта
-		let list = document.createElement('ul');
-		list.classList.add(CLASS_NAME_LIST);
-
-		let optGroup = element.querySelectorAll('optgroup');
-
-		if (optGroup.length) {
-			let isSelected = false;
-			[...optGroup].forEach(function (el) {
-				let olOptGroup = document.createElement('ol');
-				olOptGroup.classList.add(CLASS_NAME_OPTGROUP);
-
-				let liLabel = document.createElement('li');
-				liLabel.innerHTML = el.label.trim();
-				liLabel.classList.add(CLASS_NAME_OPTGROUP_TITLE)
-
-				olOptGroup.prepend(liLabel)
-
-				let optGroupOptions = Selectors.findAll('option', el);
-
-				createLi(optGroupOptions, olOptGroup, isSelected);
-
-				list.append(olOptGroup);
-				isSelected = true;
-			});
-		} else {
-			let isSelected = false;
-			createLi(options, list, isSelected);
-		}
-
-		function createLi(options, list, isSelected) {
-			let i = 0;
-			for (const option of options) {
-				let li = document.createElement('li');
-
-				li.innerHTML = option.innerHTML.trim().replace(/<\/[^>]+(>|$)/g, "")
-				li.dataset.value = Manipulator.get(option, 'value');
-				li.classList.add(CLASS_NAME_OPTION);
-
-				Manipulator.set(li, 'data-vg-toggle', 'select-option');
-
-				let liData = Manipulator.get(option);
-				if (!isEmptyObj(liData)) {
-					for (const key of Object.keys(liData)) {
-						Manipulator.set(li, 'data-' + key, liData[key]);
-					}
-				}
-
-				if (i === element.selectedIndex && !isSelected) {
-					li.classList.add('selected');
-				}
-
-				if (Manipulator.has(option, 'disabled')) li.classList.add('disabled');
-				if (Manipulator.has(option, 'hidden')) li.classList.add('hidden');
-
-				list.append(li);
-
-				i++;
-			}
-		}
-
-		dropdown.append(list);
-
-		// Добавляем все созданный контейнер после селекта
-		element.insertAdjacentElement('afterend', select);
-
-		// помечаем элемент инициализированным
-		element.dataset.inited = 'true';
-
-		if (_this._params.search) {
-			this.search(select);
-		}
+		observer.observe(select, {
+			attributeFilter: ['disabled', 'required', 'style', 'hidden'],
+			childList: true,
+			subtree: true,
+			characterDataOldValue: true,
+		});
 	}
 
-	destroy(select) {
+	dispose() {
+		super.dispose();
+	}
+
+	static destroy(select) {
 		let element = select.nextElementSibling;
 
 		if (element) {
@@ -292,74 +350,6 @@ class VGSelect extends BaseModule {
 				});
 			}
 		}
-	}
-
-	refresh(select) {
-		const _this = this;
-
-		let observer = new MutationObserver(() => {
-			clearTimeout(observerTimout);
-			observerTimout = setTimeout(() => {
-				_this.build(true, select);
-			}, 100);
-		});
-
-		observer.observe(select, {
-			attributeFilter: ['disabled', 'required', 'style', 'hidden'],
-			childList: true,
-			subtree: true,
-			characterDataOldValue: true,
-		});
-	}
-
-	search(select) {
-		let dropdown = select.querySelector('.' + CLASS_NAME_DROPDOWN);
-
-		let search_container = document.createElement('div');
-		search_container.classList.add(CLASS_NAME_SEARCH);
-
-		let input = document.createElement('input');
-		input.setAttribute('name', 'vg-select-search');
-		input.setAttribute('type', 'text');
-		input.setAttribute('placeholder', 'Поиск...');
-
-		search_container.append(input);
-		dropdown.prepend(search_container);
-
-		search_container.querySelector('[name=vg-select-search]').addEventListener('keyup', (e) => {
-			e.preventDefault();
-
-			let el = e.target;
-
-			let selectList = el?.closest('.' + CLASS_NAME_DROPDOWN).querySelector('.' + CLASS_NAME_LIST);
-			if (selectList) {
-				let options = [...selectList.querySelectorAll('.' + CLASS_NAME_OPTION)],
-					optionsGroup = [...selectList.querySelectorAll('.' + CLASS_NAME_OPTGROUP)],
-					value = el?.value;
-
-				options = options.concat(optionsGroup);
-
-				for (const option of options) {
-					Manipulator.show(option);
-				}
-
-				if (value.length) {
-					value = value.trim();
-					value = value.toLowerCase();
-					value = transliterate(value, true);
-
-					for (const option of options) {
-						let text = option.innerText.toLowerCase();
-
-						if (text.indexOf(value) === -1) Manipulator.hide(option);
-					}
-				}
-			}
-		});
-	}
-
-	dispose() {
-		super.dispose();
 	}
 
 	static hideOpenToggles(event) {
@@ -403,8 +393,8 @@ class VGSelect extends BaseModule {
 	 * @param isRebuild
 	 */
 	static init(element, params = {}, isRebuild = false) {
-		const instance = VGSelect.getOrCreateInstance(element, params);
-		instance.build(isRebuild);
+		let elm = VGSelect.build(element);
+		VGSelect.getOrCreateInstance(elm, params);
 	}
 }
 
@@ -414,10 +404,6 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	const target = this.closest('.' + CLASS_NAME_CONTAINER);
 
 	Manipulator.set(this, 'aria-expanded', true);
-
-	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
-		Manipulator.set(this, 'aria-expanded', false);
-	})
 
 	const alreadyOpen = Selectors.find('.vg-select.show')
 	if (alreadyOpen && alreadyOpen !== target) {
@@ -448,7 +434,37 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_OPTION_TOGGLE, func
 
 		let select = container.previousSibling;
 		select.value = el.dataset.value;
-		EventHandler.trigger(select, EVENT_KEY_CHANGE, {value: el.dataset.value});
+		EventHandler.trigger(select, EVENT_KEY_CHANGE, {value: normalizeData(el.dataset.value)});
+		EventHandler.trigger(select, 'change', {value: normalizeData(el.dataset.value)});
+	}
+});
+
+EventHandler.on(document, EVENT_KEY_UP_DATA_API, SELECTOR_SEARCH_TOGGLE, function (e) {
+	let el = this;
+
+	let selectList = el?.closest('.' + CLASS_NAME_DROPDOWN).querySelector('.' + CLASS_NAME_LIST);
+	if (selectList) {
+		let options = [...selectList.querySelectorAll('.' + CLASS_NAME_OPTION)],
+			optionsGroup = [...selectList.querySelectorAll('.' + CLASS_NAME_OPTGROUP)],
+			value = el?.value;
+
+		options = options.concat(optionsGroup);
+
+		for (const option of options) {
+			Manipulator.show(option);
+		}
+
+		if (value.length) {
+			value = value.trim();
+			value = value.toLowerCase();
+			value = transliterate(value, true);
+
+			for (const option of options) {
+				let text = option.innerText.toLowerCase();
+
+				if (text.indexOf(value) === -1) Manipulator.hide(option);
+			}
+		}
 	}
 });
 
