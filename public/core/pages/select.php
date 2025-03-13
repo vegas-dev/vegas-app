@@ -31,7 +31,7 @@
 					</div>
 					<div class="col">
 						<label for="region" class="d-block mb-2">Выбрать регион</label>
-						<select id="region" class="vg-select" name="region" data-search="true" data-route="/php/search.php">
+						<select id="region" class="vg-select" name="region" data-search="true">
 							<option value="1">Московская область</option>
 							<option value="2" selected>Ленинградская область</option>
 							<option value="3">Калужская область</option>
@@ -43,7 +43,6 @@
 						<label for="city" class="d-block mb-2">Выбрать город</label>
 						<select id="city" data-search="true" class="vg-select" name="city"
 								data-placeholder="Надо что-то выбрать..."
-								data-ajax-route="/core/server.php?select=ajax"
 						>
 							<option value="1">Москва</option>
 							<option value="2">Подольск</option>
@@ -150,7 +149,7 @@
 
 	selectBrand.addEventListener('vg.select.change', function (event) {
 		let code = document.createElement('code');
-		code.innerHTML = event.value;
+		code.innerHTML = event.data.value;
 		code.classList.add('d-block')
 		
 		MONITOR.append(code);
