@@ -32,6 +32,7 @@ class VGFormSender extends BaseModule {
 			validate: false,
 			submit: false,
 			fields: [],
+			timeout: 800,
 			alert: {
 				enabled: true,
 				type: 'modal'
@@ -263,9 +264,9 @@ class VGFormSender extends BaseModule {
 			}
 		});
 
-		let id = _this._params.classes.general + '-' + makeRandomString();
+		let id = _this._params.classes.general + '-' + makeRandomString(),
+			$modal = Selectors.find('.' + _this._params.classes.alertModal);
 
-		let $modal = Selectors.find('.' + _this._params.classes.alertModal);
 		if ($modal) $modal.remove();
 
 		setTimeout(() => {
@@ -282,7 +283,7 @@ class VGFormSender extends BaseModule {
 
 				self.toggle();
 			});
-		}, 800);
+		}, _this._params.timeout);
 	}
 
 	_alertCollapse(data, status) {
