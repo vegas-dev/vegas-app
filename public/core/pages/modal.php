@@ -51,7 +51,11 @@
 				</form>
 			</div>
 			<div class="vg-modal-footer">
-				<button type="button" data-vg-dismiss="modal" aria-label="Close" class="btn btn-primary">закрыть
+				<button class="btn btn-primary" data-vg-target="#routeModal" data-vg-toggle="modal" data-ajax-route="/core/server.php?modal=ajax2" data-ajax-loader="true" data-ajax-target="#routeModal-content">
+					С загрузкой контента 2
+				</button>
+				<button type="button" data-vg-dismiss="modal" aria-label="Close" class="btn btn-primary">
+					закрыть
 				</button>
 			</div>
 		</div>

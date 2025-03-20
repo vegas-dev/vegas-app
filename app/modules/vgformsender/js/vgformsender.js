@@ -32,7 +32,7 @@ class VGFormSender extends BaseModule {
 			validate: false,
 			submit: false,
 			fields: [],
-			timeout: 800,
+			timeout: 50,
 			alert: {
 				enabled: true,
 				type: 'modal'
@@ -260,7 +260,7 @@ class VGFormSender extends BaseModule {
 		[...document.getElementsByClassName('vg-modal')].forEach(function (element) {
 			if (element && element.classList.contains('show')) {
 				const mVG = VGModal.getOrCreateInstance(element);
-				mVG.hide();
+				mVG.hide([mVG]);
 			}
 		});
 

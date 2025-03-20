@@ -159,7 +159,7 @@ class VGModal extends BaseModule {
 		Backdrop.show(() => this._showElement(relatedTarget));
 	}
 
-	hide() {
+	hide(openedModals = []) {
 		if (!this._isShown || this._isTransitioning) return;
 
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
@@ -170,16 +170,18 @@ class VGModal extends BaseModule {
 
 		setTimeout(() => {
 			this._element.classList.remove(CLASS_NAME_SHOW);
-			this._queueCallback(() => this._hideModal(), this._element, this._isAnimatedFade());
+			this._queueCallback(() => this._hideModal(openedModals), this._element, this._isAnimatedFade());
 		}, this._params.animation.delay);
 	}
 
-	_hideModal() {
+	_hideModal(openedModals) {
 		this._element.style.display = 'none';
 		this._element.setAttribute('aria-hidden', true);
 		this._element.removeAttribute('aria-modal');
 		this._element.removeAttribute('role');
 		this._isTransitioning = false;
+
+		if (openedModals.length) return;
 
 		Backdrop.hide(() => {
 			document.body.classList.remove(CLASS_NAME_OPEN);
@@ -336,7 +338,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	});
 
 	const alreadyOpen = Selectors.find(OPEN_SELECTOR);
-	if (alreadyOpen) VGModal.getInstance(alreadyOpen).hide();
+	if (alreadyOpen) VGModal.getInstance(alreadyOpen).hide([alreadyOpen]);
 
 	const data = VGModal.getOrCreateInstance(target);
 	data.toggle(this);
