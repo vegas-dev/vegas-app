@@ -49,6 +49,8 @@
 		}
 
 		.dropdown {
+			position: relative;
+
 			.dropdown-content {
 				transition: var(--vg-nav-drop-transition);
 				list-style: none;
