@@ -55,8 +55,10 @@ class VGDropdown extends BaseModule {
 
 		this._params = this._getParams(element, mergeDeepObject(defaultParams, params));
 
+		const target = Selectors.getElementFromSelector(this._element);
+
 		this._parent = this._element.parentNode;
-		this._drop = Selectors.find('.' + TARGET_CONTAINER, this._parent);
+		this._drop = target || Selectors.find('.' + TARGET_CONTAINER, this._parent);
 		this._isPlacement = false;
 
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
