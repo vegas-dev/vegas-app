@@ -82,7 +82,7 @@
 			</p>
 			
 			<div class="mt-5 overflow-hidden">
-				<div class="vg-dropdown">
+				<div class="vg-dropdown" style="z-index: 1010">
 					<a href="#" class="btn btn-primary" data-vg-target="#drop-target" data-backdrop="true" data-overflow="true" data-vg-toggle="dropdown" data-keyboard="true">Открыть дроп</a>
 				</div>
 			</div>

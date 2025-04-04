@@ -40,7 +40,8 @@ class VGDropdown extends BaseModule {
 			ajax: {
 				route: '',
 				target: '',
-				method: 'get'
+				method: 'get',
+				loader: false,
 			},
 			animation: {
 				enable: false,
