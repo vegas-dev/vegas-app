@@ -3,6 +3,8 @@ import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {isDisabled, mergeDeepObject, noop} from "../../../utils/js/functions";
 import Placement from "../../../utils/js/components/placement";
+import Overflow from "../../../utils/js/components/overflow";
+import Backdrop from "../../../utils/js/components/backdrop";
 
 const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
@@ -100,6 +102,15 @@ class VGDropdown extends BaseModule {
 		this._drop.classList.add(CLASS_NAME_SHOW);
 		this._setPlacement();
 
+		if (this._params.backdrop) {
+			Backdrop.show();
+		}
+
+		if (this._params.overflow) {
+			Overflow.append();
+			document.body.classList.add('dropdown-open')
+		}
+
 		const completeCallBack = () => {
 			this._drop.classList.add(CLASS_NAME_FADE);
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, relatedTarget)
@@ -142,6 +153,19 @@ class VGDropdown extends BaseModule {
 		this._drop.classList.remove(CLASS_NAME_FADE);
 		this._element.classList.remove(CLASS_NAME_SHOW);
 		this._element.setAttribute('aria-expanded', 'false');
+
+		if (this._params.backdrop) {
+			Backdrop.hide(function () {
+				if (this._params.overflow) {
+					Overflow.destroy();
+				}
+			});
+		}
+
+		if (this._params.overflow) {
+			Overflow.destroy();
+			document.body.classList.remove('dropdown-open');
+		}
 
 		setTimeout(() => {
 			const completeCallback = () => {

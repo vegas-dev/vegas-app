@@ -1,4 +1,8 @@
-# VEGAS-APP 0.2.1 (Март, 13, 2025)
+# VEGAS-APP 0.2.2 (Апрель, 4, 2025)
+## Модуль VGDROPDOWN
+* Добавлен параметр overflow и backdrop
+
+# VEGAS-APP 0.2.1 (Март, 31, 2025)
 ## Модуль VGDROPDOWN
 * Теперь можно открыть выпадающих список через параметр data-vg-target
 

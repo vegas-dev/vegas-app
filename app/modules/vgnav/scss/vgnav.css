@@ -92,6 +92,9 @@
   margin-left: 0.355em;
   vertical-align: 0.255em;
 }
+.vg-nav .vg-nav-wrapper .dropdown {
+  position: relative;
+}
 .vg-nav .vg-nav-wrapper .dropdown .dropdown-content {
   transition: var(--vg-nav-drop-transition);
   list-style: none;

@@ -83,7 +83,7 @@
 			
 			<div class="mt-5 overflow-hidden">
 				<div class="vg-dropdown">
-					<a href="#" class="btn btn-primary" data-vg-target="#drop-target" data-vg-toggle="dropdown" data-keyboard="true">Открыть дроп</a>
+					<a href="#" class="btn btn-primary" data-vg-target="#drop-target" data-backdrop="true" data-overflow="true" data-vg-toggle="dropdown" data-keyboard="true">Открыть дроп</a>
 				</div>
 			</div>
 			<div class="vg-dropdown vg-dropdown-content" id="drop-target">
@@ -96,6 +96,8 @@
 					</ul>
 				</div>
 			</div>
+			
+			<div style="height: 2000px"></div>
 		</div>
 	</div>
 </div>
