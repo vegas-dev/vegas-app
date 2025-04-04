@@ -31,10 +31,9 @@ class VGDropdown extends BaseModule {
 
 		let defaultParams = {
 			offset: [0, 2],
-			over: false,
-			backdrop: true,
-			overflow: true,
-			keyboard: true,
+			backdrop: false,
+			overflow: false,
+			keyboard: false,
 			placement: 'bottom',
 			timeoutAnimation: 350,
 			hover: false,
