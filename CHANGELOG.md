@@ -1,4 +1,4 @@
-# VEGAS-APP 0.2.2 (Апрель, 4, 2025)
+# VEGAS-APP 0.2.2 - 0.2.3 (Апрель, 4, 2025)
 ## Модуль VGDROPDOWN
 * Добавлен параметр overflow и backdrop
 

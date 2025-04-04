@@ -101,7 +101,7 @@ class VGDropdown extends BaseModule {
 		this._drop.classList.add(CLASS_NAME_SHOW);
 		this._setPlacement();
 
-		if (this._params.backdrop) {
+		if (this._params.backdrop && !this._params.hover) {
 			Backdrop.show();
 		}
 
@@ -153,9 +153,10 @@ class VGDropdown extends BaseModule {
 		this._element.classList.remove(CLASS_NAME_SHOW);
 		this._element.setAttribute('aria-expanded', 'false');
 
-		if (this._params.backdrop) {
+		if (this._params.backdrop && !this._params.hover) {
+			const _this = this;
 			Backdrop.hide(function () {
-				if (this._params.overflow) {
+				if (_this._params.overflow) {
 					Overflow.destroy();
 				}
 			});
