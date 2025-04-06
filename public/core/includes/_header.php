@@ -91,6 +91,18 @@
 												<small>Стилизованный HTML Select</small>
 											</a>
 										</li>
+										<li>
+											<a href="/?module=alert">
+												<span>VGAlert</span>
+												<small>Замена стандартному алерту</small>
+											</a>
+										</li>
+										<li>
+											<a href="/?module=toast">
+												<span>VGToast</span>
+												<small>Показываем уведомления</small>
+											</a>
+										</li>
 									</ul>
 								</li>
 								<li class="dropdown">

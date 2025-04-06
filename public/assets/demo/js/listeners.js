@@ -31,6 +31,9 @@ function onReady() {
 	[... document.querySelectorAll('select.vg-select')].forEach(el => {
 		vg.VGSelect.init(el);
 	})
+
+	// VGToast
+	//vg.VGToast.init()
 }
 
 document.addEventListener('DOMContentLoaded', onReady);

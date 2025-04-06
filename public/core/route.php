@@ -37,6 +37,12 @@
 			case 'select':
 				$content = file_get_contents(__DIR__.'/pages/select.php');
 				break;
+			case 'alert':
+				$content = file_get_contents(__DIR__.'/pages/alert.php');
+				break;
+			case 'toast':
+				$content = file_get_contents(__DIR__.'/pages/toast.php');
+				break;
 			default:
 				$content = file_get_contents(__DIR__.'/pages/home.php');
 				break;

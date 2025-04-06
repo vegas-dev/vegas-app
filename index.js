@@ -36,6 +36,14 @@ import VGLawCookie from "./app/modules/vglawcookie/js/vglawcookie";
 import "./app/modules/vgselect/scss/vgselect.scss";
 import VGSelect from "./app/modules/vgselect/js/vgselect";
 
+// alert
+import "./app/modules/vgalert/scss/vgalert.scss";
+import VGAlert from "./app/modules/vgalert/js/vgalert";
+
+// toast
+import "./app/modules/vgtoast/scss/vgtoast.scss";
+import VGToast from "./app/modules/vgtoast/js/vgtoast";
+
 export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect, VGAlert, VGToast
 }
