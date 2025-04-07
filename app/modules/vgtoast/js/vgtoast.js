@@ -11,14 +11,15 @@ const NAME = 'toast';
 const NAME_KEY = 'vg.toast';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="toast"]';
 
-const CLASS_NAME_SHOW = 'show';
-const CLASS_NAME_OPEN = 'vg-toast-open';
+const CLASS_NAME_OPEN    = 'vg-toast-open';
+const CLASS_NAME_SHOWING = 'showing';
+const CLASS_NAME_SHOW    = 'show';
 
-const EVENT_KEY_HIDE    = `${NAME_KEY}.hide`;
-const EVENT_KEY_HIDDEN  = `${NAME_KEY}.hidden`;
-const EVENT_KEY_SHOW    = `${NAME_KEY}.show`;
-const EVENT_KEY_SHOWN   = `${NAME_KEY}.shown`;
-const EVENT_KEY_LOADED  = `${NAME_KEY}.loaded`;
+const EVENT_KEY_HIDE     = `${NAME_KEY}.hide`;
+const EVENT_KEY_HIDDEN   = `${NAME_KEY}.hidden`;
+const EVENT_KEY_SHOW     = `${NAME_KEY}.show`;
+const EVENT_KEY_SHOWN    = `${NAME_KEY}.shown`;
+const EVENT_KEY_LOADED   = `${NAME_KEY}.loaded`;
 
 const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
@@ -29,6 +30,12 @@ class VGToast extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			autohide: false,
+			delay: 5000,
+			stack: {
+				enable: true,
+				max: 5
+			},
 			animation: {
 				enable: true,
 				in: 'animate__fadeInUp',
@@ -43,11 +50,11 @@ class VGToast extends BaseModule {
 			}
 		}, params));
 
-		this._addEventListeners();
-		this._dismissElement();
-
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGToast.NAME_KEY, this._params.animation);
+		this._dismissElement();
+
+		this._timeout = null;
 	}
 
 	static get NAME() {
@@ -59,7 +66,7 @@ class VGToast extends BaseModule {
 	}
 
 	init(element) {
-		//this._setPlacement();
+
 	}
 
 	build() {
@@ -72,6 +79,8 @@ class VGToast extends BaseModule {
 
 	show(relatedTarget) {
 		if (isDisabled(this._element)) return;
+
+		this._clearTimeout();
 
 		this._params = this._getParams(relatedTarget, this._params);
 		this._route(function (status, data) {
@@ -89,8 +98,9 @@ class VGToast extends BaseModule {
 		const completeCallBack = () => {
 			this._element.classList.add(CLASS_NAME_SHOW);
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+			this._scheduleHide();
 		}
-		this._queueCallback(completeCallBack, this._element, true, 50);
+		this._queueCallback(completeCallBack, this._element, true, 0);
 	}
 
 	hide() {
@@ -106,13 +116,32 @@ class VGToast extends BaseModule {
 			const completeCallback = () => {
 				document.body.classList.remove(CLASS_NAME_OPEN);
 				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+
+				if (this._params.stack.enable) {
+					this._setPlacement();
+				}
 			}
-			this._queueCallback(completeCallback, this._element, true);
+			this._queueCallback(completeCallback, this._element, false, this._params.animation.delay);
 		}, this._params.animation.delay);
 	}
 
 	dispose() {
+		this._clearTimeout();
+		if (this._isShown()) {
+			this._element.classList.remove(CLASS_NAME_SHOW);
+		}
+
 		super.dispose();
+	}
+
+	_scheduleHide() {
+		if (!this._params.autohide) {
+			return;
+		}
+
+		this._timeout = setTimeout(() => {
+			this.hide();
+		}, this._params.delay);
 	}
 
 	_isShown() {
@@ -120,50 +149,95 @@ class VGToast extends BaseModule {
 	}
 
 	_setPlacement() {
-		const elSizes = [this._element.clientWidth, this._element.clientHeight];
+		let elms = this._enableStack();
+		//const elSizes = [this._element.clientWidth, this._element.clientHeight + stackSize];
 
-		let isPlacementClassTop = this._element.classList.contains('top'),
-			isPlacementClassBottom = this._element.classList.contains('bottom'),
-			isPlacementClassLeft = this._element.classList.contains('left'),
-			isPlacementClassRight = this._element.classList.contains('right'),
-			isPlacementClassCenter = this._element.classList.contains('center');
+		elms.forEach(elm => {
+			let isPlacementClassTop = elm.el.classList.contains('top'),
+				isPlacementClassBottom = elm.el.classList.contains('bottom'),
+				isPlacementClassLeft = elm.el.classList.contains('left'),
+				isPlacementClassRight = elm.el.classList.contains('right'),
+				isPlacementClassCenter = elm.el.classList.contains('center');
 
-		if (isPlacementClassCenter) {
-			if (isPlacementClassLeft) {
-				this._element.style.left = 0;
-				this._element.style.top = 'calc(50% - ('+ elSizes[1] +'px) / 2)';
-			} else if (isPlacementClassRight) {
-				this._element.style.right = 0;
-				this._element.style.top = 'calc(50% - ('+ elSizes[1] +'px) / 2)';
-			} else if (isPlacementClassBottom) {
-				this._element.style.left = 'calc(50% - ('+ elSizes[0] +'px) / 2)';
-				this._element.style.bottom = 0;
-			} else if (isPlacementClassTop) {
-				this._element.style.left = 'calc(50% - ('+ elSizes[0] +'px) / 2)';
-				this._element.style.top = 0;
-			} else {
-				this._element.style.left = 'calc(50% - ('+ elSizes[0] +'px) / 2)';
-				this._element.style.top = 'calc(50% - ('+ elSizes[1] +'px) / 2)';
+			if (!isPlacementClassTop &&
+				!isPlacementClassBottom &&
+				!isPlacementClassCenter &&
+				!isPlacementClassRight &&
+				!isPlacementClassLeft
+			) {
+				isPlacementClassBottom = true;
+				isPlacementClassCenter = true;
 			}
-		} else {
-			if (isPlacementClassLeft) this._element.style.left = 0;
-			if (isPlacementClassBottom) this._element.style.bottom = 0;
-			if (isPlacementClassTop) this._element.style.top = 0;
-			if (isPlacementClassRight) this._element.style.right = 0;
-		}
+
+			if (isPlacementClassCenter) {
+				if (isPlacementClassLeft) {
+					elm.el.style.left = 0;
+					elm.el.style.bottom = 'calc(50% - ('+ elm.top +'px))';
+				} else if (isPlacementClassRight) {
+					elm.el.style.right = 0;
+					elm.el.style.bottom = 'calc(50% - ('+ elm.top +'px))';
+				} else if (isPlacementClassBottom) {
+					elm.el.style.left = 'calc(50% - ('+ elm.el.clientHeight +'px) / 2)';
+					elm.el.style.bottom = elm.top + 'px';
+				} else if (isPlacementClassTop) {
+					elm.el.style.left = 'calc(50% - ('+ elm.el.clientHeight +'px) / 2)';
+					elm.el.style.top = elm.top + 'px';
+				} else {
+					elm.el.style.left = 'calc(50% - ('+ elm.el.clientHeight +'px) / 2)';
+					elm.el.style.bottom = 'calc(50% - '+ elm.top +'px)';
+				}
+			} else {
+				if (isPlacementClassLeft) elm.el.style.left = 0;
+				if (isPlacementClassBottom) elm.el.style.bottom = elm.top + 'px';
+				if (isPlacementClassTop) elm.el.style.top = elm.top + 'px';
+				if (isPlacementClassRight) elm.el.style.right = 0;
+			}
+		});
 	}
 
-	_addEventListeners() {
-		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
-			if (event.key !== 'Escape') return;
+	_enableStack() {
+		let elmsShown = [... Selectors.findAll('.vg-toast.show')], top = 0;
 
-			if (this._params.keyboard) {
-				this.hide();
-				return;
+		if (!this._params.stack.enable) {
+			elmsShown.forEach(el => {
+				if (el !== this._element) {
+					VGToast.getInstance(el).hide()
+				}
+			})
+
+			return [{
+				el: this._element,
+				top: 0,
+			}];
+		}
+
+		elmsShown = elmsShown.map(el => {
+			return {
+				el: el,
+				top: el.clientHeight
 			}
-
-			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
 		});
+
+		return elmsShown.map(function (value, index) {
+			if (index === 0) {
+				return {
+					el: value.el,
+					top: 0
+				}
+			} else {
+				top += value.top
+
+				return {
+					el: value.el,
+					top: top
+				}
+			}
+		});
+	}
+
+	_clearTimeout() {
+		clearTimeout(this._timeout);
+		this._timeout = null;
 	}
 }
 

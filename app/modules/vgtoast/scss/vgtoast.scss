@@ -18,6 +18,7 @@
 	height: var(--vg-toast-height);
 	z-index: var(--vg-toast-z-index);
 	padding: var(--vg-toast-indent);
+	transition: var(--vg-toast-transition);
 
 	&:not(.show) {
 		display: none;
