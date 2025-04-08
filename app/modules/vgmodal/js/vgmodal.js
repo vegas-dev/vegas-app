@@ -6,7 +6,6 @@ import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
-import Params from "../../../utils/js/components/params";
 
 /**
  * Constants
@@ -36,8 +35,9 @@ const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
 const EVENT_KEY_KEYDOWN_DISMISS     = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED      = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
-const EVENT_KEY_MOUSEDOWN_DISMISS   = `mousedown.dismiss${NAME_KEY}`
-const EVENT_KEY_CLICK_DISMISS           = `click.dismiss${NAME_KEY}`
+const EVENT_KEY_MOUSEDOWN_DISMISS   = `mousedown.dismiss${NAME_KEY}`;
+const EVENT_KEY_CLICK_DISMISS       = `click.dismiss${NAME_KEY}`;
+const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 
 class VGModal extends BaseModule {
 	constructor(element, params = {}) {
@@ -48,6 +48,7 @@ class VGModal extends BaseModule {
 			focus: true,
 			keyboard: true,
 			fields: [],
+			hash: true,
 			ajax: {
 				route: '',
 				target: '',
@@ -148,6 +149,10 @@ class VGModal extends BaseModule {
 
 		this._isShown = true;
 		this._isTransitioning = true;
+
+		if (this._params.hash) {
+			window.location.href = '#' + this._element.id;
+		}
 
 		this._scrollBar.hide();
 
@@ -327,7 +332,6 @@ dismissTrigger(VGModal);
 /**
  * Data API implementation
  */
-
 EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
 	const target = Selectors.getElementFromSelector(this);
 
@@ -342,6 +346,25 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	const data = VGModal.getOrCreateInstance(target);
 	data.toggle(this);
+});
+
+EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function (event) {
+	let targetHash = window.location.hash.slice(1);
+	if (!targetHash) return;
+
+	let target = Selectors.find('#' + targetHash);
+	if (!target && !target.classList.contains('vg-modal')) return;
+
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault();
+	}
+
+	if (isDisabled(target)) {
+		return;
+	}
+
+	const data = VGModal.getOrCreateInstance(target)
+	data.toggle();
 })
 
 export default VGModal;

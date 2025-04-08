@@ -25,6 +25,7 @@ const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
 const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 
 class VGSidebar extends BaseModule {
 	constructor(element, params = {}) {
@@ -34,6 +35,7 @@ class VGSidebar extends BaseModule {
 			backdrop: true,
 			overflow: true,
 			keyboard: true,
+			hash: true,
 			animation: {
 				enable: false,
 				in: 'animate__rollIn',
@@ -71,7 +73,8 @@ class VGSidebar extends BaseModule {
 		const _this = this;
 		if (isDisabled(_this._element)) return;
 
-		_this._params = _this._getParams(relatedTarget, _this._params);
+		if (relatedTarget) _this._params = _this._getParams(relatedTarget, _this._params);
+
 		_this._route(function (status, data) {
 			EventHandler.trigger(_this._element, EVENT_KEY_LOADED, {stats: status, data: data});
 		});
@@ -85,6 +88,10 @@ class VGSidebar extends BaseModule {
 
 		if (_this._params.overflow) {
 			Overflow.append();
+		}
+
+		if (this._params.hash) {
+			window.location.href = '#' + this._element.id;
 		}
 
 		_this._element.classList.add(CLASS_NAME_SHOW);
@@ -183,5 +190,24 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	const data = VGSidebar.getOrCreateInstance(target)
 	data.toggle(this);
 });
+
+EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function (event) {
+	let targetHash = window.location.hash.slice(1);
+	if (!targetHash) return;
+
+	let target = Selectors.find('#' + targetHash);
+	if (!target && !target.classList.contains('vg-sidebar')) return;
+
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault();
+	}
+
+	if (isDisabled(target)) {
+		return;
+	}
+
+	const data = VGSidebar.getOrCreateInstance(target)
+	data.toggle();
+})
 
 export default VGSidebar;

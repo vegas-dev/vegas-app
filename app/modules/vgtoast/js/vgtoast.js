@@ -143,8 +143,7 @@ class VGToast extends BaseModule {
 
 		let instance =  VGToast.getOrCreateInstance(target, params);
 		execute(callback, [instance]);
-
-		return instance;
+		instance.show();
 	}
 
 	toggle(relatedTarget) {
@@ -259,10 +258,10 @@ class VGToast extends BaseModule {
 					elm.el.style.right = 0;
 					elm.el.style.bottom = 'calc(50% - ('+ elm.top +'px))';
 				} else if (isPlacementClassBottom) {
-					elm.el.style.left = 'calc(50% - ('+ elm.el.clientHeight +'px) / 2)';
+					elm.el.style.left = 'calc(50% - ('+ elm.el.clientWidth +'px) / 2)';
 					elm.el.style.bottom = elm.top + 'px';
 				} else if (isPlacementClassTop) {
-					elm.el.style.left = 'calc(50% - ('+ elm.el.clientHeight +'px) / 2)';
+					elm.el.style.left = 'calc(50% - ('+ elm.el.clientWidth +'px) / 2)';
 					elm.el.style.top = elm.top + 'px';
 				} else {
 					elm.el.style.left = 'calc(50% - ('+ elm.el.clientHeight +'px) / 2)';
