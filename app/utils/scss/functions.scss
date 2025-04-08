@@ -1,3 +1,22 @@
 @function is-map($var){
 	@return type-of($var) == 'map';
 }
+
+// Merge multiple maps
+@function map-merge-multiple($maps...) {
+	$merged-maps: ();
+
+	@each $map in $maps {
+		$merged-maps: map-merge($merged-maps, $map);
+	}
+	@return $merged-maps;
+}
+
+// mix colors
+@function shade-color($color, $weight) {
+	@return mix(black, $color, $weight);
+}
+
+@function tint-color($color, $weight) {
+	@return mix(white, $color, $weight);
+}

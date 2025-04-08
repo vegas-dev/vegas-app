@@ -45,4 +45,60 @@ $loader-map: (
 		margin: 30px auto,
 		animation: vgLoader 1.1s infinite linear,
 		transform: translateZ(0)
-)
+);
+
+// Colors Status
+$danger:        #dc3545 !default;
+$danger-border: tint-color($danger, 60%) !default;
+$danger-text:   shade-color($danger, 60%) !default;
+$danger-bg:     tint-color($danger, 80%) !default;
+
+$success: #198754;
+$success-border: tint-color($success, 60%) !default;
+$success-text:   shade-color($success, 60%) !default;
+$success-bg:     tint-color($success, 80%) !default;
+
+$warning: #FFC107;
+$warning-border: tint-color($warning, 60%) !default;
+$warning-text:   shade-color($warning, 60%) !default;
+$warning-bg:     tint-color($warning, 80%) !default;
+
+$info: #0DCAF0;
+$info-border: tint-color($info, 60%) !default;
+$info-text:   shade-color($info, 60%) !default;
+$info-bg:     tint-color($info, 80%) !default;
+
+$dark: #232323;
+$dark-border: shade-color($dark, 60%) !default;
+$dark-text:   tint-color($dark, 60%) !default;
+$dark-bg:     shade-color($dark, 80%) !default;
+
+$success-map: (
+		color: $success-text,
+		border-color: $success-border,
+		background-color: $success-bg
+);
+
+$danger-map: (
+		color: $danger-text,
+		border-color: $danger-border,
+		background-color: $danger-bg
+);
+
+$warning-map: (
+		color: $warning-text,
+		border-color: $warning-border,
+		background-color: $warning-bg
+);
+
+$info-map: (
+		color: $info-text,
+		border-color: $info-border,
+		background-color: $info-bg
+);
+
+$dark-map: (
+		color: $dark-text,
+		border-color: $dark-border,
+		background-color: $dark-bg
+);

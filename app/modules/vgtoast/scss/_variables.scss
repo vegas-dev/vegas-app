@@ -3,5 +3,24 @@ $toast-map: (
 		height: auto,
 		width: auto,
 		z-index: $toast-index,
-		transition: $transition-base
+		transition: $transition-base,
+		padding: 8px 22px,
+		font-size: 1.125rem,
+		background-color: $bg-color,
+		color: $color,
+		border-width: $border-width,
+		border-color: transparent,
+		border-style: $border-style,
+		border-radius: 20px,
+		box-shadow: $box-shadow,
+		header-font-weight: 500,
+		header-font-size: .975rem,
+		body-font-size: 1rem,
+		body-font-weight: 400,
 );
+
+$toast-danger-map: $danger-map;
+$toast-success-map: $success-map;
+$toast-warning-map: $warning-map;
+$toast-info-map: $info-map;
+$toast-dark-map: $dark-map;

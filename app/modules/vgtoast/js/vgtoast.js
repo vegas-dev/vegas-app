@@ -12,7 +12,6 @@ const NAME_KEY = 'vg.toast';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="toast"]';
 
 const CLASS_NAME_OPEN    = 'vg-toast-open';
-const CLASS_NAME_SHOWING = 'showing';
 const CLASS_NAME_SHOW    = 'show';
 
 const EVENT_KEY_HIDE     = `${NAME_KEY}.hide`;
@@ -22,17 +21,21 @@ const EVENT_KEY_SHOWN    = `${NAME_KEY}.shown`;
 const EVENT_KEY_LOADED   = `${NAME_KEY}.loaded`;
 
 const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
-const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
-const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_HIDE_PREVENTED  = `hidePrevented.${NAME_KEY}`;
+const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
 
 class VGToast extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			static: true,
 			placement: 'bottom center',
 			autohide: false,
 			delay: 5000,
+			enableClickToast: true,
+			enableButtonClose: true,
+			keyboard: true,
 			stack: {
 				enable: true,
 				max: 5
@@ -54,6 +57,7 @@ class VGToast extends BaseModule {
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGToast.NAME_KEY, this._params.animation);
 		this._dismissElement();
+		this._addEventListeners();
 
 		this._timeout = null;
 	}
@@ -66,18 +70,75 @@ class VGToast extends BaseModule {
 		return NAME_KEY
 	}
 
-	static init(text, params = {}, callback) {
+	static run(text, params = {}, callback) {
 		return VGToast.build(text, params, callback);
 	}
 
 	static build(text, params, callback) {
+		params = mergeDeepObject({
+			static: false,
+			theme: 'dark',
+			stack: {
+				enable: false
+			}
+		}, params);
+
 		let target = document.createElement('div');
 		target.classList.add('vg-toast');
 		target.id = 'vg-toast-' + makeRandomString();
 
-		let wrapper = document.createElement('div');
-		wrapper.classList.add('wrapper');
+		if ('theme' in params) {
+			target.classList.add('vg-toast-' + params.theme);
+		}
 
+		if ('placement' in params) {
+			params.placement.split(' ').forEach(val => target.classList.add(val));
+		}
+
+		let wrapper = document.createElement('div');
+		wrapper.classList.add('vg-toast-wrapper');
+
+		if ('type' in params) {
+			let icon = document.createElement('div');
+			icon.classList.add('vg-toast-icon');
+
+			wrapper.append(icon);
+		}
+
+		let content = document.createElement('div');
+		content.classList.add('vg-toast-content');
+
+		let body = document.createElement('div');
+		body.classList.add('vg-toast-body');
+
+		if (typeof text === 'string') {
+			body.innerHTML = text;
+			content.append(body);
+		} else if (Array.isArray(text)) {
+			if (text.length > 1) {
+				let header = document.createElement('div');
+				header.classList.add('vg-toast-header');
+				header.innerHTML = text[0];
+				content.append(header);
+
+				body.innerHTML = text[1];
+				content.append(body);
+			} else {
+				body.innerHTML = text[0];
+				content.append(body);
+			}
+		}
+
+		wrapper.append(content);
+
+		if ('enableButtonClose' in params && params.enableButtonClose) {
+			let button = document.createElement('div');
+			button.classList.add('vg-toast-button');
+			button.innerHTML = '<button class="vg-btn-close" data-vg-dismiss="toast"></button>';
+			wrapper.append(button);
+		}
+
+		target.append(wrapper);
 		document.body.append(target);
 
 		let instance =  VGToast.getOrCreateInstance(target, params);
@@ -133,6 +194,10 @@ class VGToast extends BaseModule {
 				if (this._params.stack.enable) {
 					this._setPlacement();
 				}
+
+				if (!this._params.static) {
+					this.dispose();
+				}
 			}
 			this._queueCallback(completeCallback, this._element, false, this._params.animation.delay);
 		}, this._params.animation.delay);
@@ -142,6 +207,10 @@ class VGToast extends BaseModule {
 		this._clearTimeout();
 		if (this._isShown()) {
 			this._element.classList.remove(CLASS_NAME_SHOW);
+		}
+
+		if (!this._params.static) {
+			this._element.remove();
 		}
 
 		super.dispose();
@@ -251,6 +320,27 @@ class VGToast extends BaseModule {
 	_clearTimeout() {
 		clearTimeout(this._timeout);
 		this._timeout = null;
+	}
+
+	_addEventListeners() {
+		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
+			if (event.key !== 'Escape') return;
+
+			if (this._params.keyboard) {
+				this.hide();
+				return;
+			}
+
+			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
+		});
+
+		if (this._params.enableClickToast) {
+			this._element.classList.add('vg-toast-pointer');
+
+			EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, '#' + this._element.id, () => {
+				this.hide();
+			})
+		}
 	}
 }
 
