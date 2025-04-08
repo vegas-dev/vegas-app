@@ -24,7 +24,7 @@
 	</div>
 </div>
 
-<div class="vg-toast bottom center" data-type="success" id="toast-success-delete">
+<!--<div class="vg-toast bottom center" data-type="success" id="toast-success-delete">
 	<div class="vg-toast-wrapper">
 		<div class="vg-toast-icon"></div>
 		<div class="vg-toast-content">
@@ -61,10 +61,17 @@
 			<button class="vg-btn-close" data-vg-dismiss="toast"></button>
 		</div>
 	</div>
-</div>
+</div>-->
 
 <script>
-	const toastTrigger = document.getElementById('toastBtnLive')
+	const toastTrigger = document.getElementById('toastBtnLive');
+	if (toastTrigger) {
+		toastTrigger.addEventListener('click', () => {
+			vg.VGToast.init('Удалено', {}).show();
+		});
+	}
+	
+	/*const toastTrigger = document.getElementById('toastBtnLive')
 	const toastLiveExample = document.getElementById('toast-success-delete')
 
 	if (toastTrigger) {
@@ -92,5 +99,5 @@
 		toastTriggerInfo.addEventListener('click', () => {
 			toastVG.show();
 		})
-	}
+	}*/
 </script>

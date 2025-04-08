@@ -1,0 +1,26 @@
+@charset "UTF-8";
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGToast
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+.vg-toast {
+  --vg-toast-indent: 1rem ;
+  --vg-toast-height: auto ;
+  --vg-toast-width: auto ;
+  --vg-toast-z-index: 1050 ;
+  --vg-toast-transition: all 0.5s ease-in-out ;
+  position: fixed;
+  width: var(--vg-toast-width);
+  height: var(--vg-toast-height);
+  z-index: var(--vg-toast-z-index);
+  padding: var(--vg-toast-indent);
+  transition: var(--vg-toast-transition);
+}
+.vg-toast:not(.show) {
+  display: none;
+}
+
+/*# sourceMappingURL=vgtoast.css.map */

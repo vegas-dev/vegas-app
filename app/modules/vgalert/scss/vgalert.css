@@ -1,0 +1,83 @@
+@charset "UTF-8";
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGAlert
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+.vg-alert {
+  --vg-alert-padding: 2rem ;
+  --vg-alert-margin: 0 0 2rem ;
+  --vg-alert-border-width: 1px ;
+  --vg-alert-border-style: solid ;
+  --vg-alert-border-color: transparent ;
+  --vg-alert-border-radius: 0.375rem ;
+  --vg-alert-gap: 1.5rem ;
+  --vg-alert-icon-width: 80px ;
+  --vg-alert-icon-height: 80px ;
+  --vg-alert-content-width: 100% ;
+  --vg-alert-content-align: center ;
+  --vg-alert-content-justify: flex-start ;
+  --vg-alert-success-color: #88d15e ;
+  --vg-alert-success-border-color: #A5DC86 ;
+  --vg-alert-success-background-color: rgba(194, 231, 174, 0.15) ;
+  --vg-alert-success-stroke: rgba(117, 183, 152, 0.4) ;
+  --vg-alert-error-color: #f51313 ;
+  --vg-alert-error-border-color: #F74444 ;
+  --vg-alert-error-background-color: rgba(252, 190, 190, 0.075) ;
+  --vg-alert-waiting-color: #ffcd37 ;
+  --vg-alert-waiting-border-color: #ffda6a ;
+  --vg-alert-waiting-background-color: rgba(255, 237, 183, 0.1) ;
+  padding: var(--vg-alert-padding);
+  margin: var(--vg-alert-margin);
+  border: var(--vg-alert-border-width) var(--vg-alert-border-style) var(--vg-alert-border-color);
+  border-radius: var(--vg-alert-border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vg-alert-success {
+  color: var(--vg-alert-success-color);
+  border-color: var(--vg-alert-success-border-color);
+  background-color: var(--vg-alert-success-background-color);
+}
+.vg-alert-error {
+  color: var(--vg-alert-error-color);
+  border-color: var(--vg-alert-error-border-color);
+  background-color: var(--vg-alert-error-background-color);
+}
+.vg-alert-content {
+  display: flex;
+  align-items: var(--vg-alert-content-align);
+  justify-content: var(--vg-alert-content-justify);
+  gap: var(--vg-alert-gap);
+  width: var(--vg-alert-content-width);
+}
+.vg-alert-content--icon {
+  width: var(--vg-alert-icon-width);
+  height: var(--vg-alert-icon-height);
+}
+.vg-alert-content--icon svg {
+  width: 100%;
+  height: 100%;
+}
+.vg-alert-content--icon .ui-success-circle {
+  stroke: var(--vg-alert-success-stroke);
+}
+.vg-alert-content--icon .ui-success-path {
+  stroke: var(--vg-alert-success-color);
+}
+.vg-alert-modal {
+  --vg-alert-icon-width: 150px;
+  --vg-alert-icon-height: 150px;
+  --vg-alert-padding: 5rem 2rem;
+  --vg-alert-border-width: 0;
+  margin: 0;
+}
+.vg-alert-modal .vg-alert-content {
+  flex-direction: column;
+  text-align: center;
+}
+
+/*# sourceMappingURL=vgalert.css.map */

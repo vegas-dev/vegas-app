@@ -1,7 +1,7 @@
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import {dismissTrigger} from "../../module-fn";
-import {isDisabled, mergeDeepObject} from "../../../utils/js/functions";
+import {execute, isDisabled, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 
 /**
@@ -30,6 +30,7 @@ class VGToast extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			placement: 'bottom center',
 			autohide: false,
 			delay: 5000,
 			stack: {
@@ -65,12 +66,24 @@ class VGToast extends BaseModule {
 		return NAME_KEY
 	}
 
-	init(element) {
-
+	static init(text, params = {}, callback) {
+		return VGToast.build(text, params, callback);
 	}
 
-	build() {
+	static build(text, params, callback) {
+		let target = document.createElement('div');
+		target.classList.add('vg-toast');
+		target.id = 'vg-toast-' + makeRandomString();
 
+		let wrapper = document.createElement('div');
+		wrapper.classList.add('wrapper');
+
+		document.body.append(target);
+
+		let instance =  VGToast.getOrCreateInstance(target, params);
+		execute(callback, [instance]);
+
+		return instance;
 	}
 
 	toggle(relatedTarget) {
@@ -82,7 +95,7 @@ class VGToast extends BaseModule {
 
 		this._clearTimeout();
 
-		this._params = this._getParams(relatedTarget, this._params);
+		this._params = this._getParams(relatedTarget || {}, this._params);
 		this._route(function (status, data) {
 			EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data});
 		});
