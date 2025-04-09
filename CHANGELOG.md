@@ -1,3 +1,9 @@
+# VEGAS-APP 0.2.4 (Апрель, 4, 2025)
+## Модуль VGSidebar & VGModal
+* Добавлен параметр hash
+
+## Новый модуль VGToast
+
 # VEGAS-APP 0.2.2 - 0.2.3 (Апрель, 4, 2025)
 ## Модуль VGDROPDOWN
 * Добавлен параметр overflow и backdrop

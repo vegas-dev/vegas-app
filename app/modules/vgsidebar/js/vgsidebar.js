@@ -25,6 +25,7 @@ const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
 const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_POPSTATE_DATA_API = `popstate.${NAME_KEY}.data.api`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 
 class VGSidebar extends BaseModule {
@@ -91,7 +92,11 @@ class VGSidebar extends BaseModule {
 		}
 
 		if (this._params.hash) {
-			window.history.pushState(null, "sidebar open", "#" + this._element.id);
+			window.history.pushState(null, "vg-sidebar-open", "#" + this._element.id);
+
+			EventHandler.on(window, EVENT_KEY_POPSTATE_DATA_API, () => {
+				this.hide();
+			});
 		}
 
 		_this._element.classList.add(CLASS_NAME_SHOW);
@@ -129,6 +134,10 @@ class VGSidebar extends BaseModule {
 
 				if (_this._params.overflow) {
 					Overflow.destroy();
+				}
+
+				if (_this._params.hash) {
+					history.pushState("", document.title, window.location.pathname + window.location.search);
 				}
 
 				document.body.classList.remove(CLASS_NAME_OPEN);
@@ -178,7 +187,6 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	this.setAttribute('aria-expanded', true);
 	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
-		//if (isVisible(this)) this.focus();
 		this.setAttribute('aria-expanded', false);
 	})
 
@@ -191,23 +199,19 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	data.toggle(this);
 });
 
-EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function (event) {
+EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function () {
 	let targetHash = window.location.hash.slice(1);
-	if (!targetHash) return;
+	if (targetHash) {
+		let target = Selectors.find('#' + targetHash);
+		if (target && target.classList.contains('vg-sidebar')) {
+			if (isDisabled(target)) {
+				return;
+			}
 
-	let target = Selectors.find('#' + targetHash);
-	if (!target && !target.classList.contains('vg-sidebar')) return;
-
-	if (['A', 'AREA'].includes(this.tagName)) {
-		event.preventDefault();
+			const data = VGSidebar.getOrCreateInstance(target)
+			data.toggle();
+		}
 	}
-
-	if (isDisabled(target)) {
-		return;
-	}
-
-	const data = VGSidebar.getOrCreateInstance(target)
-	data.toggle();
 })
 
 export default VGSidebar;

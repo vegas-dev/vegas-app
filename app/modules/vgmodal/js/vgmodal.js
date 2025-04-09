@@ -38,6 +38,7 @@ const EVENT_KEY_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
 const EVENT_KEY_MOUSEDOWN_DISMISS   = `mousedown.dismiss${NAME_KEY}`;
 const EVENT_KEY_CLICK_DISMISS       = `click.dismiss${NAME_KEY}`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
+const EVENT_KEY_POPSTATE_DATA_API   = `popstate.${NAME_KEY}.data.api`;
 
 class VGModal extends BaseModule {
 	constructor(element, params = {}) {
@@ -151,8 +152,11 @@ class VGModal extends BaseModule {
 		this._isTransitioning = true;
 
 		if (this._params.hash) {
-			window.location.href = '#' + this._element.id;
-			history.pushState('', '', '#' + this._element.id);
+			window.history.pushState(null, "vg-sidebar-open", "#" + this._element.id);
+
+			EventHandler.on(window, EVENT_KEY_POPSTATE_DATA_API, () => {
+				this.hide();
+			});
 		}
 
 		this._scrollBar.hide();
@@ -188,6 +192,10 @@ class VGModal extends BaseModule {
 		this._isTransitioning = false;
 
 		if (openedModals.length) return;
+
+		if (this._params.hash) {
+			history.pushState("", document.title, window.location.pathname + window.location.search);
+		}
 
 		Backdrop.hide(() => {
 			document.body.classList.remove(CLASS_NAME_OPEN);
@@ -349,23 +357,19 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	data.toggle(this);
 });
 
-EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function (event) {
+EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function () {
 	let targetHash = window.location.hash.slice(1);
-	if (!targetHash) return;
+	if (targetHash) {
+		let target = Selectors.find('#' + targetHash);
+		if (target && target.classList.contains('vg-modal')) {
+			if (isDisabled(target)) {
+				return;
+			}
 
-	let target = Selectors.find('#' + targetHash);
-	if (!target && !target.classList.contains('vg-modal')) return;
-
-	if (['A', 'AREA'].includes(this.tagName)) {
-		event.preventDefault();
+			const data = VGModal.getOrCreateInstance(target)
+			data.toggle();
+		}
 	}
-
-	if (isDisabled(target)) {
-		return;
-	}
-
-	const data = VGModal.getOrCreateInstance(target)
-	data.toggle();
 })
 
 export default VGModal;

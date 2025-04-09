@@ -47,6 +47,7 @@ const nativeEvents = new Set([
 	'pointerup',
 	'pointerleave',
 	'pointercancel',
+	'popstate',
 	'gesturestart',
 	'gesturechange',
 	'gestureend',
