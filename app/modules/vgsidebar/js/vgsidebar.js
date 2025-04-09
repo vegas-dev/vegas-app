@@ -91,7 +91,7 @@ class VGSidebar extends BaseModule {
 		}
 
 		if (this._params.hash) {
-			window.location.href = '#' + this._element.id;
+			window.history.pushState(null, "sidebar open", "#" + this._element.id);
 		}
 
 		_this._element.classList.add(CLASS_NAME_SHOW);

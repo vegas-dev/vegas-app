@@ -152,6 +152,7 @@ class VGModal extends BaseModule {
 
 		if (this._params.hash) {
 			window.location.href = '#' + this._element.id;
+			history.pushState('', '', '#' + this._element.id);
 		}
 
 		this._scrollBar.hide();
