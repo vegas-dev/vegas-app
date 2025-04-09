@@ -3,7 +3,7 @@ $toast-map: (
 		height: auto,
 		width: auto,
 		z-index: $toast-index,
-		transition: $transition-base,
+		transition: all .3s ease-in-out,
 		padding: 8px 22px,
 		font-size: 1.125rem,
 		background-color: $bg-color,

@@ -32,19 +32,20 @@ class VGToast extends BaseModule {
 			static: true,
 			placement: 'bottom center',
 			autohide: false,
-			delay: 5000,
+			delay: 3000,
 			enableClickToast: true,
 			enableButtonClose: true,
 			keyboard: true,
+			theme: 'dark',
 			stack: {
 				enable: true,
 				max: 5
 			},
 			animation: {
 				enable: true,
-				in: 'animate__fadeInUp',
-				out: 'animate__fadeOutDown',
-				delay: 800,
+				in: 'animate__fadeIn',
+				out: 'animate__fadeOut',
+				delay: 400,
 			},
 			ajax: {
 				route: '',
@@ -76,6 +77,7 @@ class VGToast extends BaseModule {
 
 	static build(text, params, callback) {
 		params = mergeDeepObject({
+			placement: 'bottom center',
 			static: false,
 			theme: 'dark',
 			stack: {
@@ -183,8 +185,7 @@ class VGToast extends BaseModule {
 		if (hideEvent.defaultPrevented) return;
 
 		setTimeout(() => {
-			this._element.setAttribute('aria-expanded', false);
-			this._element.classList.remove(CLASS_NAME_SHOW);
+			this._element?.classList.remove(CLASS_NAME_SHOW);
 
 			const completeCallback = () => {
 				document.body.classList.remove(CLASS_NAME_OPEN);
@@ -231,7 +232,13 @@ class VGToast extends BaseModule {
 
 	_setPlacement() {
 		let elms = this._enableStack();
-		//const elSizes = [this._element.clientWidth, this._element.clientHeight + stackSize];
+
+		if (this._params.stack.enable) {
+			if (elms.length > this._params.stack.max) {
+				let elm = elms.shift();
+				VGToast.getInstance(elm.el).hide();
+			}
+		}
 
 		elms.forEach(elm => {
 			let isPlacementClassTop = elm.el.classList.contains('top'),

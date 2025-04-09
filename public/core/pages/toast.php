@@ -10,9 +10,91 @@
 			<h3 class="mb-5">Как это работает</h3>
 			
 			<div class="mt-5">
-				<a href="#toast-success-delete" class="btn btn-primary" id="toastBtnLive">Удалить</a>
-				<a href="#toast-danger-delete" class="btn btn-danger" id="toastBtnDanger">Удалить</a>
 				<a href="#toast-danger-delete" class="btn btn-danger" id="toastBtnDark">Удалить</a>
+			</div>
+			
+			<table class="table table-striped mt-5" id="toast-table-static">
+				<tr>
+					<td>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" value="" id="checkDefault_1">
+							<label class="form-check-label" for="checkDefault_1">
+								Default checkbox
+							</label>
+						</div>
+					</td>
+					<td>
+						Lorem ipsum dolor sit amet, consectetur adipisicing.
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" value="" id="checkDefault_2">
+							<label class="form-check-label" for="checkDefault_2">
+								Default checkbox
+							</label>
+						</div>
+					</td>
+					<td>
+						Lorem ipsum dolor sit amet, consectetur adipisicing.
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" value="" id="checkDefault_3">
+							<label class="form-check-label" for="checkDefault_3">
+								Default checkbox
+							</label>
+						</div>
+					</td>
+					<td>
+						Lorem ipsum dolor sit amet, consectetur adipisicing.
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" value="" id="checkDefault_4">
+							<label class="form-check-label" for="checkDefault_4">
+								Default checkbox
+							</label>
+						</div>
+					</td>
+					<td>
+						Lorem ipsum dolor sit amet, consectetur adipisicing.
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" value="" id="checkDefault_5">
+							<label class="form-check-label" for="checkDefault_5">
+								Default checkbox
+							</label>
+						</div>
+					</td>
+					<td>
+						Lorem ipsum dolor sit amet, consectetur adipisicing.
+					</td>
+				</tr>
+			</table>
+		</div>
+	</div>
+	
+	<div class="vg-toast vg-toast-dark bottom center" id="toast-static-table">
+		<div class="vg-toast-wrapper">
+			<div class="vg-toast-content">
+				<div class="form-check">
+					<input class="form-check-input" type="checkbox" value="" id="checkDefault">
+					<label class="form-check-label" for="checkDefault">
+						Выбрать все элементы
+					</label>
+				</div>
+			</div>
+			<div class="vg-toast-button">
+				<button class="vg-btn-close" data-vg-dismiss="toast"></button>
 			</div>
 		</div>
 	</div>
@@ -21,29 +103,18 @@
 <script>
 	const myToast = vg.VGToast;
 	
-	const toastTrigger = document.getElementById('toastBtnLive');
-	if (toastTrigger) {
-		toastTrigger.addEventListener('click', () => {
-			myToast.run(['Спасибо за внимание', 'Успешно удалено']);
-		});
-	}
-	
-	const toastTriggerDanger = document.getElementById('toastBtnDanger');
-	if (toastTriggerDanger) {
-		toastTriggerDanger.addEventListener('click', () => {
-			myToast.run(['Спасибо за понимание', 'Не удалось удалить'], {theme: 'danger'});
-		});
-	}
-	
 	const toastTriggerDark = document.getElementById('toastBtnDark');
 	if (toastTriggerDark) {
 		toastTriggerDark.addEventListener('click', () => {
-			myToast.run(['Успешно удалено'], {
-				animation: {
-					in: 'animate__zoomInDown',
-					out: 'animate__zoomOutDown'
-				}
-			});
+			myToast.run('Успешно удалено', {stack: {enable: true, max: 3}, autohide: true});
 		});
 	}
+	
+	let trInputs = [... document.querySelectorAll(('#toast-table-static input[type="checkbox"]'))];
+
+	trInputs.forEach(el => {
+		el.addEventListener('change', function () {
+			myToast.getOrCreateInstance('#toast-static-table', {enableClickToast: false, enableButtonClose: true}).show(this);
+		})
+	});
 </script>

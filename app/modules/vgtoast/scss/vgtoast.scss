@@ -25,6 +25,14 @@
 	padding: var(--vg-toast-indent);
 	transition: var(--vg-toast-transition);
 
+	&.bottom {
+		padding-top: 0;
+	}
+
+	&.top {
+		padding-bottom: 0;
+	}
+
 	&-danger {
 		--vg-toast-color: var(--vg-toast-danger-color);
 		--vg-toast-background-color: var(--vg-toast-danger-background-color);
@@ -69,6 +77,8 @@
 		border-radius: var(--vg-toast-border-radius);
 		box-shadow: var(--vg-toast-box-shadow);
 		display: flex;
+		align-items: center;
+		gap: 8px;
 	}
 
 	&-header {
@@ -84,13 +94,23 @@
 	&-pointer {
 		cursor: pointer;
 	}
-}
 
-body {
-	.vg-toast {
+	&-button {
+		width: auto;
+		height: 100%;
+		display: flex;
+		align-items: center;
+
 		.vg-btn-close {
-			right: 20px;
-			top: 20px;
+			position: relative;
+			left: unset;
+			top: unset;
+			right: unset;
+			bottom: unset;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			padding: 0;
 
 			svg {
 				width: 14px;
