@@ -11,7 +11,7 @@
   --vg-toast-height: auto ;
   --vg-toast-width: auto ;
   --vg-toast-z-index: 1050 ;
-  --vg-toast-transition: all 0.5s ease-in-out ;
+  --vg-toast-transition: all 0.3s ease-in-out ;
   --vg-toast-padding: 8px 22px ;
   --vg-toast-font-size: 1.125rem ;
   --vg-toast-background-color: #fff ;
@@ -46,6 +46,12 @@
   z-index: var(--vg-toast-z-index);
   padding: var(--vg-toast-indent);
   transition: var(--vg-toast-transition);
+}
+.vg-toast.bottom {
+  padding-top: 0;
+}
+.vg-toast.top {
+  padding-bottom: 0;
 }
 .vg-toast-danger {
   --vg-toast-color: var(--vg-toast-danger-color);
@@ -85,6 +91,8 @@
   border-radius: var(--vg-toast-border-radius);
   box-shadow: var(--vg-toast-box-shadow);
   display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .vg-toast-header {
   font-size: var(--vg-toast-header-font-size);
@@ -97,16 +105,28 @@
 .vg-toast-pointer {
   cursor: pointer;
 }
-
-body .vg-toast .vg-btn-close {
-  right: 20px;
-  top: 20px;
+.vg-toast-button {
+  width: auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
-body .vg-toast .vg-btn-close svg {
+.vg-toast-button .vg-btn-close {
+  position: relative;
+  left: unset;
+  top: unset;
+  right: unset;
+  bottom: unset;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+.vg-toast-button .vg-btn-close svg {
   width: 14px;
   height: 14px;
 }
-body .vg-toast .vg-btn-close svg polygon {
+.vg-toast-button .vg-btn-close svg polygon {
   fill: var(--vg-toast-color);
 }
 

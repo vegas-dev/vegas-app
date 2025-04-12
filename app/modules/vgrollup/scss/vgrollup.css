@@ -37,5 +37,8 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
 }
+.vg-rollup-display--none {
+  display: none !important;
+}
 
 /*# sourceMappingURL=vgrollup.css.map */

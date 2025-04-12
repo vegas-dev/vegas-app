@@ -49,7 +49,7 @@ class VGModal extends BaseModule {
 			focus: true,
 			keyboard: true,
 			fields: [],
-			hash: true,
+			hash: false,
 			ajax: {
 				route: '',
 				target: '',

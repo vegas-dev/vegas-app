@@ -72,6 +72,10 @@
 	border: 1px soild var(--bs-border-color);
 }
 
+[data-bs-theme="dark"] .vg-rollup {
+	--vg-rollup-fade-background: linear-gradient(180deg, rgba(var(--bs-body-bg-rgb), 0) 0%, rgba(var(--bs-body-bg-rgb), 1) 100%)
+}
+
 a {
 	text-decoration: none;
 }

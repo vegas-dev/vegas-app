@@ -46,4 +46,10 @@
 			-webkit-box-orient: vertical;
 		}
 	}
+
+	&-display {
+		&--none {
+			display: none !important;
+		}
+	}
 }

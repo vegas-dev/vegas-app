@@ -18,7 +18,7 @@
 						data-elements="item"
 						data-cnt="3"
 						data-fade="false"
-						data-button="false"
+						data-button-enable="false"
 						id="rollup-list">
 						<li class="item">Lorem ipsum dolor sit amet.</li>
 						<li class="item">Lorem ipsum dolor sit amet.</li>
@@ -48,6 +48,9 @@
 						data-cnt="3"
 						data-fade="false"
 						data-number="true"
+						data-more=" more "
+						data-button-more="Show"
+						data-button-less="Hide"
 						id="rollup-list-num">
 						<li class="item">Lorem ipsum dolor sit amet.</li>
 						<li class="item">Lorem ipsum dolor sit amet.</li>
@@ -128,3 +131,20 @@
 		</div>
 	</div>
 </div>
+
+<script>
+	[... document.querySelectorAll('[data-vgrollup]')].forEach(el => {
+		vg.VGRollup.init(el, {}, function (instance) {
+			console.log('Инициализация прошла успешно');
+			console.log(instance)
+		});
+	});
+	
+	const myRollupContent = document.getElementById('rollup-list-num');
+	myRollupContent.addEventListener('vg.rollup.show', function () {
+		console.log('Показали полный список')
+	});
+	myRollupContent.addEventListener('vg.rollup.hide', function () {
+		console.log('Свернули список')
+	});
+</script>

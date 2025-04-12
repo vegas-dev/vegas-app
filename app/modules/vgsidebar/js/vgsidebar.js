@@ -36,7 +36,7 @@ class VGSidebar extends BaseModule {
 			backdrop: true,
 			overflow: true,
 			keyboard: true,
-			hash: true,
+			hash: false,
 			animation: {
 				enable: false,
 				in: 'animate__rollIn',

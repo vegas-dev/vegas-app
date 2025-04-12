@@ -1,7 +1,7 @@
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import {dismissTrigger} from "../../module-fn";
-import {mergeDeepObject} from "../../../utils/js/functions";
+import {execute, mergeDeepObject} from "../../../utils/js/functions";
 
 /**
  * Constants
@@ -35,6 +35,7 @@ class VGAlert extends BaseModule {
 			keyboard: true,
 			confirm: true,
 			showInside: true,
+			theme: 'default',
 			elements: [
 				{
 					'title': 'Вы уверены?',
@@ -43,7 +44,6 @@ class VGAlert extends BaseModule {
 					'classes': ['btn', 'btn-primary']
 				}
 			],
-			template: '',
 			animation: {
 				enable: false,
 				in: 'animate__rollIn',
@@ -71,6 +71,22 @@ class VGAlert extends BaseModule {
 
 	static get NAME_KEY() {
 		return NAME_KEY
+	}
+
+	static run(text, params = {}, callback) {
+		return VGAlert.build(text, params, callback);
+	}
+
+	static build(text, params, callback) {
+		params = mergeDeepObject({
+			theme: 'default',
+		}, params);
+
+		let target;
+
+		let instance =  VGAlert.getOrCreateInstance(target, params);
+		execute(callback, [instance]);
+		instance.show();
 	}
 
 	toggle(relatedTarget) {
