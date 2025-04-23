@@ -318,10 +318,10 @@ class VGModal extends BaseModule {
 
 		if (!this._params.fields.length) return;
 
-		this._params.fields.forEach(function (item) {
+		this._params.fields.forEach((item) => {
 			if (!'name' in item && !'value' in item) return;
 
-			let elements = Selectors.findAll('[data-' + item.name + ']');
+			let elements = Selectors.findAll('[data-' + item.name + ']', this._element);
 			if (!elements.length) return;
 
 			for (const elm of elements) {
