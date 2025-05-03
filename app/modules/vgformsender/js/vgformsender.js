@@ -2,11 +2,11 @@ import BaseModule from "../../base-module";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
-import {isObject, makeRandomString, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import {execute, isObject, makeRandomString, mergeDeepObject, noop, normalizeData} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import {getSVG} from "../../module-fn";
-import Backdrop from "../../../utils/js/components/backdrop";
+import Templater from "../../../utils/js/components/templater";
 
 /**
  * Constants
@@ -33,6 +33,12 @@ class VGFormSender extends BaseModule {
 			submit: false,
 			fields: [],
 			timeout: 50,
+			pass: {
+				enabled: true,
+				template: 'pass',
+				classes: [],
+				insert: 'after'
+			},
 			alert: {
 				enabled: true,
 				type: 'modal'
@@ -48,6 +54,9 @@ class VGFormSender extends BaseModule {
 				alertModal: 'vg-form-sender-modal',
 				validation: 'needs-validation',
 				wasValidate: 'was-validated'
+			},
+			callback: {
+				afterInit: noop
 			}
 		}, params));
 
@@ -76,7 +85,14 @@ class VGFormSender extends BaseModule {
 			this._element.classList.add(this._params.classes.validation);
 		}
 
-		// TODO сделать добавление глаза если есть ввод пароля
+		if (this._params.pass.enabled) {
+			let inputs = Selectors.findAll('input[type="password"]', this._element);
+			if (!inputs.length) return ;
+
+			new Templater(inputs, this._params.pass).render();
+		}
+
+		execute(this._params.callback.afterInit, [this._element, this]);
 
 		return this
 	}

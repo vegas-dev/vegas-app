@@ -497,9 +497,11 @@ class VGNav extends BaseModule {
 	}
 }
 
-EventHandler.on(window, EVENT_RESIZE_DATA_API, function (event) {
-	const instance = VGNav.getOrCreateInstance('.vg-nav', {});
-	instance.build();
+EventHandler.on(window, EVENT_RESIZE_DATA_API, function () {
+	if (Selectors.find('.vg-nav')) {
+		const instance = VGNav.getOrCreateInstance('.vg-nav', {});
+		instance.build();
+	}
 })
 
 export default VGNav;
