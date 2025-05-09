@@ -59,6 +59,10 @@ const Selectors = {
 	getMultipleElementsFromSelector(element) {
 		const selector = getSelector(element);
 		return selector ? Selectors.findAll(selector) : []
+	},
+
+	prev(element) {
+		return element.previousElementSibling || null
 	}
 }
 

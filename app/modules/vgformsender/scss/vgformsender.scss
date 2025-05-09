@@ -9,11 +9,33 @@
 @import "../../../utils/scss/functions";
 @import "../../../utils/scss/mixin";
 @import "../../../utils/scss/variables";
+@import "variables";
 
 .vg-form-sender {
+	@include mix-vars('form-sender', $form-sender-map);
+
 	&-modal {
 		.vg-modal-content {
 			padding: 0;
+		}
+	}
+
+	&--content {
+		position: relative;
+	}
+
+	&--hide-show-pass {
+		position: absolute;
+		top: 15px;
+		right: 15px;
+		width: 22px;
+		height: 22px;
+		cursor: pointer;
+
+		svg {
+			path {
+				fill: var(--vg-form-sender-eye-color);
+			}
 		}
 	}
 }

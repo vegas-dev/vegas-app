@@ -76,6 +76,10 @@
 	--vg-rollup-fade-background: linear-gradient(180deg, rgba(var(--bs-body-bg-rgb), 0) 0%, rgba(var(--bs-body-bg-rgb), 1) 100%)
 }
 
+[data-bs-theme="dark"] .vg-form-sender {
+	--vg-form-sender-eye-color: var(--bs-body-color);
+}
+
 a {
 	text-decoration: none;
 }

@@ -6,7 +6,7 @@ import {execute, isObject, makeRandomString, mergeDeepObject, noop, normalizeDat
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import {getSVG} from "../../module-fn";
-import Templater from "../../../utils/js/components/templater";
+import VGHideShowPass from "./hideshowpass";
 
 /**
  * Constants
@@ -35,9 +35,9 @@ class VGFormSender extends BaseModule {
 			timeout: 50,
 			pass: {
 				enabled: true,
-				template: 'pass',
-				classes: [],
-				insert: 'after'
+				template: 'pass-open',
+				classes: ['vg-form-sender--hide-show-pass'],
+				insert: 'afterend'
 			},
 			alert: {
 				enabled: true,
@@ -53,7 +53,8 @@ class VGFormSender extends BaseModule {
 				alertCollapse: 'vg-form-sender-collapse',
 				alertModal: 'vg-form-sender-modal',
 				validation: 'needs-validation',
-				wasValidate: 'was-validated'
+				wasValidate: 'was-validated',
+				content: 'vg-form-sender--content'
 			},
 			callback: {
 				afterInit: noop
@@ -80,16 +81,19 @@ class VGFormSender extends BaseModule {
 	build() {
 		this._element.classList.add(this._params.classes.general);
 
+		[... Selectors.findAll('input, textarea, select', this._element)].forEach((el) => {
+			el.parentElement.classList.add(this._params.classes.content)
+		});
+
 		if (this._params.validate) {
 			Manipulator.set(this._element, 'novalidate', '');
 			this._element.classList.add(this._params.classes.validation);
 		}
 
 		if (this._params.pass.enabled) {
-			let inputs = Selectors.findAll('input[type="password"]', this._element);
-			if (!inputs.length) return ;
-
-			new Templater(inputs, this._params.pass).render();
+			[... Selectors.findAll('input[type="password"]', this._element)].forEach((el) => {
+				VGHideShowPass.init(el, this._params.pass);
+			})
 		}
 
 		execute(this._params.callback.afterInit, [this._element, this]);
