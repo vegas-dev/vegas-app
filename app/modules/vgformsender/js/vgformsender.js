@@ -2,7 +2,15 @@ import BaseModule from "../../base-module";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
-import {execute, isObject, makeRandomString, mergeDeepObject, noop, normalizeData} from "../../../utils/js/functions";
+import {
+	execute,
+	isObject,
+	isVisible,
+	makeRandomString,
+	mergeDeepObject,
+	noop,
+	normalizeData
+} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import {getSVG} from "../../module-fn";
@@ -28,7 +36,10 @@ class VGFormSender extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			redirect: '',
+			redirect: {
+				error: '',
+				success: ''
+			},
 			validate: false,
 			submit: false,
 			fields: [],
@@ -41,7 +52,8 @@ class VGFormSender extends BaseModule {
 			},
 			alert: {
 				enabled: true,
-				type: 'modal'
+				type: 'modal',
+				errors: true,
 			},
 			ajax: {
 				route: '',
@@ -82,7 +94,9 @@ class VGFormSender extends BaseModule {
 		this._element.classList.add(this._params.classes.general);
 
 		[... Selectors.findAll('input, textarea, select', this._element)].forEach((el) => {
-			el.parentElement.classList.add(this._params.classes.content)
+			if (isVisible(el)) {
+				el.parentElement.classList.add(this._params.classes.content)
+			}
 		});
 
 		if (this._params.validate) {
@@ -113,14 +127,18 @@ class VGFormSender extends BaseModule {
 
 			if (_this._params.alert.enabled) {
 				if (typeof status === 'string' && status === 'error') {
-					_this._alertError(event, data);
+					if (_this._params.redirect.error) {
+						window.location.href = _this._params.redirect.error;
+					} else {
+						_this._alertError(event, data);
+					}
 				} else if (typeof status === 'string' && status === 'success') {
-					_this._alertSuccess(event, data);
+					if (_this._params.redirect.success) {
+						window.location.href = _this._params.redirect.success;
+					} else {
+						_this._alertSuccess(event, data);
+					}
 				}
-			}
-
-			if (_this._params.redirect) {
-				window.location.href = _this._params.redirect;
 			}
 		});
 	}
@@ -367,17 +385,17 @@ class VGFormSender extends BaseModule {
 				if (typeof response !== 'string') {
 					if (!('view' in response)) {
 						if ('title' in response) title = response.title;
-						if (status === 'error' && data.code !== 200) {
+						if (status === 'error' && data.code !== 200 && this._params.alert.errors) {
 							code = ' ' + data.text + ' (' + data.code + ')';
 						}
 
-						txt += '<h4 class="vg-alert-content--title">' + title + code + '</h4>';
+						if (title) txt += '<h4 class="vg-alert-content--title">' + title + code + '</h4>';
 
 						if ('message' in response) {
 							txt += '<div class="vg-alert-content--message">' + response.message + '</div>'
 						}
 
-						if ('errors' in response) {
+						if ('errors' in response && this._params.alert.errors) {
 							let errors = normalizeData(response.errors) || null;
 							if (isObject(errors)) {
 								for (const error in errors) {
