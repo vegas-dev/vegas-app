@@ -30,10 +30,15 @@ function onReady() {
 	// VGSelect
 	[... document.querySelectorAll('select.vg-select')].forEach(el => {
 		vg.VGSelect.init(el);
-	})
+	});
 
 	// VGToast
 	//vg.VGToast.init()
+
+	// VGDataTable
+	[... document.querySelectorAll('.vg-datatable')].forEach(el => {
+		vg.VGDataTable.init(el);
+	});
 }
 
 document.addEventListener('DOMContentLoaded', onReady);

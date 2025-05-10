@@ -80,6 +80,10 @@
 	--vg-form-sender-eye-color: var(--bs-body-color);
 }
 
+[data-bs-theme="dark"] .vg-datatable {
+	--vg-datatable-loader-bg: rgba(var(--bs-tertiary-bg-rgb), .15);
+}
+
 a {
 	text-decoration: none;
 }

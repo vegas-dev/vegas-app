@@ -44,6 +44,10 @@ import VGAlert from "./app/modules/vgalert/js/vgalert";
 import "./app/modules/vgtoast/scss/vgtoast.scss";
 import VGToast from "./app/modules/vgtoast/js/vgtoast";
 
+// datatable
+import "./app/modules/vgdatatable/scss/vgdatatable.scss";
+import VGDataTable from "./app/modules/vgdatatable/js/vgdatatable";
+
 export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect, VGAlert, VGToast
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect, VGAlert, VGToast, VGDataTable
 }

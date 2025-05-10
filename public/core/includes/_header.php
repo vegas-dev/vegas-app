@@ -103,6 +103,12 @@
 												<small>Показываем уведомления</small>
 											</a>
 										</li>
+										<li>
+											<a href="/?module=datatable">
+												<span>VGDataTable</span>
+												<small>Динамические таблицы</small>
+											</a>
+										</li>
 									</ul>
 								</li>
 								<li class="dropdown">
