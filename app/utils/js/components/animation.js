@@ -14,10 +14,12 @@ class Animation {
 			in: 'animate__backInUp',
 			out: 'animate__backOutUp',
 			delay: 0,
+			duration: 800,
 		}, params);
 
 		this.classes = {
-			animated: 'animate__animated'
+			animated: 'animate__animated',
+			duration: 'animate__duration-' + this._params.duration
 		}
 
 		if (!this._params.enable) return;
@@ -28,6 +30,7 @@ class Animation {
 
 		if (!this._element.classList.contains(this.classes.animated)) {
 			this._element.classList.add(this.classes.animated);
+			this._element.classList.add(this.classes.duration);
 		}
 
 		this._triggers();

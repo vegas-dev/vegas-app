@@ -4072,3 +4072,10 @@
   -webkit-animation-name: slideOutUp;
   animation-name: slideOutUp;
 }
+
+
+@for $i from 1 through 10 {
+  .animate__duration-#{$i * 100} {
+    --animate-duration: #{$i * 100}ms;
+  }
+}

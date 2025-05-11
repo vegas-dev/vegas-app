@@ -36,6 +36,12 @@ class VGFormSender extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			response: {
+				enabled: false,
+				errors: false,
+				title: '',
+				message: '',
+			},
 			redirect: {
 				error: '',
 				success: ''
@@ -124,6 +130,10 @@ class VGFormSender extends BaseModule {
 
 		_this._route(function (status, data) {
 			_this._element.classList.remove('was-validated');
+
+			if (_this._params.response.enabled) {
+				data.response = _this._params.response;
+			}
 
 			if (_this._params.alert.enabled) {
 				if (typeof status === 'string' && status === 'error') {

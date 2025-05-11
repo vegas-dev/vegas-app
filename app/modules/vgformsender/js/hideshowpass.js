@@ -20,9 +20,7 @@ class VGHideShowPass extends BaseModule{
 	constructor(el, params = {}) {
 		super(el, params);
 
-		this._params = this._getParams(el, mergeDeepObject({
-
-		}, params))
+		this._params = this._getParams(el, mergeDeepObject({}, params));
 	}
 
 	static get NAME() {

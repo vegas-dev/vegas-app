@@ -50,6 +50,7 @@ class VGModal extends BaseModule {
 			keyboard: true,
 			fields: [],
 			hash: false,
+			centered: false,
 			ajax: {
 				route: '',
 				target: '',
@@ -60,7 +61,8 @@ class VGModal extends BaseModule {
 				enable: false,
 				in: 'animate__rollIn',
 				out: 'animate__rollOut',
-				delay: 800,
+				delay: 100,
+				duration: 800,
 			},
 			classes: {
 				general: 'vg-modal',
@@ -106,6 +108,10 @@ class VGModal extends BaseModule {
 		_element.id = id;let dialog = document.createElement('div');
 		dialog.classList.add('vg-modal-dialog');
 
+		if ('centered' in params && params.centered) {
+			dialog.classList.add('vg-modal-dialog-centered');
+		}
+
 		let content = document.createElement('div');
 		content.classList.add('vg-modal-content');
 
@@ -130,6 +136,8 @@ class VGModal extends BaseModule {
 		const modal = VGModal.getOrCreateInstance(_element, params);
 
 		execute(callback, [modal]);
+
+		return modal;
 	}
 
 	toggle(relatedTarget) {
