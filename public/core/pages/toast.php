@@ -106,7 +106,7 @@
 	const toastTriggerDark = document.getElementById('toastBtnDark');
 	if (toastTriggerDark) {
 		toastTriggerDark.addEventListener('click', () => {
-			myToast.run('Успешно удалено', {stack: {enable: true, max: 3}, autohide: true});
+			myToast.run('Успешно удалено');
 		});
 	}
 	

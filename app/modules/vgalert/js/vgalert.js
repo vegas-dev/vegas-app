@@ -10,20 +10,6 @@ import VGModal from "../../vgmodal/js/vgmodal";
 const NAME = 'alert';
 const NAME_KEY = 'vg.alert';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="alert"]';
-
-const CLASS_NAME_SHOW = 'show';
-const CLASS_NAME_OPEN = 'vg-alert-open';
-
-const EVENT_KEY_HIDE    = `${NAME_KEY}.hide`;
-const EVENT_KEY_HIDDEN  = `${NAME_KEY}.hidden`;
-const EVENT_KEY_SHOW    = `${NAME_KEY}.show`;
-const EVENT_KEY_SHOWN   = `${NAME_KEY}.shown`;
-const EVENT_KEY_LOADED  = `${NAME_KEY}.loaded`;
-const EVENT_KEY_CONFIRM = `${NAME_KEY}.confirm`;
-const EVENT_KEY_CANCEL  = `${NAME_KEY}.cancel`;
-
-const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
-const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
 let IS_PROMISE = false;
@@ -48,6 +34,9 @@ class VGAlert extends BaseModule {
 			toast: {
 
 			},
+			elements: {
+				button: ''
+			},
 			dialog: 'modal',
 			mode: 'alert',
 		}, params));
@@ -61,27 +50,44 @@ class VGAlert extends BaseModule {
 		return NAME_KEY
 	}
 
-	static run(message, params) {
-		//const instance = VGAlert.getOrCreateInstance()
+	static run(message, element = null, params = {}, event = null) {
+		if (!element) {
+			let a = document.createElement('a');
+			a.classList.add('btn-alert-fake');
+			document.body.append(a);
+			element = a;
+		}
+
+		const instance = VGAlert.getOrCreateInstance(element, mergeDeepObject({
+			message: message
+		}, params));
+
+		return instance.promise(event);
 	}
 
 	toggle(event) {
 		const promise = this.promise(event);
 		promise.then(resolve => {
-			IS_PROMISE = true
+			IS_PROMISE = true;
 			this._element.click();
 		}).catch(reject => {
-			IS_PROMISE = false;
+
 		});
 	}
 
-	promise() {
+	promise(event) {
 		let dialog = this._build();
 		dialog.toggle();
 
 		return new Promise((resolve) => {
 			if (this._params.mode === 'alert') {
-				dialog._element.addEventListener('vg.'+ this._params.dialog +'.hidden', resolve);
+				dialog._element.addEventListener('vg.'+ this._params.dialog +'.hidden', () => {
+					setTimeout(() => {
+						IS_PROMISE = false;
+						let fakeBtn = document.querySelector('.btn-alert-fake');
+						if (fakeBtn) fakeBtn.remove();
+					}, 100)
+				});
 			}
 		});
 	}
@@ -106,7 +112,17 @@ class VGAlert extends BaseModule {
 			element.classList.add('vg-alert-modal');
 
 			let $body = Selectors.find('.vg-modal-body', element);
-			if ($body) $body.innerHTML = this._params.message;
+			if ($body) {
+				let html = '<div class="message">' + this._params.message + '</div>';
+
+				html += '<div class="buttons">';
+				if (this._params.elements.button) {
+					html += '<a href="#" data-vg-dismiss="modal" class="btn btn-primary">'+ this._params.elements.button +'</a>';
+				}
+				html += '</div>';
+
+				$body.innerHTML = html;
+			}
 		});
 	}
 
@@ -129,5 +145,9 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 		data.toggle(event);
 	}
 });
+
+window.alert = (message) => {
+	VGAlert.run(message);
+}
 
 export default VGAlert;
