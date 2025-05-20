@@ -18,8 +18,8 @@
 		<div class="col-lg-9">
 			<h3 class="mb-5">Как это работает</h3>
 			
-			<div class="block">
-				<h4 id="linkFirstBlock">Первый блок</h4>
+			<div class="block" id="linkFirstBlock">
+				<h4>Первый блок</h4>
 				
 				<p><a>Lorem ipsum dolor sit amet</a>, consectetur adipiscing elit. Nunc lorem magna, mattis id pharetra in, accumsan a sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean id gravida lacus. Nullam auctor nisl justo, quis eleifend neque molestie id. Aliquam rhoncus nisl sed eros hendrerit viverra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras ac egestas ipsum, sit amet commodo orci. Quisque fermentum ante nulla, id hendrerit elit scelerisque ut. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;</p>
 				<p>Nunc id laoreet dolor. Sed porta urna vestibulum tincidunt vehicula. Nulla arcu lorem, dictum nec dapibus pulvinar, lobortis non est. Pellentesque ut semper erat, vitae tempor augue. Aenean eu congue enim, sit amet hendrerit tortor. In tincidunt enim pretium sapien porttitor, eu fermentum turpis vulputate. Phasellus et condimentum nunc. Suspendisse nec quam ut sem dignissim pellentesque efficitur vitae metus. Ut orci justo, dignissim a feugiat ut, ultricies eu tortor. Sed eget sapien id massa imperdiet pulvinar. Praesent malesuada leo ligula, et pharetra urna posuere nec. Curabitur et pharetra est. Ut risus odio, euismod eu sollicitudin at, luctus sed mauris.</p>
@@ -28,8 +28,8 @@
 				<p>Proin lacinia odio convallis lorem commodo, nec iaculis urna volutpat. Mauris ultrices non orci vitae elementum. Proin quam sem, placerat eget pretium vitae, accumsan iaculis urna. Aliquam erat volutpat. Nam quis efficitur risus. Phasellus vehicula vulputate facilisis. Suspendisse sed lorem vitae turpis pretium iaculis. Morbi tincidunt risus nisl, at tristique mi finibus in. Praesent sit amet nunc libero. Aenean maximus ipsum nec malesuada tincidunt. Proin sit amet massa vulputate, blandit erat ac, egestas odio. Mauris vitae mauris eu diam eleifend gravida. Maecenas ullamcorper mollis malesuada.</p>
 			</div>
 			
-			<div class="block">
-				<h4 id="linkSecondBlock">Второй блок</h4>
+			<div class="block" id="linkSecondBlock">
+				<h4>Второй блок</h4>
 				
 				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc lorem magna, mattis id pharetra in, accumsan a sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean id gravida lacus. Nullam auctor nisl justo, quis eleifend neque molestie id. Aliquam rhoncus nisl sed eros hendrerit viverra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras ac egestas ipsum, sit amet commodo orci. Quisque fermentum ante nulla, id hendrerit elit scelerisque ut. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;</p>
 				<p>Nunc id laoreet dolor. Sed porta urna vestibulum tincidunt vehicula. Nulla arcu lorem, dictum nec dapibus pulvinar, lobortis non est. Pellentesque ut semper erat, vitae tempor augue. Aenean eu congue enim, sit amet hendrerit tortor. In tincidunt enim pretium sapien porttitor, eu fermentum turpis vulputate. Phasellus et condimentum nunc. Suspendisse nec quam ut sem dignissim pellentesque efficitur vitae metus. Ut orci justo, dignissim a feugiat ut, ultricies eu tortor. Sed eget sapien id massa imperdiet pulvinar. Praesent malesuada leo ligula, et pharetra urna posuere nec. Curabitur et pharetra est. Ut risus odio, euismod eu sollicitudin at, luctus sed mauris.</p>
@@ -38,8 +38,8 @@
 				<p>Proin lacinia odio convallis lorem commodo, nec iaculis urna volutpat. Mauris ultrices non orci vitae elementum. Proin quam sem, placerat eget pretium vitae, accumsan iaculis urna. Aliquam erat volutpat. Nam quis efficitur risus. Phasellus vehicula vulputate facilisis. Suspendisse sed lorem vitae turpis pretium iaculis. Morbi tincidunt risus nisl, at tristique mi finibus in. Praesent sit amet nunc libero. Aenean maximus ipsum nec malesuada tincidunt. Proin sit amet massa vulputate, blandit erat ac, egestas odio. Mauris vitae mauris eu diam eleifend gravida. Maecenas ullamcorper mollis malesuada.</p>
 			</div>
 			
-			<div class="block">
-				<h4 id="linkThirdBlock">Третий блок</h4>
+			<div class="block" id="linkThirdBlock">
+				<h4>Третий блок</h4>
 				
 				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc lorem magna, mattis id pharetra in, accumsan a sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean id gravida lacus. Nullam auctor nisl justo, quis eleifend neque molestie id. Aliquam rhoncus nisl sed eros hendrerit viverra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras ac egestas ipsum, sit amet commodo orci. Quisque fermentum ante nulla, id hendrerit elit scelerisque ut. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;</p>
 				<p>Nunc id laoreet dolor. Sed porta urna vestibulum tincidunt vehicula. Nulla arcu lorem, dictum nec dapibus pulvinar, lobortis non est. Pellentesque ut semper erat, vitae tempor augue. Aenean eu congue enim, sit amet hendrerit tortor. In tincidunt enim pretium sapien porttitor, eu fermentum turpis vulputate. Phasellus et condimentum nunc. Suspendisse nec quam ut sem dignissim pellentesque efficitur vitae metus. Ut orci justo, dignissim a feugiat ut, ultricies eu tortor. Sed eget sapien id massa imperdiet pulvinar. Praesent malesuada leo ligula, et pharetra urna posuere nec. Curabitur et pharetra est. Ut risus odio, euismod eu sollicitudin at, luctus sed mauris.</p>
@@ -48,8 +48,8 @@
 				<p>Proin lacinia odio convallis lorem commodo, nec iaculis urna volutpat. Mauris ultrices non orci vitae elementum. Proin quam sem, placerat eget pretium vitae, accumsan iaculis urna. Aliquam erat volutpat. Nam quis efficitur risus. Phasellus vehicula vulputate facilisis. Suspendisse sed lorem vitae turpis pretium iaculis. Morbi tincidunt risus nisl, at tristique mi finibus in. Praesent sit amet nunc libero. Aenean maximus ipsum nec malesuada tincidunt. Proin sit amet massa vulputate, blandit erat ac, egestas odio. Mauris vitae mauris eu diam eleifend gravida. Maecenas ullamcorper mollis malesuada.</p>
 			</div>
 			
-			<div class="block">
-				<h4 id="linkFourthBlock">Четвертый блок</h4>
+			<div class="block" id="linkFourthBlock">
+				<h4>Четвертый блок</h4>
 				
 				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc lorem magna, mattis id pharetra in, accumsan a sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean id gravida lacus. Nullam auctor nisl justo, quis eleifend neque molestie id. Aliquam rhoncus nisl sed eros hendrerit viverra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras ac egestas ipsum, sit amet commodo orci. Quisque fermentum ante nulla, id hendrerit elit scelerisque ut. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;</p>
 				<p>Nunc id laoreet dolor. Sed porta urna vestibulum tincidunt vehicula. Nulla arcu lorem, dictum nec dapibus pulvinar, lobortis non est. Pellentesque ut semper erat, vitae tempor augue. Aenean eu congue enim, sit amet hendrerit tortor. In tincidunt enim pretium sapien porttitor, eu fermentum turpis vulputate. Phasellus et condimentum nunc. Suspendisse nec quam ut sem dignissim pellentesque efficitur vitae metus. Ut orci justo, dignissim a feugiat ut, ultricies eu tortor. Sed eget sapien id massa imperdiet pulvinar. Praesent malesuada leo ligula, et pharetra urna posuere nec. Curabitur et pharetra est. Ut risus odio, euismod eu sollicitudin at, luctus sed mauris.</p>
@@ -58,8 +58,8 @@
 				<p>Proin lacinia odio convallis lorem commodo, nec iaculis urna volutpat. Mauris ultrices non orci vitae elementum. Proin quam sem, placerat eget pretium vitae, accumsan iaculis urna. Aliquam erat volutpat. Nam quis efficitur risus. Phasellus vehicula vulputate facilisis. Suspendisse sed lorem vitae turpis pretium iaculis. Morbi tincidunt risus nisl, at tristique mi finibus in. Praesent sit amet nunc libero. Aenean maximus ipsum nec malesuada tincidunt. Proin sit amet massa vulputate, blandit erat ac, egestas odio. Mauris vitae mauris eu diam eleifend gravida. Maecenas ullamcorper mollis malesuada.</p>
 			</div>
 			
-			<div class="block">
-				<h4 id="linkFifthBlock">Пятый блок</h4>
+			<div class="block" id="linkFifthBlock">
+				<h4>Пятый блок</h4>
 				
 				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc lorem magna, mattis id pharetra in, accumsan a sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean id gravida lacus. Nullam auctor nisl justo, quis eleifend neque molestie id. Aliquam rhoncus nisl sed eros hendrerit viverra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras ac egestas ipsum, sit amet commodo orci. Quisque fermentum ante nulla, id hendrerit elit scelerisque ut. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;</p>
 				<p>Nunc id laoreet dolor. Sed porta urna vestibulum tincidunt vehicula. Nulla arcu lorem, dictum nec dapibus pulvinar, lobortis non est. Pellentesque ut semper erat, vitae tempor augue. Aenean eu congue enim, sit amet hendrerit tortor. In tincidunt enim pretium sapien porttitor, eu fermentum turpis vulputate. Phasellus et condimentum nunc. Suspendisse nec quam ut sem dignissim pellentesque efficitur vitae metus. Ut orci justo, dignissim a feugiat ut, ultricies eu tortor. Sed eget sapien id massa imperdiet pulvinar. Praesent malesuada leo ligula, et pharetra urna posuere nec. Curabitur et pharetra est. Ut risus odio, euismod eu sollicitudin at, luctus sed mauris.</p>
@@ -68,8 +68,8 @@
 				<p>Proin lacinia odio convallis lorem commodo, nec iaculis urna volutpat. Mauris ultrices non orci vitae elementum. Proin quam sem, placerat eget pretium vitae, accumsan iaculis urna. Aliquam erat volutpat. Nam quis efficitur risus. Phasellus vehicula vulputate facilisis. Suspendisse sed lorem vitae turpis pretium iaculis. Morbi tincidunt risus nisl, at tristique mi finibus in. Praesent sit amet nunc libero. Aenean maximus ipsum nec malesuada tincidunt. Proin sit amet massa vulputate, blandit erat ac, egestas odio. Mauris vitae mauris eu diam eleifend gravida. Maecenas ullamcorper mollis malesuada.</p>
 			</div>
 			
-			<div class="block">
-				<h4 id="linkSixthBlock">Шестой блок</h4>
+			<div class="block" id="linkSixthBlock">
+				<h4>Шестой блок</h4>
 				
 				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc lorem magna, mattis id pharetra in, accumsan a sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean id gravida lacus. Nullam auctor nisl justo, quis eleifend neque molestie id. Aliquam rhoncus nisl sed eros hendrerit viverra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras ac egestas ipsum, sit amet commodo orci. Quisque fermentum ante nulla, id hendrerit elit scelerisque ut. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae;</p>
 				<p>Nunc id laoreet dolor. Sed porta urna vestibulum tincidunt vehicula. Nulla arcu lorem, dictum nec dapibus pulvinar, lobortis non est. Pellentesque ut semper erat, vitae tempor augue. Aenean eu congue enim, sit amet hendrerit tortor. In tincidunt enim pretium sapien porttitor, eu fermentum turpis vulputate. Phasellus et condimentum nunc. Suspendisse nec quam ut sem dignissim pellentesque efficitur vitae metus. Ut orci justo, dignissim a feugiat ut, ultricies eu tortor. Sed eget sapien id massa imperdiet pulvinar. Praesent malesuada leo ligula, et pharetra urna posuere nec. Curabitur et pharetra est. Ut risus odio, euismod eu sollicitudin at, luctus sed mauris.</p>
