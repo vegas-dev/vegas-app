@@ -1,0 +1,125 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGToast
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-toast {
+	@include mix-vars('toast', $toast-map);
+	@include mix-vars('toast-danger', $toast-danger-map);
+	@include mix-vars('toast-success', $toast-success-map);
+	@include mix-vars('toast-warning', $toast-warning-map);
+	@include mix-vars('toast-info', $toast-info-map);
+	@include mix-vars('toast-dark', $toast-dark-map);
+	position: fixed;
+	width: var(--vg-toast-width);
+	height: var(--vg-toast-height);
+	z-index: var(--vg-toast-z-index);
+	padding: var(--vg-toast-indent);
+	transition: var(--vg-toast-transition);
+
+	&.bottom {
+		padding-top: 0;
+	}
+
+	&.top {
+		padding-bottom: 0;
+	}
+
+	&-danger {
+		--vg-toast-color: var(--vg-toast-danger-color);
+		--vg-toast-background-color: var(--vg-toast-danger-background-color);
+		--vg-toast-border-color: var(--vg-toast-danger-border-color);
+	}
+
+	&-success {
+		--vg-toast-color: var(--vg-toast-success-color);
+		--vg-toast-background-color: var(--vg-toast-success-background-color);
+		--vg-toast-border-color: var(--vg-toast-success-border-color);
+	}
+
+	&-warning {
+		--vg-toast-color: var(--vg-toast-warning-color);
+		--vg-toast-background-color: var(--vg-toast-warning-background-color);
+		--vg-toast-border-color: var(--vg-toast-warning-border-color);
+	}
+
+	&-info {
+		--vg-toast-color: var(--vg-toast-info-color);
+		--vg-toast-background-color: var(--vg-toast-info-background-color);
+		--vg-toast-border-color: var(--vg-toast-info-border-color);
+	}
+
+	&-dark {
+		--vg-toast-color: var(--vg-toast-dark-color);
+		--vg-toast-background-color: var(--vg-toast-dark-background-color);
+		--vg-toast-border-color: var(--vg-toast-dark-border-color);
+	}
+
+	&:not(.show) {
+		display: none;
+	}
+
+	&-wrapper {
+		background-color: var(--vg-toast-background-color);
+		padding: var(--vg-toast-padding);
+		color: var(--vg-toast-color);
+		border-width: var(--vg-toast-border-width);
+		border-style: var(--vg-toast-border-style);
+		border-color: var(--vg-toast-border-color);
+		border-radius: var(--vg-toast-border-radius);
+		box-shadow: var(--vg-toast-box-shadow);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	&-header {
+		font-size: var(--vg-toast-header-font-size);
+		font-weight: var(--vg-toast-header-font-weight);
+	}
+
+	&-body {
+		font-size: var(--vg-toast-body-font-size);
+		font-weight: var(--vg-toast-body-font-weight);
+	}
+
+	&-pointer {
+		cursor: pointer;
+	}
+
+	&-button {
+		width: auto;
+		height: 100%;
+		display: flex;
+		align-items: center;
+
+		.vg-btn-close {
+			position: relative;
+			left: unset;
+			top: unset;
+			right: unset;
+			bottom: unset;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			padding: 0;
+
+			svg {
+				width: 14px;
+				height: 14px;
+
+				polygon {
+					fill: var(--vg-toast-color);
+				}
+			}
+		}
+	}
+}

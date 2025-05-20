@@ -46,6 +46,9 @@
 			case 'datatable':
 				$content = file_get_contents(__DIR__.'/pages/datatable.php');
 				break;
+			case 'spy':
+				$content = file_get_contents(__DIR__.'/pages/spy.php');
+				break;
 			default:
 				$content = file_get_contents(__DIR__.'/pages/home.php');
 				break;

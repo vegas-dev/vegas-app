@@ -48,6 +48,9 @@ import VGToast from "./app/modules/vgtoast/js/vgtoast";
 import "./app/modules/vgdatatable/scss/vgdatatable.scss";
 import VGDataTable from "./app/modules/vgdatatable/js/vgdatatable";
 
+// spy
+import VGSpy from "./app/modules/vgspy/js/vgspy";
+
 export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect, VGAlert, VGToast, VGDataTable
+	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect, VGAlert, VGToast, VGDataTable, VGSpy
 }

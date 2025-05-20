@@ -109,6 +109,12 @@
 												<small>Динамические таблицы</small>
 											</a>
 										</li>
+										<li>
+											<a href="/?module=spy">
+												<span>VGSpy</span>
+												<small>Анимированный скроллинг</small>
+											</a>
+										</li>
 									</ul>
 								</li>
 								<li class="dropdown">
