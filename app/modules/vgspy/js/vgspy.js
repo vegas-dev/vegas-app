@@ -16,7 +16,9 @@ class VGSpy extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			speed: 1500,
 			offset: 0,
+			easing: 'easeInOutSine', // easeInOutSine:easeOutSine:easeInOutQuint
 			isState: false,
 			onActive: noop,
 			onClick: noop,
@@ -77,6 +79,8 @@ class VGSpy extends BaseModule {
 	}
 
 	setCurrentSection($link = null) {
+		this.removeCurrentActive();
+
 		if (this._params.isState) {
 			// TODO не тестили
 			let target = window.location.hash;
@@ -97,10 +101,55 @@ class VGSpy extends BaseModule {
 				section = document.getElementById(target);
 
 			if (section) {
-				let to = section.offsetTop + (offset) + (this._params.offset)
+				let scrollTargetY = section.offsetTop + (offset) + (this._params.offset),
+					scrollY = window.scrollY || document.documentElement.scrollTop,
+					speed = this._params.speed,
+					easing = this._params.easing,
+					currentTime = 0;
+
 				this.removeCurrentActive();
 				this.setActive($link, section);
-				window.scrollTo(0, to);
+
+				let time = Math.max(.1, Math.min(Math.abs(scrollY - scrollTargetY) / speed, .8)),
+					easingEquations = {
+						easeOutSine: function (pos) {
+							return Math.sin(pos * (Math.PI / 2));
+						},
+						easeInOutSine: function (pos) {
+							return (-0.5 * (Math.cos(Math.PI * pos) - 1));
+						},
+						easeInOutQuint: function (pos) {
+							if ((pos /= 0.5) < 1) {
+								return 0.5 * Math.pow(pos, 5);
+							}
+							return 0.5 * (Math.pow((pos - 2), 5) + 2);
+						}
+					};
+
+				window.requestAnimFrame = (function(){
+					return  window.requestAnimationFrame       ||
+						window.webkitRequestAnimationFrame ||
+						window.mozRequestAnimationFrame    ||
+						function( callback ){
+							window.setTimeout(callback, 1000 / 60);
+						};
+				})();
+
+				function move() {
+					currentTime += 1 / 60;
+
+					let p = currentTime / time,
+						t = easingEquations[easing](p);
+
+					if (p < 1) {
+						requestAnimFrame(move);
+						window.scrollTo(0, scrollY + ((scrollTargetY - scrollY) * t));
+					} else {
+						window.scrollTo(0, scrollTargetY);
+					}
+				}
+
+				move();
 
 				this.isClick = false;
 			}

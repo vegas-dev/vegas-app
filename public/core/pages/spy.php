@@ -6,7 +6,7 @@
 		<div class="col-lg-3">
 			<div class="sidebar position-sticky" style="top: 10px">
 				<ul class="list flex-column" data-vgspy >
-					<li><a href="/#linkFirstBlock">Первый блок</a></li>
+					<li><a href="/#linkFirstBlock" data-vg-offset="-100">Первый блок</a></li>
 					<li><a href="/#linkSecondBlock">Второй блок</a></li>
 					<li><a href="/#linkThirdBlock">Третий блок</a></li>
 					<li><a href="/#linkFourthBlock">Четвертый блок</a></li>
@@ -15,7 +15,7 @@
 				</ul>
 			</div>
 		</div>
-		<div class="col-lg-9">
+		<div class="col-lg-9 overflow-hidden">
 			<h3 class="mb-5">Как это работает</h3>
 			
 			<div class="block" id="linkFirstBlock">
