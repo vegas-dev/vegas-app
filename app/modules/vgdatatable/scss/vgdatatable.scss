@@ -11,37 +11,62 @@
 @import "../../../utils/scss/variables";
 @import "variables";
 
-.vg-datatable {
-	@include mix-vars('datatable', $datatable-map);
+.vg-table {
+	@include mix-vars('table', $datatable-map);
+	width: var(--vg-table-width);
+	margin-bottom: var(--vg-table-margin-bottom);
+	vertical-align: var(--vg-table-vertical-align);
+	border-color: var(--vg-table-border-color);
+
+	> thead {
+		vertical-align: bottom;
+	}
+
+	> tbody {
+		vertical-align: inherit;
+	}
+
+	thead, tbody, tfoot, td, th, tr {
+		border-color: inherit;
+		border-style: solid;
+		border-width: 0;
+	}
+
+	> :not(caption) > * > * {
+		padding: var(--vg-table-padding);
+		color: var(--vg-table-color-state, var(--vg-table-color-type, var(--vg-table-color)));
+		background-color: var(--vg-table-bg);
+		border-bottom-width: var(--vg-table-border-width);
+		box-shadow: inset 0 0 0 9999px var(--vg-table-bg-state, var(--vg-table-bg-type, var(--vg-table-bg-accent)));
+	}
 
 	&-loader {
-		position: absolute;
 		width: 100%;
-		height: 100%;
-		min-height: 300px;
-		left: 0;
-		top: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 100;
+		height: 12px;
+		margin: .5rem 0;
+		background-color: var(--vg-table-loader-bg);
+		border-radius: var(--vg-table-loader-border-radius);
+		overflow: hidden;
+		position: relative;
 
-		&--after {
-			position: relative;
-
-			&:after {
-				content: '';
-				width: 100%;
-				height: 100%;
-				min-height: 300px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				background-color: var(--vg-datatable-loader-bg);
-				position: absolute;
-				left: 0;
-				top: 0;
-			}
+		&:after {
+			content: '';
+			width: 2rem;
+			height: 100%;
+			display: block;
+			background-color: rgba(white, .15);
+			top: 0;
+			left: -20%;
+			position: absolute;
+			filter: blur(7px);
+			transform: scale(1.5);
+			animation: loading-line-shadow 2s infinite;
 		}
+	}
+}
+
+@keyframes loading-line-shadow {
+	to {
+		left: 120%;
 	}
 }

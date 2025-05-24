@@ -36,7 +36,7 @@ function onReady() {
 	//vg.VGToast.init()
 
 	// VGDataTable
-	[... document.querySelectorAll('.vg-datatable')].forEach(el => {
+	[... document.querySelectorAll('[data-vgdatatable]')].forEach(el => {
 		vg.VGDataTable.init(el);
 	});
 }

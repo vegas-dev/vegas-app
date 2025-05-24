@@ -22,6 +22,10 @@
 	color: var(--vg-sidebar-color);
 	box-shadow: var(--vg-sidebar-box-shadow);
 
+	@media screen and (max-width: 576px) {
+		--vg-sidebar-horizontal-width: 100%;
+	}
+
 	&.left, &.right {
 		width: var(--vg-sidebar-horizontal-width);
 		height: var(--vg-sidebar-horizontal-height);

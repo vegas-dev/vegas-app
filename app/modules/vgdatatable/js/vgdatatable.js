@@ -1,13 +1,12 @@
 import BaseModule from "../../base-module";
-import {isObject, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import {isEmptyObj, isObject, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
 const NAME             = 'datatable';
 const NAME_KEY         = 'vg.datatable';
 
-const CLASS_NAME_LOADER_INLINE  = 'vg-datatable-loader--inline';
-const CLASS_NAME_LOADER_AFTER   = 'vg-datatable-loader--after';
+const CLASS_NAME_LOADER  = 'vg-table-loader';
 
 const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
 
@@ -38,6 +37,7 @@ class VGDataTable extends BaseModule {
 		}, params));
 
 		this.paginateCount = this._params.paginate.items;
+		this.paginateCountSlice = 0;
 	}
 
 	static get NAME() {
@@ -54,28 +54,21 @@ class VGDataTable extends BaseModule {
 	}
 
 	build() {
-		this._setBuildMode();
-
-
-		/*if (this._params.loader) {
-
-		}
+		/*this._setBuildMode();
 
 		if (this._params.ajax.enabled) {
 			this._route((status, data) => {
 				setTimeout(() => {
 					EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data});
 
-					if (this._params.loader) {
-						this._element.classList.remove(CLASS_NAME_LOADER_AFTER);
-						Selectors.find('.' + CLASS_NAME_LOADER).remove();
-					}
+					// todo это можно сделать на стороне сервера
+					let d = normalizeData(data.response),
+						arr = d.slice(this.paginateCountSlice, this.paginateCount);
 
-					this._setBuildMode(normalizeData(data.response));
+
+					this._setBuildMode(arr);
 				}, 1000);
 			});
-		} else {
-			// TODO берем данные которые уже есть странице и загружены
 		}*/
 	}
 
@@ -88,7 +81,7 @@ class VGDataTable extends BaseModule {
 	}
 
 	_modeBuildTable(data) {
-		let tbody = Selectors.find('tbody', this._element),
+	/*	let tbody = Selectors.find('tbody', this._element),
 			thead = Selectors.find('thead', this._element);
 
 		if (!thead && !tbody) return;
@@ -96,41 +89,49 @@ class VGDataTable extends BaseModule {
 		let countTD = [... Selectors.findAll('th', thead)].length;
 		if (!countTD) return;
 
-		for (let i = 1; i <= this._params.paginate.items; i++) {
-			let tr = document.createElement('tr');
-
-			for (let n = 1; n <= countTD; n++) {
-				let td = document.createElement('td');
-				if (this._params.table.width > 0) td.style.width = this._params.table.width;
-				if (this._params.table.padding > 0) td.style.padding  = this._params.table.padding;
-				if (this._params.table.classes.length) td.classList.add(... this._params.table.classes);
-
-				if (this._params.loader) {
-					td.innerHTML = '<div class="'+ CLASS_NAME_LOADER_INLINE +'"></div>';
-				}
-
-				/*setTimeout(() => {
-					if (this._params.loader) {
-						td.innerHTML = '';
-					}
-				}, 500);*/
-
-				tr.append(td);
-				console.log('asd')
+		let setData = (data, isLoading = false) => {
+			if (!isLoading) {
+				tbody.innerHTML = '';
 			}
 
-			console.log('asd')
+			console.log(data)
 
-			tbody.append(tr);
+			for (let i = 1; i <= this.paginateCount; i++) {
+				let tr = document.createElement('tr');
+
+				for (let n = 1; n <= countTD; n++) {
+					let td = document.createElement('td');
+					if (this._params.table.width > 0) td.style.width = this._params.table.width;
+					if (this._params.table.padding > 0) td.style.padding  = this._params.table.padding;
+					if (this._params.table.classes.length) td.classList.add(... this._params.table.classes);
+
+					if (isLoading) {
+						td.innerHTML = '<div class="'+ CLASS_NAME_LOADER +'"></div>';
+					} else {
+						td.innerHTML = Object.keys(data[i - 1])[n - 1];
+					}
+
+
+					tr.append(td);
+				}
+
+				tbody.append(tr);
+			}
 		}
 
-		/*if (isObject(data)) {
+		if (isEmptyObj(data) && this._params.loader) {
+			setData({}, true);
+		} else {
+			setData(data)
+		}
+
+		/!*if (isObject(data)) {
 			for (const datum of data) {
 				console.log(datum)
 			}
 		} else {
 			target.innerHTML = data;
-		}*/
+		}*!/*/
 	}
 
 	_modeBuildList(data) {

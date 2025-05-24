@@ -124,12 +124,7 @@ a {
 	background: rgba(var(--bs-emphasis-color-rgb), .1);
 }
 
-.header .header-wrapper .header-bottom .logo-area img {
-	height: 36px;
-}
-.header .header-wrapper .header-bottom .vg-nav-wrapper {
-	justify-content: flex-end;
-}
+
 
 [data-bs-theme="dark"] .logo-area .light {
 	display: none;
@@ -137,6 +132,12 @@ a {
 
 [data-bs-theme="light"] .logo-area .dark {
 	display: none;
+}
+
+[data-bs-theme="dark"] .vg-table {
+	--vg-table-color: var(--bs-body-color);
+	--vg-table-bg: var(--bs-body-bg);
+	--vg-table-border-color: var(--bs-border-color);
 }
 
 /* Hero */
