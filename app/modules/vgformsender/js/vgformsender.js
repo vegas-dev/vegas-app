@@ -75,7 +75,13 @@ class VGFormSender extends BaseModule {
 				content: 'vg-form-sender--content'
 			},
 			callback: {
-				afterInit: noop
+				afterInit: noop,
+				afterSuccess: noop,
+				afterError: noop,
+			},
+			interceptors: {
+				success: false,
+				error: false
 			}
 		}, params));
 
@@ -140,13 +146,21 @@ class VGFormSender extends BaseModule {
 					if (_this._params.redirect.error) {
 						window.location.href = _this._params.redirect.error;
 					} else {
-						_this._alertError(event, data);
+						if (!_this._params.interceptors.error) {
+							_this._alertError(event, data);
+						} else {
+							execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
+						}
 					}
 				} else if (typeof status === 'string' && status === 'success') {
 					if (_this._params.redirect.success) {
 						window.location.href = _this._params.redirect.success;
 					} else {
-						_this._alertSuccess(event, data);
+						if (!_this._params.interceptors.success) {
+							_this._alertSuccess(event, data);
+						} else {
+							execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
+						}
 					}
 				}
 			}
@@ -399,7 +413,8 @@ class VGFormSender extends BaseModule {
 							code = ' ' + data.text + ' (' + data.code + ')';
 						}
 
-						if (title) txt += '<h4 class="vg-alert-content--title">' + title + code + '</h4>';
+						if (!title) txt += '<h4 class="vg-alert-content--title">' + code + '</h4>';
+						else txt += '<h4 class="vg-alert-content--title">' + title + '</h4>';
 
 						if ('message' in response) {
 							txt += '<div class="vg-alert-content--message">' + response.message + '</div>'
