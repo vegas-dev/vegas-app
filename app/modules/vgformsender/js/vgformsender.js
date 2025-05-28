@@ -60,6 +60,7 @@ class VGFormSender extends BaseModule {
 				enabled: true,
 				type: 'modal',
 				errors: true,
+				delay: 0
 			},
 			ajax: {
 				route: '',
@@ -148,6 +149,7 @@ class VGFormSender extends BaseModule {
 					} else {
 						if (!_this._params.interceptors.error) {
 							_this._alertError(event, data);
+							execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
 						} else {
 							execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
 						}
@@ -158,6 +160,7 @@ class VGFormSender extends BaseModule {
 					} else {
 						if (!_this._params.interceptors.success) {
 							_this._alertSuccess(event, data);
+							execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
 						} else {
 							execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
 						}
@@ -344,6 +347,12 @@ class VGFormSender extends BaseModule {
 				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
 
 				self.toggle();
+
+				if (_this._params.alert.delay > 0) {
+					setTimeout(() => {
+						self.hide();
+					}, _this._params.alert.delay)
+				}
 			});
 		}, _this._params.timeout);
 	}
@@ -362,7 +371,14 @@ class VGFormSender extends BaseModule {
 			_this._element.prepend($collapse);
 		}
 
-		VGCollapse.getOrCreateInstance($collapse, {toggle: false}).toggle();
+		let collapse = VGCollapse.getOrCreateInstance($collapse, {toggle: false});
+		collapse.toggle();
+
+		if (_this._params.alert.delay > 0) {
+			setTimeout(() => {
+				collapse.hide();
+			}, _this._params.alert.delay)
+		}
 	}
 
 	setDataRelationStatus($element, status, data, type) {
