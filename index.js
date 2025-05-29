@@ -5,7 +5,7 @@ import "./app/utils/scss/default.scss";
 export { default as VGCollapse } from './app/modules/vgcollapse';
 //export { default as VGDatatable } from './app/modules/vgdatatable';
 export { default as VGDropdown } from './app/modules/vgdropdown';
-export { default as VGFormsender } from './app/modules/vgformsender';
+export { default as VGFormSender } from './app/modules/vgformsender';
 export { default as VGLawCookie } from './app/modules/vglawcookie';
 export { default as VGModal } from './app/modules/vgmodal';
 export { default as VGNav } from './app/modules/vgnav';

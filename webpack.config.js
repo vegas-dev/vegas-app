@@ -1,5 +1,5 @@
 const nameModule = 'VGApp';
-const outputPaths = ['./build', './public/assets/build'];
+const outputPaths = ['./build'];
 
 const path = require('path');
 const webpack = require('webpack');
