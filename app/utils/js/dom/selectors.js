@@ -61,8 +61,44 @@ const Selectors = {
 		return selector ? Selectors.findAll(selector) : []
 	},
 
-	prev(element) {
-		return element.previousElementSibling || null
+	parents(element, selector) {
+		const parents = []
+		let ancestor = element.parentNode.closest(selector)
+
+		while (ancestor) {
+			parents.push(ancestor)
+			ancestor = ancestor.parentNode.closest(selector)
+		}
+
+		return parents
+	},
+
+	next(element, selector) {
+		let next = element.nextElementSibling
+
+		while (next) {
+			if (next.matches(selector)) {
+				return [next]
+			}
+
+			next = next.nextElementSibling
+		}
+
+		return []
+	},
+
+	prev(element, selector) {
+		let previous = element.previousElementSibling
+
+		while (previous) {
+			if (previous.matches(selector)) {
+				return [previous]
+			}
+
+			previous = previous.previousElementSibling
+		}
+
+		return []
 	}
 }
 

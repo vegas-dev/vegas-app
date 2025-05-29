@@ -3,6 +3,20 @@
  */
 
 /**
+ * Экранирование селекторов для корректной работы идентификаторов
+ * @param {string} selector
+ * @returns {string}
+ */
+const parseSelector = selector => {
+	if (selector && window.CSS && window.CSS.escape) {
+		// document.querySelector needs escaping to handle IDs (html5+) containing for instance /
+		selector = selector.replace(/#([^\s"#']+)/g, (match, id) => `#${CSS.escape(id)}`)
+	}
+
+	return selector
+}
+
+/**
  * Если что-нибудь в объекте
  * @param obj
  * @returns {boolean}
@@ -15,6 +29,19 @@ function isEmptyObj(obj) {
 	}
 
 	return true
+}
+
+const getElement = object => {
+	// it's a jQuery object or a node element
+	if (isElement(object)) {
+		return object.jquery ? object[0] : object
+	}
+
+	if (typeof object === 'string' && object.length > 0) {
+		return document.querySelector(parseSelector(object))
+	}
+
+	return null
 }
 
 /**
@@ -140,6 +167,8 @@ function removeElementArray(arr, el) {
  */
 function mergeDeepObject(...objects) {
 	const isObject = obj => obj && typeof obj === 'object';
+
+	if (!isObject) return;
 
 	return objects.reduce((prev, obj) => {
 		Object.keys(obj).forEach(key => {
@@ -293,4 +322,4 @@ function transliterate(text, enToRu) {
  */
 const isRTL = () => document.documentElement.dir === 'rtl'
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL, transliterate}
+export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL, transliterate, getElement}

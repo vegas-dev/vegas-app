@@ -1,56 +1,16 @@
 // css классы по умолчанию
 import "./app/utils/scss/default.scss";
 
-// sidebar
-import "./app/modules/vgsidebar/scss/vgsidebar.scss";
-import VGSidebar from "./app/modules/vgsidebar/js/vgsidebar";
-
-// collapse
-import VGCollapse from "./app/modules/vgcollapse/js/vgcollapse";
-
-// nav
-import "./app/modules/vgnav/scss/vgnav.scss";
-import VGNav from "./app/modules/vgnav/js/vgnav";
-
-// dropdown
-import "./app/modules/vgdropdown/scss/vgdropdown.scss";
-import VGDropdown from "./app/modules/vgdropdown/js/vgdropdown";
-
-// modal
-import "./app/modules/vgmodal/scss/vgmodal.scss";
-import VGModal from "./app/modules/vgmodal/js/vgmodal";
-
-// form sender
-import "./app/modules/vgformsender/scss/vgformsender.scss";
-import VGFormSender from "./app/modules/vgformsender/js/vgformsender";
-
-// rollup
-import "./app/modules/vgrollup/scss/vgrollup.scss";
-import VGRollup from "./app/modules/vgrollup/js/vgrollup";
-
-// law cookie
-import "./app/modules/vglawcookie/scss/vglawcookie.scss";
-import VGLawCookie from "./app/modules/vglawcookie/js/vglawcookie";
-
-// select
-import "./app/modules/vgselect/scss/vgselect.scss";
-import VGSelect from "./app/modules/vgselect/js/vgselect";
-
-// alert
-import "./app/modules/vgalert/scss/vgalert.scss";
-import VGAlert from "./app/modules/vgalert/js/vgalert";
-
-// toast
-import "./app/modules/vgtoast/scss/vgtoast.scss";
-import VGToast from "./app/modules/vgtoast/js/vgtoast";
-
-// datatable
-import "./app/modules/vgdatatable/scss/vgdatatable.scss";
-import VGDataTable from "./app/modules/vgdatatable/js/vgdatatable";
-
-// spy
-import VGSpy from "./app/modules/vgspy/js/vgspy";
-
-export {
-	VGSidebar, VGCollapse, VGNav, VGDropdown, VGModal, VGFormSender, VGRollup, VGLawCookie, VGSelect, VGAlert, VGToast, VGDataTable, VGSpy
-}
+//export { default as VGAlert } from './app/modules/vgalert';
+export { default as VGCollapse } from './app/modules/vgcollapse';
+//export { default as VGDatatable } from './app/modules/vgdatatable';
+export { default as VGDropdown } from './app/modules/vgdropdown';
+export { default as VGFormsender } from './app/modules/vgformsender';
+export { default as VGLawCookie } from './app/modules/vglawcookie';
+export { default as VGModal } from './app/modules/vgmodal';
+export { default as VGNav } from './app/modules/vgnav';
+export { default as VGRollup } from './app/modules/vgrollup';
+export { default as VGSelect } from './app/modules/vgselect';
+export { default as VGSidebar } from './app/modules/vgsidebar';
+export { default as VGSpy } from './app/modules/vgspy';
+export { default as VGToast } from './app/modules/vgtoast';

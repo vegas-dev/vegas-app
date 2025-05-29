@@ -1,7 +1,6 @@
 import BaseModule from "../../base-module";
+import {mergeDeepObject, getElement, isDisabled, isVisible} from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
-import {dismissTrigger} from "../../module-fn";
-import {execute, isDisabled, makeRandomString, mergeDeepObject, noop} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 
 /**
@@ -9,32 +8,52 @@ import Selectors from "../../../utils/js/dom/selectors";
  */
 const NAME = 'spy';
 const NAME_KEY = 'vg.spy';
+const EVENT_KEY = `.${NAME_KEY}`
+const DATA_API_KEY = '.data-api'
+
+const EVENT_ACTIVATE = `activate${EVENT_KEY}`
+const EVENT_CLICK = `click${EVENT_KEY}`
+const EVENT_LOAD_DATA_API = `load${EVENT_KEY}${DATA_API_KEY}`
+
+const CLASS_NAME_DROPDOWN_ITEM = 'vg-dropdown-item'
+const CLASS_NAME_ACTIVE = 'active'
+
+const SELECTOR_DATA_SPY = '[data-vg-toggle="spy"]'
+const SELECTOR_TARGET_LINKS = '[href]'
+const SELECTOR_NAV_LIST_GROUP = '.nav, .list-group'
+const SELECTOR_NAV_LINKS = '.nav-link'
+const SELECTOR_NAV_ITEMS = '.nav-item'
+const SELECTOR_LIST_ITEMS = '.list-group-item'
+const SELECTOR_LINK_ITEMS = `${SELECTOR_NAV_LINKS}, ${SELECTOR_NAV_ITEMS} > ${SELECTOR_NAV_LINKS}, ${SELECTOR_LIST_ITEMS}`
+const SELECTOR_DROPDOWN = '.vg-dropdown'
+const SELECTOR_DROPDOWN_TOGGLE = '[data-vg-toggle="dropdown"]'
 
 
 class VGSpy extends BaseModule {
-	constructor(element, params = {}) {
+	constructor(element, params) {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			speed: 1500,
-			offset: 0,
-			easing: 'easeInOutSine', // easeInOutSine:easeOutSine:easeInOutQuint
-			isState: false,
-			onActive: noop,
-			onClick: noop,
-			activeClass: ['active']
+			offset: null, // TODO: v6 @deprecated, keep it for backwards compatibility reasons
+			rootMargin: '0px 0px -25%',
+			smoothScroll: true,
+			target: this._element,
+			threshold: [0.1, 0.5, 1]
 		}, params));
 
-		this.isClick = false;
+		this._targetLinks = new Map()
+		this._observableSections = new Map()
+		this._rootElement = getComputedStyle(this._element).overflowY === 'visible' ? null : this._element
+		this._activeTarget = null
+		this._observer = null
+		this._previousScrollData = {
+			visibleEntryTop: 0,
+			parentScrollTop: 0
+		}
+		this._params = this._configAfterMerge(this._params);
+		console.log(this._params)
 
-		this.links = this._element.querySelectorAll('[data-vg-target]').length ?
-			this._element.querySelectorAll('[data-vg-target]') :
-			this._element.querySelectorAll('a')
-		;
-
-		this.onLoad();
-		this.onClick();
-		this.onScroll();
+		this.refresh();
 	}
 
 	static get NAME() {
@@ -45,198 +64,166 @@ class VGSpy extends BaseModule {
 		return NAME_KEY
 	}
 
-	onLoad() {
-		let _this = this;
+	refresh() {
+		this._initializeTargetsAndObservables()
+		this._maybeEnableSmoothScroll()
 
-		document.addEventListener('DOMContentLoaded', function () {
-			_this.setCurrentSection(null);
-		});
-	}
-
-	onClick() {
-		let _this = this;
-
-		_this.links.forEach(el => {
-			if (el) {
-				el.onclick = function (e) {
-					execute(_this._params.onClick, [e, this])
-					_this.setCurrentSection(this);
-
-					return false;
-				}
-			}
-		});
-	}
-
-	onScroll() {
-		let _this = this;
-
-		if (!_this.isClick) {
-			window.onscroll = function () {
-				_this.setCurrentSection(null);
-			}
-		}
-	}
-
-	setCurrentSection($link = null) {
-		this.removeCurrentActive();
-
-		if (this._params.isState) {
-			// TODO не тестили
-			let target = window.location.hash;
-			if (target) {
-				let $element = document.querySelector('[href="'+ target +'"]') ||
-					document.querySelector('[href="\/' + target +'"]') ||
-					document.querySelector('[data-vg-target="'+ target.replace('#', '') +'"]') || null;
-
-				if ($element !== null) {
-					$link = $element;
-				}
-			}
-		}
-
-		if ($link) {
-			let target = this.attributes($link, 'target'),
-				offset = this.attributes($link, 'offset'),
-				section = document.getElementById(target);
-
-			if (section) {
-				let scrollTargetY = section.offsetTop + (offset) + (this._params.offset),
-					scrollY = window.scrollY || document.documentElement.scrollTop,
-					speed = this._params.speed,
-					easing = this._params.easing,
-					currentTime = 0;
-
-				this.removeCurrentActive();
-				this.setActive($link, section);
-
-				let time = Math.max(.1, Math.min(Math.abs(scrollY - scrollTargetY) / speed, .8)),
-					easingEquations = {
-						easeOutSine: function (pos) {
-							return Math.sin(pos * (Math.PI / 2));
-						},
-						easeInOutSine: function (pos) {
-							return (-0.5 * (Math.cos(Math.PI * pos) - 1));
-						},
-						easeInOutQuint: function (pos) {
-							if ((pos /= 0.5) < 1) {
-								return 0.5 * Math.pow(pos, 5);
-							}
-							return 0.5 * (Math.pow((pos - 2), 5) + 2);
-						}
-					};
-
-				window.requestAnimFrame = (function(){
-					return  window.requestAnimationFrame       ||
-						window.webkitRequestAnimationFrame ||
-						window.mozRequestAnimationFrame    ||
-						function( callback ){
-							window.setTimeout(callback, 1000 / 60);
-						};
-				})();
-
-				function move() {
-					currentTime += 1 / 60;
-
-					let p = currentTime / time,
-						t = easingEquations[easing](p);
-
-					if (p < 1) {
-						requestAnimFrame(move);
-						window.scrollTo(0, scrollY + ((scrollTargetY - scrollY) * t));
-					} else {
-						window.scrollTo(0, scrollTargetY);
-					}
-				}
-
-				move();
-
-				this.isClick = false;
-			}
+		if (this._observer) {
+			this._observer.disconnect()
 		} else {
-			for (let i = 0; i < this.links.length; i++) {
-				let target = this.attributes(this.links[i], 'target'),
-					offset = this.attributes(this.links[i], 'offset'),
-					section = document.getElementById(target);
+			this._observer = this._getNewObserver()
+		}
 
-				if (section) {
-					let start = section.offsetTop + (offset) + (this._params.offset),
-						end = start + section.offsetHeight,
-						currentPosition = (document.documentElement.scrollTop || document.body.scrollTop),
-						isInView = currentPosition >= start && currentPosition < end;
+		for (const section of this._observableSections.values()) {
+			this._observer.observe(section)
+		}
+	}
 
-					if (isInView) {
-						this.removeCurrentActive({ignore: this.links[i]});
-						this.setActive(this.links[i], section);
-					}
+	dispose() {
+		this._observer.disconnect()
+		super.dispose()
+	}
+
+	_configAfterMerge(param) {
+		param.target = getElement(param.target) || document.body
+		param.rootMargin = param.offset ? `${param.offset}px 0px -30%` : param.rootMargin
+
+		if (typeof param.threshold === 'string') {
+			param.threshold = param.threshold.split(',').map(value => Number.parseFloat(value))
+		}
+
+		return param
+	}
+
+	_maybeEnableSmoothScroll() {
+		if (!this._params.smoothScroll) {
+			return
+		}
+
+		EventHandler.off(this._params.target, EVENT_CLICK)
+
+		EventHandler.on(this._params.target, EVENT_CLICK, SELECTOR_TARGET_LINKS, event => {
+			const observableSection = this._observableSections.get(event.target.hash)
+			if (observableSection) {
+				event.preventDefault()
+				const root = this._rootElement || window
+				const height = observableSection.offsetTop - this._element.offsetTop
+				if (root.scrollTo) {
+					root.scrollTo({ top: height, behavior: 'smooth' })
+					return
 				}
+				root.scrollTop = height
+			}
+		})
+	}
+
+	_getNewObserver() {
+		const options = {
+			root: this._rootElement,
+			threshold: this._params.threshold,
+			rootMargin: this._params.rootMargin
+		}
+
+		return new IntersectionObserver(entries => this._observerCallback(entries), options)
+	}
+
+	_observerCallback(entries) {
+		const targetElement = entry => this._targetLinks.get(`#${entry.target.id}`);
+
+		const activate = entry => {
+			this._previousScrollData.visibleEntryTop = entry.target.offsetTop;
+			this._process(targetElement(entry));
+		}
+
+		const parentScrollTop = (this._rootElement || document.documentElement).scrollTop
+		const userScrollsDown = parentScrollTop >= this._previousScrollData.parentScrollTop
+		this._previousScrollData.parentScrollTop = parentScrollTop
+
+		for (const entry of entries) {
+			if (!entry.isIntersecting) {
+				this._activeTarget = null
+				this._clearActiveClass(targetElement(entry))
+
+				continue
+			}
+
+			const entryIsLowerThanPrevious = entry.target.offsetTop >= this._previousScrollData.visibleEntryTop
+			if (userScrollsDown && entryIsLowerThanPrevious) {
+				activate(entry)
+				if (!parentScrollTop) {
+					return
+				}
+
+				continue
+			}
+
+			if (!userScrollsDown && !entryIsLowerThanPrevious) {
+				activate(entry)
 			}
 		}
 	}
 
-	setActive($link, $section) {
-		const isActive = this._params.activeClass.every(function (value){
-			return $link.classList.contains(value);
-		});
+	_initializeTargetsAndObservables() {
+		this._targetLinks = new Map();
+		this._observableSections = new Map();
 
-		if (this._params.isState) {
-			let text = this.attributes($link, 'text'),
-				target = this.attributes($link, 'target');
+		const targetLinks = Selectors.findAll(SELECTOR_TARGET_LINKS, this._params.target);
 
-			history.pushState("", document.title + text, '#' + target);
-		}
-
-		if (!isActive) {
-			if ($section) {
-				$section.classList.add(...this._params.activeClass);
+		for (const anchor of targetLinks) {
+			if (!anchor.hash || isDisabled(anchor)) {
+				continue
 			}
 
-			if ($link) {
-				$link.classList.add(...this._params.activeClass);
-			}
+			const observableSection = Selectors.find(decodeURI(anchor.hash));
 
-			execute(this._params.onActive, [$link, $section]);
-		}
-	}
-
-	removeCurrentActive(options = { ignore: null }) {
-		for (let i = 0; i < this.links.length; i++) {
-			let target = this.attributes(this.links[i], 'target'),
-				section = document.getElementById(target);
-
-			if ((options.ignore !== this.links[i]) && section) {
-				this.links[i].classList.remove(...this._params.activeClass);
-				section.classList.remove(...this._params.activeClass);
+			if (isVisible(observableSection)) {
+				this._targetLinks.set(decodeURI(anchor.hash), anchor)
+				this._observableSections.set(anchor.hash, observableSection)
 			}
 		}
 	}
 
-	attributes(self, prop = '') {
-		let target = self.getAttribute('href') || self.dataset.vgTarget;
-
-		if (target !== 'undefined' && target.indexOf('#') !== -1) {
-			target = target.replace(/(^.+)#/gm, '');
-
-			if (target.indexOf('#') !== -1) {
-				target = target.replace('#', '');
-			}
-		} else if (target !== 'undefined' && target.indexOf('#') === -1) {
-			target = ''
+	_process(target) {
+		if (this._activeTarget === target) {
+			return
 		}
 
-		let offset = self.dataset.vgOffset ? parseInt(self.dataset.vgOffset) : 0;
-		let text = self.innerHTML;
+		this._clearActiveClass(this._params.target)
+		this._activeTarget = target
+		target.classList.add(CLASS_NAME_ACTIVE)
+		this._activateParents(target)
 
-		if (prop === 'target') return target;
-		if (prop === 'offset') return offset;
-		if (prop === 'text') return text;
+		EventHandler.trigger(this._element, EVENT_ACTIVATE, { relatedTarget: target })
+	}
 
-		return {
-			target: target,
-			offset: offset,
-			text: text
-		};
+	_activateParents(target) {
+		if (target.classList.contains(CLASS_NAME_DROPDOWN_ITEM)) {
+			Selectors.find(SELECTOR_DROPDOWN_TOGGLE, target.closest(SELECTOR_DROPDOWN))
+				.classList.add(CLASS_NAME_ACTIVE)
+			return
+		}
+
+		for (const listGroup of Selectors.parents(target, SELECTOR_NAV_LIST_GROUP)) {
+			for (const item of Selectors.prev(listGroup, SELECTOR_LINK_ITEMS)) {
+				item.classList.add(CLASS_NAME_ACTIVE)
+			}
+		}
+	}
+
+	_clearActiveClass(parent) {
+		parent.classList.remove(CLASS_NAME_ACTIVE)
+
+		const activeNodes = Selectors.findAll(`${SELECTOR_TARGET_LINKS}.${CLASS_NAME_ACTIVE}`, parent);
+		for (const node of activeNodes) {
+			node.classList.remove(CLASS_NAME_ACTIVE)
+		}
 	}
 }
+
+EventHandler.on(window, EVENT_LOAD_DATA_API, () => {
+	for (const spy of Selectors.findAll(SELECTOR_DATA_SPY)) {
+		VGSpy.getOrCreateInstance(spy)
+	}
+})
 
 export default VGSpy;
