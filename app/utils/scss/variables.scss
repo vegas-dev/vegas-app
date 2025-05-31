@@ -1,17 +1,22 @@
 // -- Backgrounds
 $bg-color:           #fff !default;
+$bg-color-active:    #c7dcf6 !default;
 
 // -- Colors
 $color:              #000000 !default;
+$color-active:       #0065ff !default;
+$color-disabled:     rgba(#000000, .5) !default;
 
 // -- Shadows
 $box-shadow:         0 8px 14px 5px rgba(0, 0, 0, 0.2) !default;
 
 // -- Borders
-$border-color:       rgba(0, 0, 0, .2) !default;
-$border-radius:      .375rem !default;
-$border-width:       1px !default;
-$border-style:       solid;
+$border-color:          rgba(0, 0, 0, .2) !default;
+$border-color-active:   rgba(#0065ff, 1) !default;
+$border-color-disabled: rgba(0, 0, 0, .1) !default;
+$border-radius:         .375rem !default;
+$border-width:          1px !default;
+$border-style:          solid;
 
 // -- Transitions
 $transition-base:    all .5s ease-in-out !default;

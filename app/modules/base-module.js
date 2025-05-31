@@ -16,6 +16,7 @@ class BaseModule {
 		}
 
 		this._params = {};
+		this._isLoaded = false;
 		Data.set(this._element, this.constructor.NAME_KEY, this);
 	}
 
@@ -35,6 +36,8 @@ class BaseModule {
 	_route(callback) {
 		const _this = this;
 		let $content = null;
+
+		if (_this._isLoaded) return;
 
 		const setData = (data) => {
 			if ($content) $content.innerHTML = data;
@@ -61,6 +64,10 @@ class BaseModule {
 		}
 
 		Ajax[_this._params.ajax.method](_this._params.ajax.route, _this._params.ajax.data || {}, function (status, data) {
+			if ('once' in _this._params.ajax && _this._params.ajax.once) {
+				_this._isLoaded = true;
+			}
+
 			setData(data.response);
 			execute(callback, [status, data]);
 		});

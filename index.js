@@ -13,4 +13,5 @@ export { default as VGRollup } from './app/modules/vgrollup';
 export { default as VGSelect } from './app/modules/vgselect';
 export { default as VGSidebar } from './app/modules/vgsidebar';
 export { default as VGSpy } from './app/modules/vgspy';
+export { default as VGTabs } from './app/modules/vgtabs';
 export { default as VGToast } from './app/modules/vgtoast';

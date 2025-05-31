@@ -1,0 +1,112 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGTabs
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-tabs {
+	@include mix-vars('tabs', $tabs-map);
+
+	&-panel {
+		display: flex;
+		flex-wrap: wrap;
+		padding-left: 0;
+		margin-bottom: 0;
+		list-style: none;
+		gap: var(--vg-tabs-panel-gap);
+	}
+
+	&-link {
+		display: block;
+		text-decoration: none;
+		padding: var(--vg-tabs-link-padding-y) var(--vg-tabs-link-padding-x);
+		color: var(--vg-tabs-link-color);
+		background-color: var(--vg-tabs-link-bg);
+		border-width: var(--vg-tabs-link-border-width);
+		border-style: var(--vg-tabs-link-border-style);
+		border-color: var(--vg-tabs-link-border-color);
+		border-radius: var(--vg-tabs-link-border-radius);
+		transition: var(--vg-tabs-link-transition);
+
+		&:focus {
+			color: var(--vg-tabs-link-focus-color);
+			background-color:  var(--vg-tabs-link-focus-bg);
+			border-color: var(--vg-tabs-link-border-focus-color);
+		}
+
+		&.active {
+			color: var(--vg-tabs-link-active-color);
+			background-color:  var(--vg-tabs-link-active-bg);
+			border-color: var(--vg-tabs-link-border-active-color);
+		}
+
+		&[disabled] {
+			cursor: not-allowed;
+			color: var(--vg-tabs-link-disabled-color);
+			background-color:  var(--vg-tabs-link-disabled-bg);
+			border-color: var(--vg-tabs-link-border-disabled-color);
+		}
+	}
+
+	&-column {
+		flex-direction: column;
+
+		.vg-tabs-item {
+			flex: 1;
+		}
+
+		.vg-tabs-link {
+			width: 100%;
+		}
+	}
+
+	&-with-slider {
+		--vg-tabs-link-border-width: 0;
+		padding: var(--vg-tabs-track-slider-padding-y) var(--vg-tabs-track-slider-padding-x);
+		border-radius: var(--vg-tabs-track-slider-border-radius);
+		background-color: var(--vg-tabs-track-slider-bg);
+		position: relative;
+
+		.vg-tabs-slider {
+			position: absolute;
+			background-color: var(--vg-tabs-slider-bg);
+			border-radius: var(--vg-tabs-slider-border-radius);
+			transition: var(--vg-tabs-slider-transition);
+			z-index: 0;
+		}
+
+		.vg-tabs-panel {
+			justify-content: space-between;
+
+			.vg-tabs-item {
+				flex: 1;
+			}
+
+			.vg-tabs-link {
+				width: 100%;
+				position: relative;
+				z-index: 10;
+
+				&.active, &.hover {
+					color: var(--vg-tabs-slider-link-color);
+				}
+			}
+		}
+	}
+}
+
+.vg-tabs-content {
+	> .vg-tabs-pane {
+		display: none;
+	}
+	> .active {
+		display: block;
+	}
+}
