@@ -108,8 +108,8 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 });
 
-window.alert = (message) => {
+/*window.alert = (message) => {
 	VGAlert.run(message);
-}
+}*/
 
 export default VGAlert;

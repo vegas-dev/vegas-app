@@ -55,7 +55,7 @@ class VGRollup  extends BaseModule {
 		this.isOffset = false;
 
 		if (this._params.offset > 0) {
-			this.offset = (this._params.offset + this._params.cnt) || 0;
+			this.offset = this._params.offset || 0;
 			this.isOffset = true;
 		}
 
@@ -210,8 +210,13 @@ class VGRollup  extends BaseModule {
 	switch(el, switcher = false) {
 		const _this = this;
 
-		if (switcher) {
+		if (switcher && !_this.isOffset) {
 			this.build(el, false);
+
+			if (this._params.offset > 0) {
+				_this.offset = this._params.offset;
+				if (_this.offset > 0) this.isOffset = true;
+			}
 		} else {
 			el.classList.remove(this.classes.hidden);
 			el.classList.remove(this.classes.ellipsis);
@@ -222,16 +227,14 @@ class VGRollup  extends BaseModule {
 			if (_this._params.content === 'elements') {
 				let className = _this._params.elements;
 
-				let items = [...el.querySelectorAll('.' + className)];
+				let items = Selectors.findAll('.' + className, el);
+
 				if (items.length) {
 					if (_this.offset > 0) {
-						let className = _this._params.elements,
-							items = [...el.querySelectorAll('.' + className)];
+						items.slice(_this.offset, _this.offset + _this.count).forEach(item => item.classList.remove(CLASS_NAME_HIDE));
+						_this.offset = _this.offset + _this._params.offset;
 
-						items.slice(_this.count, _this.offset).forEach(item => item.classList.remove(CLASS_NAME_HIDE));
-						_this.offset = _this.offset + _this.settings.offset;
-
-						if (_this.offset > items.length) {
+						if (_this.offset >= (items.length - _this.count)) {
 							_this.isOffset = false;
 							_this.offset = 0;
 						}
@@ -277,6 +280,5 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 	this.setAttribute('aria-expanded', true);
 	VGRollup.toggle(target, this);
 });
-
 
 export default VGRollup;
