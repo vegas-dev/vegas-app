@@ -37,6 +37,7 @@ class VGCollapse extends BaseModule {
 				target: '',
 				method: 'get',
 				loader: false,
+				once: false,
 			}
 		}, params));
 

@@ -55,7 +55,8 @@ class VGModal extends BaseModule {
 				route: '',
 				target: '',
 				method: 'get',
-				loader: false
+				loader: false,
+				once: false
 			},
 			animation: {
 				enable: false,

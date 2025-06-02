@@ -1,7 +1,7 @@
 // css классы по умолчанию
 import "./app/utils/scss/default.scss";
 
-//export { default as VGAlert } from './app/modules/vgalert';
+export { default as VGAlert } from './app/modules/vgalert';
 export { default as VGCollapse } from './app/modules/vgcollapse';
 //export { default as VGDatatable } from './app/modules/vgdatatable';
 export { default as VGDropdown } from './app/modules/vgdropdown';
@@ -13,4 +13,5 @@ export { default as VGRollup } from './app/modules/vgrollup';
 export { default as VGSelect } from './app/modules/vgselect';
 export { default as VGSidebar } from './app/modules/vgsidebar';
 export { default as VGSpy } from './app/modules/vgspy';
+export { default as VGTabs } from './app/modules/vgtabs';
 export { default as VGToast } from './app/modules/vgtoast';
