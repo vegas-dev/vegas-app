@@ -53,6 +53,7 @@ class VGToast extends BaseModule {
 				method: 'get',
 				loader: false,
 				once: false,
+				output: true,
 			}
 		}, params));
 

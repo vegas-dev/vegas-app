@@ -60,7 +60,9 @@ class BaseModule {
 		}
 
 		if ('loader' in _this._params.ajax && _this._params.ajax.loader) {
-			setData('<div class="vg-loader"></div>');
+			if ('output' in _this._params.ajax && _this._params.ajax.output) {
+				setData('<div class="vg-loader"></div>');
+			}
 		}
 
 		Ajax[_this._params.ajax.method](_this._params.ajax.route, _this._params.ajax.data || {}, function (status, data) {
@@ -68,8 +70,11 @@ class BaseModule {
 				_this._isLoaded = true;
 			}
 
-			setData(data.response);
-			execute(callback, [status, data]);
+			if ('output' in _this._params.ajax && _this._params.ajax.output) {
+				setData(data.response);
+			}
+
+			execute(callback, [status, data, $content]);
 		});
 	}
 

@@ -7,6 +7,7 @@ export { default as VGCollapse } from './app/modules/vgcollapse';
 export { default as VGDropdown } from './app/modules/vgdropdown';
 export { default as VGFormSender } from './app/modules/vgformsender';
 export { default as VGLawCookie } from './app/modules/vglawcookie';
+export { default as VGLoadMore } from './app/modules/vgloadmore';
 export { default as VGModal } from './app/modules/vgmodal';
 export { default as VGNav } from './app/modules/vgnav';
 export { default as VGRollup } from './app/modules/vgrollup';

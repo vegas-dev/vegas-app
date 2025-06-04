@@ -43,6 +43,7 @@ class VGDropdown extends BaseModule {
 				method: 'get',
 				loader: false,
 				once: false,
+				output: true,
 			},
 			animation: {
 				enable: false,

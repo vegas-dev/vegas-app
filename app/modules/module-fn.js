@@ -101,11 +101,19 @@ const Ajax = {
 		let query = [];
 
 		if (!isEmptyObj(data)) {
-			for (let key of data) {
-				query.push(encodeURIComponent(key[0]) + '=' + encodeURIComponent(key[1]));
+			for (let key in data) {
+				console.log(key)
+				query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
 			}
 		}
-		Ajax.send(url + (query.length ? '?' + query.join('&') : ''), callback, 'GET', null, async)
+
+		let uri = '';
+		if (query.length) {
+			uri += url.includes('?') ? '&' : '?';
+			uri += query.join('&');
+		}
+
+		Ajax.send(url + uri, callback, 'GET', null, async)
 	},
 
 	post: function (url, data, callback, async) {

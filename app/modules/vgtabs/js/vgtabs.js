@@ -62,7 +62,8 @@ class VGTabs extends BaseModule {
 				target: '',
 				method: 'get',
 				loader: false,
-				once: true
+				once: true,
+				output: true,
 			},
 		}, this._params);
 

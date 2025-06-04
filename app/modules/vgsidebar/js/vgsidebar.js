@@ -49,6 +49,7 @@ class VGSidebar extends BaseModule {
 				method: 'get',
 				loader: false,
 				once: false,
+				output: true,
 			}
 		}, params));
 

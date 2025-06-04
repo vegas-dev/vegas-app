@@ -77,7 +77,10 @@ class VGNav extends BaseModule {
 			ajax: {
 				route: '',
 				target: '',
-				method: 'get'
+				method: 'get',
+				loader: false,
+				once: false,
+				output: true,
 			}
 		}, params));
 
