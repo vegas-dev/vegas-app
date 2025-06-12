@@ -81,7 +81,7 @@ const Selectors = {
 				return [next]
 			}
 
-			next = next.nextElementSibling
+			next = next.nextElementSibling;
 		}
 
 		return []

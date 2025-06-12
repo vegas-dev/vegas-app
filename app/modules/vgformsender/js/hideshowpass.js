@@ -10,7 +10,7 @@ import {Manipulator} from "../../../utils/js/dom/manipulator";
  */
 const NAME = 'hideshowpass';
 const NAME_KEY = 'vg.hideshowpass';
-const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="vgpass"]';
+const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="pass"]';
 
 const CLASS_NAME_SHOW = 'show';
 
@@ -75,7 +75,7 @@ class VGHideShowPass extends BaseModule{
  * Data API implementation
  */
 EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-	const target = Selectors.prev(this);
+	const target = Selectors.prev(this, 'input');
 	if (!target) return;
 
 	if (['A', 'AREA'].includes(this.tagName)) {
@@ -88,7 +88,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	this.setAttribute('aria-expanded', true);
 
-	const instance = VGHideShowPass.getOrCreateInstance(target)
+	const instance = VGHideShowPass.getOrCreateInstance(target.shift())
 	instance.toggle(this);
 });
 
