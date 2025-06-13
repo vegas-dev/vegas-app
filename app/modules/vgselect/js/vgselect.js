@@ -1,7 +1,7 @@
 import BaseModule from "../../base-module";
 import {
 	isDisabled,
-	isEmptyObj, isObject,
+	isEmptyObj, isObject, isVisible,
 	mergeDeepObject,
 	noop,
 	normalizeData,
@@ -54,8 +54,6 @@ class VGSelect extends BaseModule {
 			placeholder: '',
 		}, params));
 
-		element.parentElement.style.position = 'relative';
-
 		this._drop = Selectors.find('.' + CLASS_NAME_DROPDOWN, this._element);
 		this.refresh();
 	}
@@ -68,9 +66,21 @@ class VGSelect extends BaseModule {
 		return NAME_KEY;
 	}
 
-	static buildListOptions(selector, drop) {
+	static buildListOptions(selector, drop, isPlaceholder) {
 		let options = selector.options,
 			list = document.createElement('ul');
+
+		if (isPlaceholder) {
+			let isSelectedOption = [...options].filter(el => Manipulator.has(el, 'selected')).length > 0;
+
+			if (!isSelectedOption) {
+				let option = document.createElement('option');
+				Manipulator.set(option, 'hidden', '');
+				Manipulator.set(option, 'selected', '');
+				options.add(option, 0)
+			}
+		}
+
 
 		list.classList.add(CLASS_NAME_LIST);
 
@@ -136,19 +146,38 @@ class VGSelect extends BaseModule {
 		}
 	}
 
-	static build(selector, reBuild) {
+	static build(selector, reBuild = false) {
 		let option_selected,
 			placeholder = selector.dataset.placeholder || '',
+			isPlaceholder = !!placeholder,
 			isSearch = selector.dataset.search || false;
 
-		if (selector.dataset?.inited === 'true' && !reBuild) {
-			return;
-		} else if (reBuild) {
+		if (selector.dataset?.inited === 'true' || reBuild) {
 			VGSelect.destroy(selector);
 		}
 
-		if (placeholder && selector.selectedIndex === 0) {
-			option_selected = '<span class="'+ CLASS_NAME_PLACEHOLDER +'">' + placeholder + '<span>';
+		selector.parentElement.style.position = 'relative';
+
+		let isSelectedOption = [... selector.options].filter(el => {
+			return Manipulator.has(el, 'selected') && el.value !== ''
+		}).length > 0;
+
+		if (isPlaceholder && selector.selectedIndex === -1) {
+			option_selected = '<span class="' + CLASS_NAME_PLACEHOLDER + '">' + placeholder + '<span>';
+			Manipulator.set(selector, 'disabled', '');
+		} else if (!isPlaceholder && selector.selectedIndex === -1) {
+			option_selected = '<span class="' + CLASS_NAME_PLACEHOLDER + '">-<span>';
+			Manipulator.set(selector, 'disabled', '');
+		} else if (isPlaceholder) {
+			if (isPlaceholder && isSelectedOption) {
+				option_selected = selector.options[selector.selectedIndex].innerText;
+			} else if (isPlaceholder && !isSelectedOption) {
+				option_selected = '<span class="' + CLASS_NAME_PLACEHOLDER + '">' + placeholder + '<span>';
+			} else if(!isPlaceholder && !isSelectedOption) {
+				option_selected = selector.options[selector.selectedIndex].innerText;
+			} else {
+				option_selected = '<span class="' + CLASS_NAME_PLACEHOLDER + '">-<span>';
+			}
 		} else {
 			option_selected = selector.options[selector.selectedIndex].innerText;
 		}
@@ -186,7 +215,7 @@ class VGSelect extends BaseModule {
 		element.append(dropdown);
 
 		// Создаем список и варианты селекта
-		VGSelect.buildListOptions(selector, dropdown);
+		VGSelect.buildListOptions(selector, dropdown, isPlaceholder);
 
 		// Добавляем все созданный контейнер после селекта
 		selector.insertAdjacentElement('afterend', element);
@@ -202,6 +231,7 @@ class VGSelect extends BaseModule {
 			Manipulator.set(input, 'name', 'vg-select-search');
 			Manipulator.set(input, 'type', 'text');
 			Manipulator.set(input, 'placeholder', 'Поиск...');
+			Manipulator.set(input, 'autocomplete', 'off');
 
 			search_container.append(input);
 			dropdown.prepend(search_container);
@@ -295,7 +325,8 @@ class VGSelect extends BaseModule {
 	}
 
 	static destroy(select) {
-		let element = select.nextElementSibling;
+		let element = Selectors.next(select, '.' + CLASS_NAME_CONTAINER);
+		element = element.shift();
 
 		if (element) {
 			if (element.classList.contains(CLASS_NAME_CONTAINER)) {
@@ -422,13 +453,26 @@ EventHandler.on(document, EVENT_KEY_UP_DATA_API, SELECTOR_SEARCH_TOGGLE, functio
 		if (value.length) {
 			value = value.trim();
 			value = value.toLowerCase();
-			value = transliterate(value, true);
 
-			for (const option of options) {
-				let text = option.innerText.toLowerCase();
+			let arrOptions = [];
 
-				if (text.indexOf(value) === -1) Manipulator.hide(option);
-			}
+			[
+				value,
+				transliterate(value),
+				transliterate(value, true),
+			].forEach(val => {
+				for (const option of options) {
+					let text = option.innerText.toLowerCase();
+
+					Manipulator.hide(option)
+
+					if (text.includes(val)) {
+						arrOptions.push(option)
+					}
+				}
+			});
+
+			arrOptions.forEach(el => Manipulator.show(el))
 		}
 	}
 });
