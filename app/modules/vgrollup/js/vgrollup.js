@@ -49,10 +49,11 @@ class VGRollup  extends BaseModule {
 			transition: "vg-rollup-content--transition"
 		};
 
-		this.total    = 0;
-		this.count    = 0;
-		this.offset   = 0;
-		this.isOffset = false;
+		this.total       = 0;
+		this.count       = 0;
+		this.offset      = 0;
+		this.isOffset    = false;
+		this.isRemainder = false;
 
 		if (this._params.offset > 0) {
 			this.offset = this._params.offset || 0;
@@ -77,12 +78,15 @@ class VGRollup  extends BaseModule {
 		if (!isShown) {
 			instance._element.classList.add(CLASS_NAME_SHOW);
 			relatedTarget.innerHTML = instance._params.button.less;
+			relatedTarget.setAttribute("aria-expanded", true);
 
 			if (instance.offset > 0) {
 				if (instance.isOffset) {
 					relatedTarget.innerHTML = instance._params.button.more;
+					relatedTarget.setAttribute("aria-expanded", true);
 				} else {
 					relatedTarget.innerHTML = instance._params.button.less;
+					relatedTarget.setAttribute("aria-expanded", false);
 				}
 			}
 
@@ -101,7 +105,12 @@ class VGRollup  extends BaseModule {
 				}
 			}
 
-			relatedTarget.setAttribute("aria-expanded", false);
+			if (instance.isOffset) {
+				relatedTarget.setAttribute("aria-expanded", true);
+			} else {
+				relatedTarget.setAttribute("aria-expanded", false);
+			}
+
 			instance._element.classList.remove(CLASS_NAME_SHOW);
 			relatedTarget.innerHTML = instance._params.button.more + textShowNum;
 			instance.switch(instance._element, true);
@@ -208,14 +217,12 @@ class VGRollup  extends BaseModule {
 	}
 
 	switch(el, switcher = false) {
-		const _this = this;
-
-		if (switcher && !_this.isOffset) {
+		if (switcher && !this.isOffset) {
 			this.build(el, false);
 
 			if (this._params.offset > 0) {
-				_this.offset = this._params.offset;
-				if (_this.offset > 0) this.isOffset = true;
+				this.offset = this._params.offset;
+				if (this.offset > 0) this.isOffset = true;
 			}
 		} else {
 			el.classList.remove(this.classes.hidden);
@@ -224,19 +231,20 @@ class VGRollup  extends BaseModule {
 
 			el.removeAttribute("style");
 
-			if (_this._params.content === 'elements') {
-				let className = _this._params.elements;
+			if (this._params.content === 'elements') {
+				let className = this._params.elements;
 
 				let items = Selectors.findAll('.' + className, el);
 
 				if (items.length) {
-					if (_this.offset > 0) {
-						items.slice(_this.offset, _this.offset + _this.count).forEach(item => item.classList.remove(CLASS_NAME_HIDE));
-						_this.offset = _this.offset + _this._params.offset;
+					if (this.offset > 0) {
+						items.slice(this.offset, this.offset + this.count).forEach(item => item.classList.remove(CLASS_NAME_HIDE));
+						this.offset = this.offset + this._params.offset;
+						this.isRemainder = (items.length - this.offset) > 0;
 
-						if (_this.offset >= (items.length - _this.count)) {
-							_this.isOffset = false;
-							_this.offset = 0;
+						if (!this.isRemainder) {
+							this.isOffset = false;
+							this.offset = 0;
 						}
 					} else {
 						items.forEach((item) => item.classList.remove(CLASS_NAME_HIDE))
@@ -277,7 +285,6 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 		return
 	}
 
-	this.setAttribute('aria-expanded', true);
 	VGRollup.toggle(target, this);
 });
 
