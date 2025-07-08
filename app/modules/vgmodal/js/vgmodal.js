@@ -272,7 +272,7 @@ class VGModal extends BaseModule {
 	}
 
 	_addEventListeners() {
-		EventHandler.on(this._element, EVENT_KEY_KEYDOWN_DISMISS, event => {
+		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
 			if (event.key !== ESCAPE_KEY) return;
 
 			if (this._params.keyboard) {
