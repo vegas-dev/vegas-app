@@ -1,11 +1,11 @@
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
-import {execute, mergeDeepObject} from "../../../utils/js/functions";
+import {execute, isObject, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
+import {Manipulator} from "../../../utils/js/dom/manipulator";
 
 const NAME             = 'loadmore';
 const NAME_KEY         = 'vg.loadmore';
-const CLASS_NAME_SHOW  = 'show';
 
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="loadmore"]';
 
@@ -14,6 +14,9 @@ const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
 const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
+
+const CLASS_NAME_HIDE = 'vg-collapse';
+const CLASS_NAME_SHOW = 'show';
 
 const EVENT_KEY_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
 
@@ -28,7 +31,8 @@ class VGLoadMore extends BaseModule{
 			autohide: true,
 			button: {
 				text: '',
-				send: 'Загружаем...'
+				send: 'Загружаем...',
+				classes: []
 			},
 			ajax: {
 				route: '',
@@ -55,7 +59,66 @@ class VGLoadMore extends BaseModule{
 		return NAME_KEY;
 	}
 
+	static init(el, callback) {
+		let id           = el.id,
+			items        = normalizeData(el.dataset.elements),
+			limit        = normalizeData(el.dataset.limit),
+			offset       = normalizeData(el.dataset.offset),
+			output       = el.dataset.output || 'true',
+			autohide     = el.dataset.autohide || 'true',
+			params       = el.dataset.params,
+			buttonParams = normalizeData(el.dataset.button);
+
+		if (!isObject(buttonParams)) {
+			console.log('Дата атрибут data-button должен быть в формате json и передавать объект');
+			return;
+		}
+
+		if (!id && !items && !limit && !offset) return;
+
+		let itemsElements = [... Selectors.findAll('.' + items, el)];
+
+		if (itemsElements.length <= limit) return;
+
+		itemsElements.forEach((item, i) => {
+			item.classList.add(CLASS_NAME_HIDE)
+			if ((i + 1) <= limit) item.classList.add(CLASS_NAME_SHOW)
+		});
+
+		let button = document.createElement('button');
+
+		buttonParams.text = normalizeData(el.dataset.buttonText) || 'Показать еще';
+
+		Manipulator.set(button, 'data-limit', limit);
+		Manipulator.set(button, 'data-offset', offset);
+		Manipulator.set(button, 'data-output', output);
+		Manipulator.set(button, 'data-autohide', autohide);
+		Manipulator.set(button, 'data-elements', items);
+		Manipulator.set(button, 'data-vg-toggle', 'loadmore');
+		Manipulator.set(button, 'data-target', '#' + id);
+
+		if (params) Manipulator.set(button, 'data-autohide', params);
+
+		button.innerHTML = buttonParams.text
+
+		if ('classes' in buttonParams && buttonParams.classes.length) {
+			buttonParams.classes.forEach(cl => button.classList.add(cl));
+		}
+
+		el.parentNode.insertBefore(button, el.nextSibling);
+
+		execute(callback, [el, button]);
+	}
+
 	toggle(callback) {
+		if (this._params.ajax.route) {
+			this.ajax(callback);
+		} else {
+			this.static(callback);
+		}
+	}
+
+	ajax(callback) {
 		this._params.ajax.data = {
 			limit: this._params.limit,
 			offset: this._params.offset
@@ -75,7 +138,7 @@ class VGLoadMore extends BaseModule{
 				target.insertAdjacentHTML('beforeend', data.response);
 			}
 
-			this._params.offset = this.fOffset + this._params.offset;
+			this._params.offset = this.counter();
 			this._element.innerHTML = this._params.button.text;
 
 			if ('autohide' in this._params && this._params.autohide) {
@@ -86,7 +149,36 @@ class VGLoadMore extends BaseModule{
 			execute(callback, [this, data, target, status]);
 		});
 	}
+
+	static(callback) {
+		if (!'elements' in this._params && !'target' in this._params) return;
+
+		let container = Selectors.find(this._params.target),
+			items = Selectors.findAll('.' + this._params.elements, container);
+
+		if (items) {
+			items.slice(this._params.offset, this._params.offset + this._params.limit).forEach(item => item.classList.add(CLASS_NAME_SHOW));
+			this._params.offset = this.counter();
+		}
+
+		console.log(this._params)
+		execute(callback, [this, this._element]);
+	}
+
+	counter() {
+		return this.fOffset + this._params.offset;
+	}
+
+	remainder(items, count) {
+		return items;
+	}
 }
+
+EventHandler.on(document, 'DOMContentLoaded', function () {
+	[... document.querySelectorAll('[data-vgloadmore]')].forEach(el => {
+		VGLoadMore.init(el);
+	})
+});
 
 /**
  * Data API implementation

@@ -23,7 +23,6 @@ class VGRollup  extends BaseModule {
 
 		this._params = this._getParams(element, mergeDeepObject({
 			content: 'text',
-			offset: 0,
 			cnt: 0,
 			fade: true,
 			transition: false,
@@ -51,14 +50,6 @@ class VGRollup  extends BaseModule {
 
 		this.total       = 0;
 		this.count       = 0;
-		this.offset      = 0;
-		this.isOffset    = false;
-		this.isRemainder = false;
-
-		if (this._params.offset > 0) {
-			this.offset = this._params.offset || 0;
-			this.isOffset = true;
-		}
 
 		this.build();
 	}
@@ -237,18 +228,7 @@ class VGRollup  extends BaseModule {
 				let items = Selectors.findAll('.' + className, el);
 
 				if (items.length) {
-					if (this.offset > 0) {
-						items.slice(this.offset, this.offset + this.count).forEach(item => item.classList.remove(CLASS_NAME_HIDE));
-						this.offset = this.offset + this._params.offset;
-						this.isRemainder = (items.length - this.offset) > 0;
-
-						if (!this.isRemainder) {
-							this.isOffset = false;
-							this.offset = 0;
-						}
-					} else {
-						items.forEach((item) => item.classList.remove(CLASS_NAME_HIDE))
-					}
+					items.forEach((item) => item.classList.remove(CLASS_NAME_HIDE))
 				}
 			}
 		}

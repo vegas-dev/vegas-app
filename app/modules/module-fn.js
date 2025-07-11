@@ -102,7 +102,6 @@ const Ajax = {
 
 		if (!isEmptyObj(data)) {
 			for (let key in data) {
-				console.log(key)
 				query.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key]));
 			}
 		}
