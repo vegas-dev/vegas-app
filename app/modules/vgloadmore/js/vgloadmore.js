@@ -74,6 +74,11 @@ class VGLoadMore extends BaseModule{
 			return;
 		}
 
+		if (limit < offset) {
+			console.log('Параметр offset должен быть меньше или равен параметру limit');
+			return;
+		}
+
 		if (!id && !items && !limit && !offset) return;
 
 		let itemsElements = [... Selectors.findAll('.' + items, el)];
@@ -161,7 +166,14 @@ class VGLoadMore extends BaseModule{
 			this._params.offset = this.counter();
 		}
 
-		console.log(this._params)
+		let itemsHidden = Selectors.findAll('.' + this._params.elements + ':not(.show)', container);
+
+		if (this.remainder(itemsHidden.length)) {
+			if ('autohide' in this._params && this._params.autohide) {
+				this._element.remove();
+			}
+		}
+
 		execute(callback, [this, this._element]);
 	}
 
@@ -169,8 +181,8 @@ class VGLoadMore extends BaseModule{
 		return this.fOffset + this._params.offset;
 	}
 
-	remainder(items, count) {
-		return items;
+	remainder(count) {
+		return count === 0
 	}
 }
 
