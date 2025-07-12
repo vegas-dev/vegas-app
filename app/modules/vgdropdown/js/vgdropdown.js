@@ -88,7 +88,7 @@ class VGDropdown extends BaseModule {
 			relatedTarget: this._element
 		}
 
-		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, relatedTarget)
+		const showEvent = EventHandler.trigger(this._drop, EVENT_KEY_SHOW, relatedTarget)
 		if (showEvent.defaultPrevented) return;
 
 		if ('ontouchstart' in document.documentElement) {
@@ -114,8 +114,8 @@ class VGDropdown extends BaseModule {
 		}
 
 		const completeCallBack = () => {
-			this._drop.classList.add(CLASS_NAME_FADE);
-			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, relatedTarget)
+			if (!this._params.animation.enable) this._drop.classList.add(CLASS_NAME_FADE);
+			EventHandler.trigger(this._drop, EVENT_KEY_SHOWN, relatedTarget)
 		}
 		this._queueCallback(completeCallBack, this._drop, true, 50);
 	}
@@ -141,7 +141,7 @@ class VGDropdown extends BaseModule {
 	}
 
 	_completeHide(relatedTarget) {
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE, relatedTarget)
+		const hideEvent = EventHandler.trigger(this._drop, EVENT_KEY_HIDE, relatedTarget)
 		if (hideEvent.defaultPrevented) {
 			return;
 		}
@@ -152,7 +152,7 @@ class VGDropdown extends BaseModule {
 			}
 		}
 
-		this._drop.classList.remove(CLASS_NAME_FADE);
+		if (!this._params.animation.enable) this._drop.classList.remove(CLASS_NAME_FADE);
 		this._element.classList.remove(CLASS_NAME_SHOW);
 		this._element.setAttribute('aria-expanded', 'false');
 
@@ -173,9 +173,9 @@ class VGDropdown extends BaseModule {
 		setTimeout(() => {
 			const completeCallback = () => {
 				this._drop.classList.remove(CLASS_NAME_SHOW);
-				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
+				EventHandler.trigger(this._drop, EVENT_KEY_HIDDEN, relatedTarget);
 			}
-			this._queueCallback(completeCallback, this._parent, true, 10);
+			this._queueCallback(completeCallback, this._drop, true);
 		}, this._params.animation.delay);
 	}
 

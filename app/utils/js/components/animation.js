@@ -28,10 +28,7 @@ class Animation {
 		this._element = element;
 		this._name_key = key;
 
-		if (!this._element.classList.contains(this.classes.animated)) {
-			this._element.classList.add(this.classes.animated);
-			this._element.classList.add(this.classes.duration);
-		}
+		this._element.classList.add(this.classes.duration);
 
 		this._triggers();
 	}
@@ -40,6 +37,7 @@ class Animation {
 		EventHandler.on(this._element, this._name_key + '.show', () => {
 			this._element.classList.remove(this._params.out);
 			this._element.classList.add(this._params.in);
+			this._element.classList.add(this.classes.animated);
 		});
 
 		EventHandler.on(this._element, this._name_key + '.hide', () => {
@@ -49,6 +47,7 @@ class Animation {
 
 		EventHandler.on(this._element, this._name_key + '.hidden', () => {
 			this._element.classList.remove(this._params.out);
+			this._element.classList.remove(this.classes.animated);
 		});
 	}
 }

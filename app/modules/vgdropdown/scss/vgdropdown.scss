@@ -27,6 +27,10 @@
 			display: none;
 		}
 
+		&.animate__animated {
+			opacity: 1;
+		}
+
 		&.fade {
 			opacity: 1;
 			transform: translateY(0);
