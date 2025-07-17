@@ -6,6 +6,8 @@ import {isElement, normalizeData} from "../functions";
  * has (элемент, имя) - есть ли атрибут у элемента
  * set (элемент, имя, значение) - установка у элемента атрибута или его изменение
  * remove (элемент, имя) - удаляет атрибут у элемента
+ * hide(элемент) - скрыть элемент
+ * show(элемент) - показать элемент
  */
 const Manipulator = {
 	get(element, nameAttribute = 'data', isRemoveDataName = true) {
