@@ -1,0 +1,38 @@
+// css animation
+/*@import "./app/utils/scss/animate";*/
+
+// css классы по умолчанию
+@import "./app/utils/scss/default";
+
+// alert
+@import "./app/modules/vgalert/scss/vgalert";
+
+// Dropdown
+@import './app/modules/vgdropdown/scss/vgdropdown';
+
+// FormSender
+@import './app/modules/vgformsender/scss/vgformsender';
+
+// Law Cookie
+@import './app/modules/vglawcookie/scss/vglawcookie';
+
+// Modal
+@import './app/modules/vgmodal/scss/vgmodal';
+
+// Nav
+@import './app/modules/vgnav/scss/vgnav';
+
+// Rollup
+@import './app/modules/vgrollup/scss/vgrollup';
+
+// Select
+@import './app/modules/vgselect/scss/vgselect';
+
+// Sidebar
+@import './app/modules/vgsidebar/scss/vgsidebar';
+
+// Tabs
+@import './app/modules/vgtabs/scss/vgtabs';
+
+// Toast
+@import './app/modules/vgtoast/scss/vgtoast';

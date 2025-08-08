@@ -11,7 +11,7 @@ module.exports = outputPaths.map(outputPath => {
 			name = nameModule.trim().toLowerCase();
 
 		let args = {
-			entry: './index.js',
+			entry: './index.scss',
 			output: {
 				path: path.resolve(__dirname, outputPath),
 				filename: name + '.js',
