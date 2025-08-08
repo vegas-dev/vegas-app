@@ -147,7 +147,7 @@ class VGNav extends BaseModule {
 		}
 
 		// Устанавливаем гамбургер, если его нет в разметке
-		if (params.expand && !params.hamburger.body) {
+		if (params.expand && !params.hamburger.body && params.hamburger.enable) {
 			let isHamburger = Selectors.find('.' + params.classes.hamburger, this._element);
 
 			if (isHamburger === null) {
