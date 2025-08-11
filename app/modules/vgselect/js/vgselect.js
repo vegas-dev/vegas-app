@@ -309,7 +309,7 @@ class VGSelect extends BaseModule {
 			clearTimeout(observerTimout);
 			observerTimout = setTimeout(() => {
 				VGSelect.build(select, true);
-			}, 100);
+			}, 10);
 		});
 
 		observer.observe(select, {
@@ -378,6 +378,14 @@ class VGSelect extends BaseModule {
 
 	static changeSelector(select, value, data = {}) {
 		if (!isObject(data) && isEmptyObj(data)) return;
+
+		[... select.options].forEach(el => {
+			Manipulator.remove(el, 'selected');
+
+			if (el.value === value) {
+				Manipulator.set(el, 'selected', true);
+			}
+		})
 
 		select.value = normalizeData(value);
 		EventHandler.trigger(select, EVENT_KEY_CHANGE, {data: data});
