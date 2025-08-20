@@ -96,6 +96,16 @@ class BaseModule {
 		new Animation(element, key, params);
 	}
 
+	isMobileDevice() {
+		const userAgent = navigator.userAgent;
+		const isMobileUA = /Android|iPhone|iPad|iPod/i.test(userAgent);
+		const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+		const isSmallScreen = window.innerWidth < 768;
+		const isHighDPI = window.devicePixelRatio >= 2;
+
+		return isMobileUA || (isTouchDevice && isSmallScreen && isHighDPI);
+	}
+
 	static getInstance(element) {
 		return Data.get(Selectors.find(element), this.NAME_KEY)
 	}

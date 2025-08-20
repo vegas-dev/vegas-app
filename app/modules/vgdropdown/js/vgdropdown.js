@@ -209,8 +209,9 @@ class VGDropdown extends BaseModule {
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);
 
-		if (instance._params.hover) {
+		if (instance._params.hover && !instance.isMobileDevice()) {
 			let currentElem = null;
+
 			EventHandler.on(instance._parent, EVENT_MOUSEOVER_DATA_API, function (event) {
 				if (currentElem) return;
 				VGDropdown.hideOpenToggles(event);
@@ -236,16 +237,16 @@ class VGDropdown extends BaseModule {
 				currentElem = null;
 				instance._completeHide({relatedTarget: instance._element});
 			})
-		} else {
-			EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
-			EventHandler.on(document, EVENT_KEYDOWN_DATA_API, '.' + TARGET_CONTAINER, VGDropdown.keydownHandler);
-			EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
-			EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
-			EventHandler.on(element, EVENT_CLICK_DATA_API, function (event) {
-				event.preventDefault();
-				instance.toggle();
-			});
 		}
+
+		EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
+		EventHandler.on(document, EVENT_KEYDOWN_DATA_API, '.' + TARGET_CONTAINER, VGDropdown.keydownHandler);
+		EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
+		EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
+		EventHandler.on(element, EVENT_CLICK_DATA_API, function (event) {
+			event.preventDefault();
+			instance.toggle();
+		});
 	}
 
 	static hideOpenToggles(event) {
