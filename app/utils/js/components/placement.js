@@ -1,9 +1,13 @@
 import {mergeDeepObject, normalizeData} from "../functions";
+import Selectors from "../dom/selectors";
 
 /**
  * Класс Placement, определяет и устанавливает местоположение элемента на странице.
- * TODO класс не дописан
+ * TODO класс не дописан, не определяет сверху и снизу
  */
+
+const CLASS_NAME_RIGHT = 'right';
+const CLASS_NAME_LEFT  = 'left';
 
 class Placement {
 	constructor(arg = {}) {
@@ -11,6 +15,46 @@ class Placement {
 			element: null,
 			drop: null
 		}, arg);
+
+		this._drop = null;
+		this.drop = this.params.drop;
+
+		this._element = null;
+		this.element = this.params.element;
+	}
+
+	get drop() {
+		return this._drop;
+	}
+
+	set drop(el) {
+		if (!el) return;
+		this._drop = el;
+	}
+
+	get element() {
+		return this._element;
+	}
+
+	set element(el) {
+		if (!el) {
+			if (this.drop) {
+				this._element = this.drop.parentNode;
+			}
+		}
+
+		this._element = el;
+	}
+
+	_setPlacement() {
+		this.drop.classList.remove(CLASS_NAME_RIGHT);
+		this.drop.classList.remove(CLASS_NAME_LEFT);
+
+		if (this._isElementInViewport(this.drop)) {
+			this.drop.classList.add(CLASS_NAME_LEFT);
+		} else {
+			this.drop.classList.add(CLASS_NAME_RIGHT);
+		}
 	}
 
 	_getPlacement() {
@@ -53,6 +97,19 @@ class Placement {
 			top: top,
 			left: left
 		}
+	}
+
+	_isElementInViewport(element) {
+		const rect = element.getBoundingClientRect();
+		const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+		const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+		return (
+			rect.top >= 0 &&
+			rect.left >= 0 &&
+			rect.bottom <= viewportHeight &&
+			rect.right <= viewportWidth
+		);
 	}
 }
 

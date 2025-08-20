@@ -3,7 +3,7 @@
 		flex-direction: row;
 
 		.dropdown {
-			> ul {
+			> .dropdown-content {
 				&.left, .left {
 					left: 0;
 				}

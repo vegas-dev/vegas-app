@@ -1,10 +1,10 @@
 import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
-import Responsive from "../../../utils/js/components/responsive";
 import {getSVG} from "../../module-fn";
 import {execute, isDisabled, isVisible, mergeDeepObject, noop, normalizeData} from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
+import Placement from "../../../utils/js/components/placement";
 
 /**
  * Constants
@@ -15,10 +15,15 @@ const NAME_KEY = 'vg.nav';
 /**
  * Constants Classes
  */
-const CLASS_NAME_SHOW   = 'show';
-const CLASS_NAME_FADE   = 'fade';
-const CLASS_NAME_ACTIVE = 'active';
-const SELECTOR_DATA_TOGGLE = '.vg-nav a';
+const CLASS_NAME           = 'vg-nav';
+const CLASS_NAME_SHOW      = 'show';
+const CLASS_NAME_FADE      = 'fade';
+const CLASS_NAME_ACTIVE    = 'active';
+
+/**
+ * Constants toggle
+ */
+const SELECTOR_DATA_TOGGLE = '.'+ CLASS_NAME +' a';
 
 /**
  * Constants Events
@@ -32,7 +37,6 @@ const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOUT_DATA_API  = `mouseout.${NAME_KEY}.data.api`;
 const EVENT_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 const EVENT_KEYUP_DATA_API = `keyup.${NAME_KEY}.data.api`;
-const EVENT_RESIZE_DATA_API = `resize.${NAME_KEY}.data.api`;
 
 class VGNav extends BaseModule {
 	constructor(element, params = {}) {
@@ -41,18 +45,21 @@ class VGNav extends BaseModule {
 		this._params = this._getParams(element, mergeDeepObject({
 			breakpoint: 'lg',
 			placement: 'horizontal',
-			hover: false,
-			animation: true,
-			timeoutAnimation: 300,
+			hover: true,
+			animation: {
+				enable: true,
+				timeout: 700
+			},
 			toggle: '<span class="default"></span>',
 			hamburger: {
 				enable: true,
 				always: false,
-				title: 'This is Navigation',
+				title: '',
 				body: null
 			},
 			callbacks: {
-				afterInit: noop
+				afterInit: noop,
+				afterClick: noop,
 			}
 		}, params));
 
@@ -79,8 +86,8 @@ class VGNav extends BaseModule {
 		this._navigation = null;
 		this.navigation = '.' + this._classes.wrapper;
 
-		if (this._params.animation === false) {
-			this._params.timeoutAnimation = 10
+		if (this._params.animation.enable === false) {
+			this._params.animation.timeout = 10
 		}
 	}
 
@@ -122,13 +129,11 @@ class VGNav extends BaseModule {
 			this._element.classList.add(classes.hamburgerAlways);
 		}
 
-		console.log(params)
-
 		// Устанавливаем гамбургер, если его нет в разметке
 		if (params.hamburger.enable) {
-			let isHamburger = Selectors.find('.' + classes.hamburger, this._element);
+			let isHamburger = !!Selectors.find('.' + classes.hamburger, this._element);
 
-			if (isHamburger === null) {
+			if (!isHamburger) {
 				let mobileNavTitle = '',
 					hamburger = '<span class="' + classes.hamburger + '--lines"><span></span><span></span><span></span></span>';
 
@@ -146,7 +151,7 @@ class VGNav extends BaseModule {
 				Manipulator.set(a, 'href', '#sidebar-nav');
 				a.innerHTML = mobileNavTitle + hamburger;
 
-				this._element.before(a);
+				this._element.append(a);
 			}
 		}
 
@@ -174,10 +179,79 @@ class VGNav extends BaseModule {
 		let target = relatedTarget.relatedTarget;
 
 		if (!target || isDisabled(target)) return;
+
+		if (!target.closest('.dropdown-content')) {
+			target.classList.add('first');
+		}
+
+		const showEvent = EventHandler.trigger(target, EVENT_KEY_SHOW, { relatedTarget });
+		if (showEvent.defaultPrevented) return;
+
+		let drop = Selectors.find('.dropdown-content', target),
+			link = target.firstElementChild;
+
+		if (link) link.setAttribute('aria-expanded', 'true');
+		drop.classList.add(CLASS_NAME_SHOW);
+		target.classList.add(CLASS_NAME_ACTIVE);
+
+		const $placement = new Placement({
+			drop: drop
+		})
+
+		$placement._setPlacement();
+
+		const completeCallBack = () => {
+			drop.classList.add(CLASS_NAME_FADE);
+			EventHandler.trigger(target, EVENT_KEY_SHOWN, relatedTarget)
+		}
+		this._queueCallback(completeCallBack, drop, true, 10);
 	}
 
 	hide(relatedTarget) {
+		const _this = this;
+		if ('ontouchstart' in document.documentElement) {
+			for (const element of [].concat(...document.body.children)) {
+				EventHandler.off(element, 'mouseover', noop);
+			}
+		}
 
+		let element = relatedTarget.relatedTarget;
+
+		if ('elm' in relatedTarget && relatedTarget.elm) {
+			element = relatedTarget.elm
+		}
+
+		if (element) {
+			const hideEvent = EventHandler.trigger(element, EVENT_KEY_HIDE);
+			if (hideEvent.defaultPrevented) return;
+
+			element.classList.remove(CLASS_NAME_ACTIVE);
+
+			if (element.classList.contains('first')) {
+				element.classList.remove('first');
+			}
+
+			[...Selectors.findAll('.' + CLASS_NAME_SHOW, element)].forEach(function (el, index) {
+				el.classList.remove(CLASS_NAME_FADE);
+
+				let parent = el.closest('.dropdown');
+				if (parent.classList.contains(CLASS_NAME_ACTIVE)) {
+					parent.classList.remove(CLASS_NAME_ACTIVE);
+				}
+
+				let link = el.previousElementSibling;
+				if (link) link.setAttribute('aria-expanded', 'false');
+
+				if (index === 0) {
+					const completeCallback = () => {
+						el.classList.remove(CLASS_NAME_SHOW);
+						EventHandler.trigger(el, EVENT_KEY_HIDDEN, relatedTarget)
+					}
+
+					_this._queueCallback(completeCallback, el, true, 500);
+				}
+			});
+		}
 	}
 
 	static init(element, params = {}) {
@@ -186,14 +260,133 @@ class VGNav extends BaseModule {
 
 		let drops = Selectors.findAll('.dropdown', instance.navigation);
 
+		if (instance._params.hover && !instance.isMobileDevice()) {
+			[...drops].forEach(function (el) {
+				let currentElem = null;
+
+				EventHandler.on(el, EVENT_MOUSEOVER_DATA_API, function (event) {
+					if (currentElem) return;
+					VGNav.hideOpenDrops(event);
+
+					let target = event.target.closest('.dropdown');
+					if (!target) return;
+
+					if (!instance.navigation.contains(target)) return;
+					currentElem = target;
+
+					let relatedTarget = {
+						relatedTarget: target
+					}
+
+					instance.show(relatedTarget);
+				});
+
+				EventHandler.on(el, EVENT_MOUSEOUT_DATA_API, function (event) {
+					if (!currentElem) return;
+
+					let relatedTarget = event.relatedTarget.closest('.dropdown'),
+						elm = currentElem;
+
+					while (relatedTarget) {
+						if (relatedTarget === currentElem) return;
+						relatedTarget = relatedTarget.parentNode;
+					}
+
+					currentElem = null;
+					instance.hide({relatedTarget: relatedTarget, elm: elm});
+				})
+			})
+		}
+
+		const vgNavSidebar = document.getElementById('sidebar-nav');
+		let hamburger = instance._element.querySelector('.' + instance._classes.hamburger);
+
+		if (vgNavSidebar && hamburger) {
+			vgNavSidebar.addEventListener('vg.sidebar.show', function () {
+				hamburger.classList.add(instance._classes.hamburgerActive);
+			});
+
+			vgNavSidebar.addEventListener('vg.sidebar.hide', function () {
+				hamburger.classList.remove(instance._classes.hamburgerActive);
+			});
+		}
+	}
+
+	static clearDrops(event) {
+		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) {
+			return
+		}
+
+		VGNav.hideOpenDrops(event)
+	}
+
+	static hideOpenDrops(event) {
+		[... Selectors.findAll('.dropdown:not(.disabled):not(:disabled).active')].forEach((el) => {
+			let target = event.target,
+				drop   = target.closest('.dropdown');
+
+			if (el !== drop) {
+				const nav = el.closest('.vg-nav');
+				const context = VGNav.getInstance(nav);
+				if (!context) return;
+
+				let isFirst = !!nav.querySelector('.first'),
+					dropContent = !!target.closest('.dropdown-content');
+
+				if (isFirst && dropContent) {
+					return;
+				}
+
+				const relatedTarget = { relatedTarget: el }
+
+				context.hide(relatedTarget)
+			}
+		});
 	}
 }
 
-EventHandler.on(window, EVENT_RESIZE_DATA_API, function () {
-	if (Selectors.find('.vg-nav')) {
-		const instance = VGNav.getOrCreateInstance('.vg-nav', {});
-		instance.build();
+EventHandler.on(document, EVENT_KEYUP_DATA_API, VGNav.clearDrops);
+EventHandler.on(document, EVENT_CLICK_DATA_API, VGNav.clearDrops);
+EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+	if (!Manipulator.has(this, 'aria-expanded')) {
+		return;
 	}
-})
+
+	let nav = this.closest('.vg-nav');
+	const instance = VGNav.getOrCreateInstance(nav);
+
+	if ('afterClick' in instance._params.callbacks) {
+		execute(instance._params.callbacks.afterClick, [instance, event, this]);
+	}
+
+	if (instance._params.hover) {
+		return;
+	}
+
+	event.preventDefault();
+
+	let drop = this.parentNode;
+	if (!drop) return;
+
+	if (isDisabled(drop) && !isVisible(drop)) {
+		return;
+	}
+
+	let isFirst = !!nav.querySelector('.first'),
+		dropContent = !!this.closest('.dropdown-content');
+
+	if (dropContent && isFirst) {
+		if (drop.classList.contains('active')) {
+			instance.hide({relatedTarget: drop});
+			return;
+		}
+	} else {
+		[...Selectors.findAll('.active', nav)].forEach(function (el) {
+			instance.hide({relatedTarget: el})
+		});
+	}
+
+	instance.show({relatedTarget: drop});
+});
 
 export default VGNav;
