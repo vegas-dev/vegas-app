@@ -1,13 +1,15 @@
 import {mergeDeepObject, normalizeData} from "../functions";
-import Selectors from "../dom/selectors";
+import {Classes} from "../dom/manipulator";
 
 /**
  * Класс Placement, определяет и устанавливает местоположение элемента на странице.
  * TODO класс не дописан, не определяет сверху и снизу
  */
 
-const CLASS_NAME_RIGHT = 'right';
-const CLASS_NAME_LEFT  = 'left';
+const CLASS_NAME_RIGHT   = 'right';
+const CLASS_NAME_LEFT    = 'left';
+const CLASS_NAME_TOP     = 'top';
+const CLASS_NAME_BOTTOM  = 'bottom';
 
 class Placement {
 	constructor(arg = {}) {
@@ -21,6 +23,8 @@ class Placement {
 
 		this._element = null;
 		this.element = this.params.element;
+
+		if (!this.drop) return false;
 	}
 
 	get drop() {
@@ -47,13 +51,28 @@ class Placement {
 	}
 
 	_setPlacement() {
-		this.drop.classList.remove(CLASS_NAME_RIGHT);
-		this.drop.classList.remove(CLASS_NAME_LEFT);
+		let rect = this._isElementInViewport(this.drop);
 
-		if (this._isElementInViewport(this.drop)) {
-			this.drop.classList.add(CLASS_NAME_LEFT);
-		} else {
-			this.drop.classList.add(CLASS_NAME_RIGHT);
+		if (!rect.isView) {
+			if (!rect.isViewRight) {
+				Classes.remove(this.drop, CLASS_NAME_LEFT);
+				Classes.add(this.drop, CLASS_NAME_RIGHT);
+			}
+
+			if (!rect.isViewLeft) {
+				Classes.remove(this.drop, CLASS_NAME_RIGHT);
+				Classes.add(this.drop, CLASS_NAME_LEFT);
+			}
+
+			if (!rect.isViewTop) {
+				Classes.remove(this.drop, CLASS_NAME_BOTTOM);
+				Classes.add(this.drop, CLASS_NAME_TOP);
+			}
+
+			if (!rect.isViewBottom) {
+				Classes.remove(this.drop, CLASS_NAME_TOP);
+				Classes.add(this.drop, CLASS_NAME_BOTTOM);
+			}
 		}
 	}
 
@@ -104,12 +123,18 @@ class Placement {
 		const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
 		const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
 
-		return (
-			rect.top >= 0 &&
-			rect.left >= 0 &&
-			rect.bottom <= viewportHeight &&
-			rect.right <= viewportWidth
-		);
+		return {
+			isView: (
+				rect.top >= 0 &&
+				rect.left >= 0 &&
+				rect.bottom <= viewportHeight &&
+				rect.right <= viewportWidth
+			),
+			isViewRight: rect.right <= viewportWidth,
+			isViewLeft: rect.left >= 0,
+			isViewTop: rect.top >= 0,
+			isViewBottom: rect.bottom <= viewportHeight,
+		};
 	}
 }
 

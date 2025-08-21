@@ -69,4 +69,32 @@ const Manipulator = {
 	},
 }
 
-export {Manipulator}
+let Classes = {
+	remove(element, className) {
+		if (className && element) {
+			if (typeof className === 'string') {
+				className = className.split(' ');
+			}
+
+			element.classList.remove(...className);
+		}
+	},
+
+	add(element, className, isString = false) {
+		if (className) {
+			if (typeof className === 'string') {
+				className = className.split(' ');
+			}
+
+			if (isString) {
+				return '' + className.join(' ');
+			}
+
+			if (element) {
+				element.classList.add(...className);
+			}
+		}
+	}
+}
+
+export {Manipulator, Classes}

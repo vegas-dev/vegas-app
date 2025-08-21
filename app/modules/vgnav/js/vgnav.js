@@ -359,9 +359,7 @@ EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (
 		execute(instance._params.callbacks.afterClick, [instance, event, this]);
 	}
 
-	if (instance._params.hover) {
-		return;
-	}
+	if (instance._params.hover && !instance.isMobileDevice()) return;
 
 	event.preventDefault();
 

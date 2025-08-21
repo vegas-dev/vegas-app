@@ -12,6 +12,14 @@
 					right: 0;
 				}
 
+				&.top, .top {
+					top: 0;
+				}
+
+				&.bottom, .bottom {
+					bottom: 0;
+				}
+
 				.dropdown {
 					ul.left {
 						left: 100%;
@@ -19,6 +27,14 @@
 
 					ul.right {
 						right: 100%;
+					}
+
+					ul.top {
+						top: 100%;
+					}
+
+					ul.bottom {
+						bottom: 100%;
 					}
 				}
 			}
@@ -32,8 +48,6 @@
 
 		.dropdown {
 			> ul {
-				top: 100%;
-
 				&.left, .left {
 					left: 100%;
 				}
@@ -42,14 +56,34 @@
 					right: 100%;
 				}
 
+				&.top, .top {
+					top: 100%;
+				}
+
+				&.bottom, .bottom {
+					bottom: 100%;
+				}
+
 				&.fade {
-					top: 0;
+					&.top {
+						top: 0;
+					}
+					&.bottom {
+						bottom: 0;
+					}
 				}
 			}
 
 			&.show {
-				> ul {
-					top: 0;
+				&.top {
+					> ul {
+						top: 0;
+					}
+				}
+				&.bottom {
+					> ul {
+						bottom: 0;
+					}
 				}
 			}
 		}
@@ -62,7 +96,13 @@
 				top: 100%;
 
 				&.fade {
-					top: 0;
+					&.top {
+						top: 0;
+					}
+
+					&.bottom {
+						bottom: 0;
+					}
 				}
 			}
 		}

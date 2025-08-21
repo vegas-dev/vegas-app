@@ -35,7 +35,7 @@ class VGDropdown extends BaseModule {
 			overflow: false,
 			keyboard: false,
 			placement: 'bottom',
-			timeoutAnimation: 350,
+			timeoutAnimation: 10,
 			hover: false,
 			ajax: {
 				route: '',
@@ -184,18 +184,11 @@ class VGDropdown extends BaseModule {
 		const _this = this;
 
 		if (!_this._isPlacement) {
-			let placement = new Placement({
-				element: this._parent,
-				drop: this._drop
-			})._getPlacement();
+			const $placement = new Placement({
+				drop: _this._drop
+			})
 
-			if (placement.isFixed) {
-				_this._drop.style.position = 'fixed';
-				_this._drop.style.transform = 'translateY(-20%)'; // todo this is костыль поfixить
-			}
-
-			_this._drop.style.left = placement.left + 'px';
-			_this._drop.style.top =  placement.top + 'px';
+			$placement._setPlacement();
 		}
 
 		if (_this._params.offset) {

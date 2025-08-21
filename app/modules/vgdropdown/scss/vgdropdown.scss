@@ -17,11 +17,13 @@
 
 	&-content {
 		z-index: var(--vg-dropdown-z-index);
-		position: absolute;
-		opacity: 0;
 		transform: translateY(20%);
 		transition: var(--vg-dropdown-transition);
 		min-width: var(--vg-dropdown-min-width);
+		position: absolute;
+		opacity: 0;
+		left: 0;
+		top: 100%;
 
 		&:not(.show) {
 			display: none;
@@ -34,6 +36,33 @@
 		&.fade {
 			opacity: 1;
 			transform: translateY(0);
+		}
+
+		&.top {
+			bottom: 0;
+		}
+
+		&.bottom {
+			top: 0;
+		}
+
+		&.left {
+			left: 0;
+		}
+
+		&.right {
+			left: auto;
+			right: 0;
+		}
+
+		&.show {
+			&.top {
+				bottom: 100%;
+			}
+
+			&.bottom {
+				top: 100%;
+			}
 		}
 	}
 

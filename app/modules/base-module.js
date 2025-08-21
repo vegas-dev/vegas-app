@@ -103,7 +103,38 @@ class BaseModule {
 		const isSmallScreen = window.innerWidth < 768;
 		const isHighDPI = window.devicePixelRatio >= 2;
 
-		return isMobileUA || (isTouchDevice && isSmallScreen && isHighDPI);
+		function detectIPadPro() {
+			const userAgent = navigator.userAgent;
+			const platform = navigator.platform;
+
+			const isIPad = /iPad/.test(userAgent) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+			if (!isIPad) return { isiPadPro: false };
+
+			const screenWidth = window.screen.width * window.devicePixelRatio;
+			const screenHeight = window.screen.height * window.devicePixelRatio;
+
+			const proResolutions = [
+				{ width: 2048, height: 2732 }, // 12.9"
+				{ width: 1668, height: 2388 }, // 11"
+				{ width: 1668, height: 2224 }  // 10.5"
+			];
+
+			const isProResolution = proResolutions.some(res =>
+				(screenWidth === res.width && screenHeight === res.height) ||
+				(screenWidth === res.height && screenHeight === res.width)
+			);
+
+			return {
+				isiPadPro: isProResolution,
+				screenWidth: screenWidth,
+				screenHeight: screenHeight,
+				userAgent: userAgent,
+				platform: platform
+			};
+		}
+
+		return isMobileUA || (isTouchDevice && isSmallScreen && isHighDPI) || detectIPadPro().isiPadPro;
 	}
 
 	static getInstance(element) {
