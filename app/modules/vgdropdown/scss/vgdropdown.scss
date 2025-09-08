@@ -25,6 +25,10 @@
 		left: 0;
 		top: 100%;
 
+		&.open {
+			transition: none;
+		}
+
 		&:not(.show) {
 			display: none;
 		}
@@ -33,7 +37,7 @@
 			opacity: 1;
 		}
 
-		&.fade {
+		&.fade, &.open {
 			opacity: 1;
 			transform: translateY(0);
 		}

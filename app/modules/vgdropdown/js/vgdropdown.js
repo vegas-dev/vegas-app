@@ -10,6 +10,7 @@ const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
 const CLASS_NAME_SHOW  = 'show';
 const CLASS_NAME_FADE  = 'fade';
+const CLASS_NAME_OPEN  = 'open';
 const TARGET_CONTAINER = 'vg-dropdown-content';
 const PARENT_CONTAINER = 'vg-dropdown';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="dropdown"]';
@@ -46,6 +47,7 @@ class VGDropdown extends BaseModule {
 				output: true,
 			},
 			animation: {
+				fade: false,
 				enable: false,
 				in: 'animate__flipInY',
 				out: 'animate__flipOutY',
@@ -65,7 +67,10 @@ class VGDropdown extends BaseModule {
 		this._drop = target || Selectors.find('.' + TARGET_CONTAINER, this._parent);
 		this._isPlacement = false;
 
-		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
+		this.isFade      = this._params.animation.fade;
+		this.isAnimation = this._params.animation.enable;
+
+		this._params.animation.delay = !this.isAnimation ? 0 : this._params.animation.delay;
 		this._animation(this._drop, VGDropdown.NAME_KEY, this._params.animation);
 	}
 
@@ -114,10 +119,16 @@ class VGDropdown extends BaseModule {
 		}
 
 		const completeCallBack = () => {
-			if (!this._params.animation.enable) this._drop.classList.add(CLASS_NAME_FADE);
+			if (this.isFade) {
+				this._drop.classList.add(CLASS_NAME_FADE);
+			} else if(!this.isAnimation) {
+				this._drop.classList.add(CLASS_NAME_OPEN);
+			}
+
 			EventHandler.trigger(this._drop, EVENT_KEY_SHOWN, relatedTarget)
 		}
-		this._queueCallback(completeCallBack, this._drop, true, 50);
+
+		this._queueCallback(completeCallBack, this._drop, this.isAnimation || this.isFade, 50);
 	}
 
 	hide() {
@@ -152,7 +163,12 @@ class VGDropdown extends BaseModule {
 			}
 		}
 
-		if (!this._params.animation.enable) this._drop.classList.remove(CLASS_NAME_FADE);
+		if (this.isFade) {
+			this._drop.classList.remove(CLASS_NAME_FADE);
+		} else if(!this.isAnimation) {
+			this._drop.classList.remove(CLASS_NAME_OPEN);
+		}
+
 		this._element.classList.remove(CLASS_NAME_SHOW);
 		this._element.setAttribute('aria-expanded', 'false');
 
@@ -175,7 +191,7 @@ class VGDropdown extends BaseModule {
 				this._drop.classList.remove(CLASS_NAME_SHOW);
 				EventHandler.trigger(this._drop, EVENT_KEY_HIDDEN, relatedTarget);
 			}
-			this._queueCallback(completeCallback, this._drop, true);
+			this._queueCallback(completeCallback, this._drop, this.isAnimation || this.isFade);
 		}, this._params.animation.delay);
 	}
 
