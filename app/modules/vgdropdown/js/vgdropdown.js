@@ -5,6 +5,8 @@ import {isDisabled, mergeDeepObject, noop} from "../../../utils/js/functions";
 import Placement from "../../../utils/js/components/placement";
 import Overflow from "../../../utils/js/components/overflow";
 import Backdrop from "../../../utils/js/components/backdrop";
+import {dismissTrigger} from "../../module-fn";
+import VGSidebar from "../../vgsidebar";
 
 const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
@@ -326,5 +328,7 @@ class VGDropdown extends BaseModule {
 		VGDropdown.hideOpenToggles(event)
 	}
 }
+
+dismissTrigger(VGDropdown);
 
 export default VGDropdown;
