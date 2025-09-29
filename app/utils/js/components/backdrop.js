@@ -6,6 +6,7 @@ import Overflow from "./overflow";
 const NAME = 'backdrop';
 const CLASS_NAME = 'vg-backdrop';
 const CLASS_NAME_FADE = 'fade';
+const CLASS_NAME_SHOW = 'show';
 const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 
 let backdrop_delay = 500;
@@ -30,6 +31,7 @@ class Backdrop {
 		backdrop.classList.add(CLASS_NAME);
 
 		document.body.append(backdrop);
+		backdrop.classList.add(CLASS_NAME_SHOW)
 
 		setTimeout(() => {
 			backdrop.classList.add(CLASS_NAME_FADE)
@@ -48,6 +50,7 @@ class Backdrop {
 		element.classList.remove(CLASS_NAME_FADE);
 
 		setTimeout(() => {
+			element.classList.remove(CLASS_NAME_SHOW);
 			element.remove();
 		}, backdrop_delay);
 	}
