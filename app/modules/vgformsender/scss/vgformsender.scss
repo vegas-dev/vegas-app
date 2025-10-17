@@ -31,11 +31,18 @@
 		width: 22px;
 		height: 22px;
 		cursor: pointer;
+		transition: $transition-base;
 
 		svg {
 			path {
 				fill: var(--vg-form-sender-eye-color);
 			}
+		}
+	}
+
+	&.was-validated {
+		.vg-form-sender--hide-show-pass {
+			right: 34px;
 		}
 	}
 }
