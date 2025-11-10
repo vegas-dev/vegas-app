@@ -196,7 +196,7 @@ class VGModal extends BaseModule {
 
 	_hideModal(openedModals) {
 		this._element.style.display = 'none';
-		this._element.setAttribute('aria-hidden', true);
+		//this._element.setAttribute('aria-hidden', true);
 		this._element.removeAttribute('aria-modal');
 		this._element.removeAttribute('role');
 		this._isTransitioning = false;
@@ -222,7 +222,7 @@ class VGModal extends BaseModule {
 		}
 
 		this._element.style.display = 'block';
-		this._element.removeAttribute('aria-hidden');
+		//this._element.removeAttribute('aria-hidden');
 		this._element.setAttribute('aria-modal', true);
 		this._element.setAttribute('role', 'dialog');
 		this._element.scrollTop = 0;

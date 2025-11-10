@@ -284,7 +284,7 @@ class VGNav extends BaseModule {
 				EventHandler.on(el, EVENT_MOUSEOUT_DATA_API, function (event) {
 					if (!currentElem) return;
 
-					let relatedTarget = event.relatedTarget.closest('.dropdown'),
+					let relatedTarget = event.relatedTarget?.closest('.dropdown'),
 						elm = currentElem;
 
 					while (relatedTarget) {
