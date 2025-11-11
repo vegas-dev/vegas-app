@@ -1,6 +1,7 @@
 export { default as VGAlert } from './app/modules/vgalert';
 export { default as VGCollapse } from './app/modules/vgcollapse';
 export { default as VGDropdown } from './app/modules/vgdropdown';
+export { default as VGFiles } from './app/modules/vgfiles';
 export { default as VGFormSender } from './app/modules/vgformsender';
 export { default as VGLawCookie } from './app/modules/vglawcookie';
 export { default as VGLoadMore } from './app/modules/vgloadmore';

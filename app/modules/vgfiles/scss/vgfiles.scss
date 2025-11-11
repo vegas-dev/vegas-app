@@ -1,0 +1,152 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGFiles
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-files {
+	@include mix-vars('files', $files-map);
+
+	input {
+		visibility: initial;
+		width: 0;
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+
+	&-label {
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		background: var(--vg-files-label-bg);
+		border: 1px solid var(--vg-files-label-border-color);
+		border-radius: var(--vg-files-label-border-radius);
+		color: var(--vg-files-label-color);
+
+		&--icon {
+			padding: var(--vg-files-label-padding-icon);
+			border-right: 1px solid var(--vg-files-label-border-color);
+
+			svg {
+				width: 24px;
+
+				path {
+					fill: var(--vg-files-label-color)
+				}
+			}
+		}
+
+		&--title {
+			padding: var(--vg-files-label-padding);
+		}
+	}
+
+	&-info {
+		display: none;
+		margin-bottom: var(--vg-files-info-mb);
+		padding-top: var(--vg-files-info-mt);
+
+		&.show {
+			display: block;
+		}
+
+		&--wrapper {
+			display: flex;
+			align-items: center;
+
+			&-title {
+				font-weight: var(--vg-files-info-title-fw);
+				color: var(--vg-files-info-title-color);
+			}
+
+			&-count {
+				span {
+					display: inline-block;
+					font-weight: var(--vg-files-info-count-fw);
+					font-size: var(--vg-files-info-count-fs);
+					color: var(--vg-files-info-count-color);
+					margin-left: var(--vg-files-info-count-ms);
+				}
+			}
+
+			&-dismiss {
+				font-size: var(--vg-files-info-dismiss-fs);
+				margin-left: var(--vg-files-info-dismiss-ms);
+			}
+		}
+
+		&--images {
+			display: flex;
+			flex-wrap: wrap;
+
+			> span {
+				position: relative;
+				width: var(--vg-files-info-image-width);
+				margin-right: var(--vg-files-info-image-me);
+				margin-bottom: var(--vg-files-info-image-mb);
+				padding: var(--vg-files-info-image-padding);
+				border: var(--vg-files-info-image-border);
+
+				&:after {
+					content: '';
+					display: block;
+					padding-bottom: 100%;
+				}
+
+				> * {
+					height: calc(100% - 10px);
+					width: calc(100% - 10px);
+					position: absolute;
+				}
+
+				&:last-child {
+					margin-right: 0;
+				}
+
+				img {
+					object-fit: cover;
+					object-position: center;
+				}
+			}
+		}
+
+		&--list {
+			padding: 0;
+
+			li {
+				font-size: var(--vg-files-info-list-fs);
+				display: flex;
+				align-items: baseline;
+
+				+ li {
+					margin-top: var(--vg-files-info-list-mt);
+				}
+
+				span {
+					font-size: var(--vg-files-info-list-span-fs);
+					color: var(--vg-files-info-list-span-color);
+					display: inline-block;
+					margin-right: var(--vg-files-info-list-span-me);
+
+					&:nth-child(2) {
+						--vg-files-info-list-span-fs: 15px;
+						--vg-files-info-list-span-color: #000000;
+					}
+
+					&:last-child {
+						margin-left: auto;
+						white-space: nowrap;
+					}
+				}
+			}
+		}
+	}
+}
