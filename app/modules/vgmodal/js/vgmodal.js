@@ -147,13 +147,12 @@ class VGModal extends BaseModule {
 	}
 
 	show(relatedTarget) {
-		const _this = this;
-		if (isDisabled(_this._element)) return;
+		if (isDisabled(this._element)) return;
 
-		this._params = this._getParams(relatedTarget, this._params);
-		_this._route(function (status, data) {
-			EventHandler.trigger(_this._element, EVENT_KEY_LOADED, {stats: status, data: data});
-		});
+		if (this._params.ajax.route && this._params.ajax.target) {
+			const ajaxTargetContent = Selectors.find(this._params.ajax.target, this._element);
+			if (ajaxTargetContent) ajaxTargetContent.innerHTML = '';
+		}
 
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
@@ -240,6 +239,11 @@ class VGModal extends BaseModule {
 			this._isTransitioning = false;
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, {
 				relatedTarget
+			});
+
+			this._params = this._getParams(relatedTarget, this._params);
+			this._route((status, data) => {
+				EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data});
 			});
 		}
 
