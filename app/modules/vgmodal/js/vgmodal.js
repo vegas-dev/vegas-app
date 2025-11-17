@@ -149,7 +149,7 @@ class VGModal extends BaseModule {
 	show(relatedTarget) {
 		if (isDisabled(this._element)) return;
 
-		if (this._params.ajax.route && this._params.ajax.target) {
+		if (this._params.ajax.route && this._params.ajax.target && !this._params.ajax.once) {
 			const ajaxTargetContent = Selectors.find(this._params.ajax.target, this._element);
 			if (ajaxTargetContent) ajaxTargetContent.innerHTML = '';
 		}
@@ -178,7 +178,7 @@ class VGModal extends BaseModule {
 		Backdrop.show(() => this._showElement(relatedTarget));
 	}
 
-	hide(openedModals = []) {
+	hide(openedModals = [], isLeaveBackDrop = false) {
 		if (!this._isShown || this._isTransitioning) return;
 
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
@@ -189,13 +189,12 @@ class VGModal extends BaseModule {
 
 		setTimeout(() => {
 			this._element.classList.remove(CLASS_NAME_SHOW);
-			this._queueCallback(() => this._hideModal(openedModals), this._element, this._isAnimatedFade());
+			this._queueCallback(() => this._hideModal(openedModals, isLeaveBackDrop), this._element, this._isAnimatedFade());
 		}, this._params.animation.delay);
 	}
 
-	_hideModal(openedModals) {
+	_hideModal(openedModals, isLeaveBackDrop) {
 		this._element.style.display = 'none';
-		//this._element.setAttribute('aria-hidden', true);
 		this._element.removeAttribute('aria-modal');
 		this._element.removeAttribute('role');
 		this._isTransitioning = false;
@@ -206,13 +205,21 @@ class VGModal extends BaseModule {
 			history.pushState("", document.title, window.location.pathname + window.location.search);
 		}
 
-		Backdrop.hide(() => {
+		if (!isLeaveBackDrop) {
+			Backdrop.hide(() => {
+				document.body.classList.remove(CLASS_NAME_OPEN);
+				this._resetAdjustments();
+				this._scrollBar.reset();
+
+				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+			})
+		} else {
 			document.body.classList.remove(CLASS_NAME_OPEN);
 			this._resetAdjustments();
 			this._scrollBar.reset();
 
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
-		})
+		}
 	}
 
 	_showElement(relatedTarget) {
@@ -221,7 +228,6 @@ class VGModal extends BaseModule {
 		}
 
 		this._element.style.display = 'block';
-		//this._element.removeAttribute('aria-hidden');
 		this._element.setAttribute('aria-modal', true);
 		this._element.setAttribute('role', 'dialog');
 		this._element.scrollTop = 0;

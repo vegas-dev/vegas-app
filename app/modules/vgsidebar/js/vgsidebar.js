@@ -114,31 +114,32 @@ class VGSidebar extends BaseModule {
 		_this._queueCallback(completeCallBack, _this._element, true, 50)
 	}
 
-	hide() {
-		const _this = this;
-		if (isDisabled(_this._element)) return;
+	hide(isLeaveBackDrop = false) {
+		if (isDisabled(this._element)) return;
 
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
 		setTimeout(() => {
-			_this._element.setAttribute('aria-expanded', false);
-			_this._element.classList.remove(CLASS_NAME_SHOW);
+			this._element.setAttribute('aria-expanded', false);
+			this._element.classList.remove(CLASS_NAME_SHOW);
 
 			const completeCallback = () => {
-				if (_this._params.backdrop) {
-					Backdrop.hide(function () {
-						if (_this._params.overflow) {
-							Overflow.destroy();
-						}
-					});
+				if (!isLeaveBackDrop) {
+					if (this._params.backdrop) {
+						Backdrop.hide(() => {
+							if (this._params.overflow) {
+								Overflow.destroy();
+							}
+						});
+					}
 				}
 
-				if (_this._params.overflow) {
+				if (this._params.overflow) {
 					Overflow.destroy();
 				}
 
-				if (_this._params.hash) {
+				if (this._params.hash) {
 					history.pushState("", document.title, window.location.pathname + window.location.search);
 				}
 
