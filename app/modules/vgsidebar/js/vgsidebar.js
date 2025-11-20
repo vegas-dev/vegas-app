@@ -120,6 +120,8 @@ class VGSidebar extends BaseModule {
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
+		document.body.classList.remove(CLASS_NAME_OPEN);
+
 		setTimeout(() => {
 			this._element.setAttribute('aria-expanded', false);
 			this._element.classList.remove(CLASS_NAME_SHOW);
@@ -133,18 +135,17 @@ class VGSidebar extends BaseModule {
 							}
 						});
 					}
-				}
 
-				if (this._params.overflow) {
-					Overflow.destroy();
-				}
+					if (this._params.overflow) {
+						Overflow.destroy();
+					}
 
-				if (this._params.hash) {
-					history.pushState("", document.title, window.location.pathname + window.location.search);
-				}
+					if (this._params.hash) {
+						history.pushState("", document.title, window.location.pathname + window.location.search);
+					}
 
-				document.body.classList.remove(CLASS_NAME_OPEN);
-				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+					EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+				}
 			}
 			this._queueCallback(completeCallback, this._element, true);
 		}, this._params.animation.delay);

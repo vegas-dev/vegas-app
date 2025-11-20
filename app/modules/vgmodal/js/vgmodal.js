@@ -187,6 +187,8 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = true;
 
+		document.body.classList.remove(CLASS_NAME_OPEN);
+
 		setTimeout(() => {
 			this._element.classList.remove(CLASS_NAME_SHOW);
 			this._queueCallback(() => this._hideModal(openedModals, isLeaveBackDrop), this._element, this._isAnimatedFade());
@@ -194,31 +196,24 @@ class VGModal extends BaseModule {
 	}
 
 	_hideModal(openedModals, isLeaveBackDrop) {
-		this._element.style.display = 'none';
-		this._element.removeAttribute('aria-modal');
-		this._element.removeAttribute('role');
-		this._isTransitioning = false;
-
-		if (openedModals.length) return;
-
-		if (this._params.hash) {
-			history.pushState("", document.title, window.location.pathname + window.location.search);
-		}
-
 		if (!isLeaveBackDrop) {
+			this._element.style.display = 'none';
+			this._element.removeAttribute('aria-modal');
+			this._element.removeAttribute('role');
+			this._isTransitioning = false;
+
+			if (openedModals.length) return;
+
+			if (this._params.hash) {
+				history.pushState("", document.title, window.location.pathname + window.location.search);
+			}
+
 			Backdrop.hide(() => {
-				document.body.classList.remove(CLASS_NAME_OPEN);
 				this._resetAdjustments();
 				this._scrollBar.reset();
 
 				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 			})
-		} else {
-			document.body.classList.remove(CLASS_NAME_OPEN);
-			this._resetAdjustments();
-			this._scrollBar.reset();
-
-			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 		}
 	}
 
