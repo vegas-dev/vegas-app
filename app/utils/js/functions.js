@@ -346,8 +346,23 @@ const getNextActiveElement = (list, activeElement, shouldGetNext, isCycleAllowed
 }
 
 /**
+ * Рекурсивный поиск самого глубокого последнего потомка
+ * @param element
+ * @returns {*}
+ */
+function getDeepestLastChild(element) {
+	let current = element;
+
+	while (current.lastElementChild) {
+		current = current.lastElementChild;
+	}
+
+	return current;
+}
+
+/**
  *
  */
 const isRTL = () => document.documentElement.dir === 'rtl'
 
-export {isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL, transliterate, getElement, getNextActiveElement}
+export {getDeepestLastChild, isElement, isVisible, isDisabled, isObject, isEmptyObj, mergeDeepObject, removeElementArray, normalizeData, execute, executeAfterTransition, reflow, noop, makeRandomString, isRTL, transliterate, getElement, getNextActiveElement}

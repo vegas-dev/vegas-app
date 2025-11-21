@@ -3,7 +3,7 @@ import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
 import {
-	execute,
+	execute, getDeepestLastChild,
 	isObject,
 	isVisible,
 	makeRandomString,
@@ -66,6 +66,7 @@ class VGFormSender extends BaseModule {
 				route: '',
 				target: '',
 				method: 'get',
+				timeout: 1000,
 			},
 			classes: {
 				general: 'vg-form-sender',
@@ -83,7 +84,17 @@ class VGFormSender extends BaseModule {
 			interceptors: {
 				success: false,
 				error: false
-			}
+			},
+			button: {
+				enabled: true,
+				disabled: true,
+				send: 'Отправляем...',
+				initial: 'Отправить',
+				spinner: {
+					enabled: false,
+					element: '<span class="spinner-border spinner-border-sm me-2"></span>'
+				}
+			},
 		}, params));
 
 		this._params.ajax.route = Manipulator.get(this._element, 'action').toLowerCase();
@@ -93,6 +104,9 @@ class VGFormSender extends BaseModule {
 		this._params.isBtnText   = Manipulator.get(this._element, 'data-btn-text') !== 'false';
 		this._params.isJsonParse = Manipulator.get(this._element, 'data-json-parse') !== 'false';
 		this._params.isShowPass  = Manipulator.get(this._element, 'data-show-pass') === 'true';
+
+		this._params = this._getParams(this._button, this._params);
+		this._params.button.initial = this._button.innerHTML || this._params.button.initial;
 	}
 
 	static get NAME() {
@@ -129,40 +143,38 @@ class VGFormSender extends BaseModule {
 	}
 
 	request(data, event) {
-		const _this = this;
+		this._alertBefore();
 
-		_this._alertBefore();
+		this._params.ajax.data = data;
 
-		_this._params.ajax.data = data;
+		this._route((status, data)  => {
+			this._element.classList.remove('was-validated');
 
-		_this._route(function (status, data) {
-			_this._element.classList.remove('was-validated');
-
-			if (_this._params.response.enabled) {
-				data.response = _this._params.response;
+			if (this._params.response.enabled) {
+				data.response = this._params.response;
 			}
 
-			if (_this._params.alert.enabled) {
+			if (this._params.alert.enabled) {
 				if (typeof status === 'string' && status === 'error') {
-					if (_this._params.redirect.error) {
-						window.location.href = _this._params.redirect.error;
+					if (this._params.redirect.error) {
+						window.location.href = this._params.redirect.error;
 					} else {
-						if (!_this._params.interceptors.error) {
-							_this._alertError(event, data);
-							execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
+						if (!this._params.interceptors.error) {
+							this._alertError(event, data);
+							execute(this._params.callback.afterError, [this._element, this, event, data]);
 						} else {
-							execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
+							execute(this._params.callback.afterError, [this._element, this, event, data]);
 						}
 					}
 				} else if (typeof status === 'string' && status === 'success') {
-					if (_this._params.redirect.success) {
-						window.location.href = _this._params.redirect.success;
+					if (this._params.redirect.success) {
+						window.location.href = this._params.redirect.success;
 					} else {
-						if (!_this._params.interceptors.success) {
-							_this._alertSuccess(event, data);
-							execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
+						if (!this._params.interceptors.success) {
+							this._alertSuccess(event, data);
+							execute(this._params.callback.afterSuccess, [this._element, this, event, data]);
 						} else {
-							execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
+							execute(this._params.callback.afterSuccess, [this._element, this, event, data]);
 						}
 					}
 				}
@@ -202,55 +214,35 @@ class VGFormSender extends BaseModule {
 	}
 
 	_statusButton(status) {
-		const _this = this;
-
-		if (!_this._button) return;
-
-		let btnSubmitText = _this._button,
-			btnText = {
-			send: 'Отправляем...',
-			text: 'Отправить'
-		};
-
-		if (Manipulator.has(_this._button, 'data-spinner') && status === 'before') {
-			_this._button.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-2"></span>');
-		}
-
-		if (Manipulator.has(_this._button, 'data-text')) {
-			btnText.text = Manipulator.get(_this._button, 'data-text');
-		} else {
-			let $btnText = _this._button.querySelector('[data-text]');
-			if ($btnText) {
-				btnText.text = Manipulator.get($btnText, 'data-text');
-				btnSubmitText = $btnText;
-			}
-		}
-
-		if (Manipulator.has(_this._button, 'data-text-send')) {
-			btnText.send = Manipulator.get(_this._button, 'data-text-send');
-		} else {
-			let $btnTextSend = _this._button.querySelector('[data-text-send]');
-			if ($btnTextSend) {
-				btnText.send = Manipulator.get($btnTextSend, 'data-text-send');
-				btnSubmitText = $btnTextSend;
-			}
-		}
+		if (!this._button) return;
 
 		if (status === 'before') {
-			if (_this._params.isBtnText) {
-				btnSubmitText.innerHTML = btnText.send;
+			const button = getDeepestLastChild(this._button) || this._button;
+
+			if (this._params.button.spinner.enabled) {
+				this._button.insertAdjacentHTML('afterbegin', this._params.button.spinner.element);
 			}
-			Manipulator.set(_this._button,'disabled', 'disabled');
+
+			if (this._params.button.enabled) {
+				button.innerHTML = this._params.button.send
+			}
+
+			if (this._params.button.disabled) {
+				Manipulator.set(this._button,'disabled', 'disabled');
+			}
 		}
 
 		if (status === 'after') {
-			if (_this._params.isBtnText) {
-				btnSubmitText.innerHTML = btnText.text;
+			if (this._params.button.enabled) {
+				this._button.innerHTML = this._params.button.initial;
 			}
-			Manipulator.remove(_this._button,'disabled');
-
-			let spinner = _this._button.querySelector('.spinner-border');
-			if (spinner) spinner.remove();
+			if (this._params.button.disabled) {
+				Manipulator.remove(this._button,'disabled');
+			}
+			if (this._params.button.spinner.enabled) {
+				let spinner = this._button.querySelector('.spinner-border');
+				if (spinner) spinner.remove();
+			}
 		}
 	}
 

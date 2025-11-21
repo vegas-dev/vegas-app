@@ -34,48 +34,50 @@ class BaseModule {
 	}
 
 	_route(callback) {
-		const _this = this;
-		let $content = null;
+		let $content = null,
+			timeout = this._params.ajax.timeout || 0;
 
-		if (_this._isLoaded) return;
+		if (this._isLoaded) return;
 
 		const setData = (data) => {
 			if ($content) $content.innerHTML = data;
 		};
 
-		if (!_this._params.hasOwnProperty('ajax')) {
+		if (!this._params.hasOwnProperty('ajax')) {
 			return;
 		}
 
-		if (!_this._params.ajax.route) {
+		if (!this._params.ajax.route) {
 			return;
 		}
 
-		if (!'method' in _this._params.ajax) {
-			_this._params.ajax.method = 'get';
+		if (!'method' in this._params.ajax) {
+			this._params.ajax.method = 'get';
 		}
 
-		if ('target' in _this._params.ajax && _this._params.ajax.target) {
-			$content = Selectors.find(_this._params.ajax.target);
+		if ('target' in this._params.ajax && this._params.ajax.target) {
+			$content = Selectors.find(this._params.ajax.target);
 		}
 
-		if ('loader' in _this._params.ajax && _this._params.ajax.loader) {
-			if ('output' in _this._params.ajax && _this._params.ajax.output) {
+		if ('loader' in this._params.ajax && this._params.ajax.loader) {
+			if ('output' in this._params.ajax && this._params.ajax.output) {
 				setData('<div class="vg-loader"></div>');
 			}
 		}
 
-		Ajax[_this._params.ajax.method](_this._params.ajax.route, _this._params.ajax.data || {}, function (status, data) {
-			if ('once' in _this._params.ajax && _this._params.ajax.once) {
-				_this._isLoaded = true;
-			}
+		setTimeout(() => {
+			Ajax[this._params.ajax.method](this._params.ajax.route, this._params.ajax.data || {}, (status, data) => {
+				if ('once' in this._params.ajax && this._params.ajax.once) {
+					this._isLoaded = true;
+				}
 
-			if ('output' in _this._params.ajax && _this._params.ajax.output) {
-				setData(data.response);
-			}
+				if ('output' in this._params.ajax && this._params.ajax.output) {
+					setData(data.response);
+				}
 
-			execute(callback, [status, data, $content]);
-		});
+				execute(callback, [status, data, $content]);
+			});
+		}, timeout)
 	}
 
 	_dismissElement() {

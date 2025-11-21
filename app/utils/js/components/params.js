@@ -17,24 +17,30 @@ class Params {
 	merge(params, element) {
 		let mParams = mergeDeepObject(params, this.fromElement(element));
 
-		for (let key in mParams) {
-			if (key.indexOf('-') !== -1) {
-				let keys = key.split('-'),
-					value = normalizeData(mParams[key]);
+		function stringToNestedObjectWithValue(str, value, params) {
+			const keys = str.split('-');
+			let result = {};
+			let currentLevel = result;
 
-				if (keys[0] in mParams) {
-					if (keys[1] in mParams[keys[0]]) {
-						mParams[keys[0]][keys[1]] = value;
-					}
+			for (let i = 0; i < keys.length; i++) {
+				const key = keys[i];
+
+				if (i < keys.length - 1) {
+					currentLevel[key] = {};
+					currentLevel = currentLevel[key];
+				} else {
+					currentLevel[key] = value;
 				}
-
-				delete mParams[key];
 			}
+
+			return mergeDeepObject(params, result);
 		}
 
-		if ('params' in mParams) {
-			mParams = mergeDeepObject(mParams, mParams.params);
-			delete mParams.params;
+		for (let key in mParams) {
+			if (key.indexOf('-') !== -1) {
+				mParams = stringToNestedObjectWithValue(key, mParams[key], mParams);
+				delete mParams[key];
+			}
 		}
 
 		return mParams;
