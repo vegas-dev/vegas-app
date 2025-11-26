@@ -17,6 +17,12 @@ import {getSVG} from "../../module-fn";
 import VGHideShowPass from "./hideshowpass";
 
 /**
+ * TODO
+ * доделай динамическое добавление полей в форму,
+ * но не меняй место их получения (их нужно получить прямо перед отправкой, после того как выполнился промис beforeSend)
+ */
+
+/**
  * Constants
  */
 const NAME = 'form-sender';
@@ -82,6 +88,7 @@ class VGFormSender extends BaseModule {
 				afterError: noop,
 			},
 			interceptors: {
+				beforeSend: () => new Promise((resolve, reject) => resolve()),
 				success: false,
 				error: false
 			},
@@ -143,42 +150,49 @@ class VGFormSender extends BaseModule {
 	}
 
 	request(data, event) {
-		this._alertBefore();
+		const _this = this;
 
-		this._params.ajax.data = data;
+		_this._alertBefore();
 
-		this._route((status, data)  => {
-			this._element.classList.remove('was-validated');
+		const submit = () => {
+			_this._params.ajax.data = new FormData(_this._element);
+			_this._route(function (status, data) {
+				_this._element.classList.remove('was-validated');
 
-			if (this._params.response.enabled) {
-				data.response = this._params.response;
-			}
+				if (_this._params.response.enabled) {
+					data.response = _this._params.response;
+				}
 
-			if (this._params.alert.enabled) {
-				if (typeof status === 'string' && status === 'error') {
-					if (this._params.redirect.error) {
-						window.location.href = this._params.redirect.error;
-					} else {
-						if (!this._params.interceptors.error) {
-							this._alertError(event, data);
-							execute(this._params.callback.afterError, [this._element, this, event, data]);
+				if (_this._params.alert.enabled) {
+					if (typeof status === 'string' && status === 'error') {
+						if (_this._params.redirect.error) {
+							window.location.href = _this._params.redirect.error;
 						} else {
-							execute(this._params.callback.afterError, [this._element, this, event, data]);
+							if (!_this._params.interceptors.error) {
+								_this._alertError(event, data);
+								execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
+							} else {
+								execute(_this._params.callback.afterError, [_this._element, _this, event, data]);
+							}
 						}
-					}
-				} else if (typeof status === 'string' && status === 'success') {
-					if (this._params.redirect.success) {
-						window.location.href = this._params.redirect.success;
-					} else {
-						if (!this._params.interceptors.success) {
-							this._alertSuccess(event, data);
-							execute(this._params.callback.afterSuccess, [this._element, this, event, data]);
+					} else if (typeof status === 'string' && status === 'success') {
+						if (_this._params.redirect.success) {
+							window.location.href = _this._params.redirect.success;
 						} else {
-							execute(this._params.callback.afterSuccess, [this._element, this, event, data]);
+							if (!_this._params.interceptors.success) {
+								_this._alertSuccess(event, data);
+								execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
+							} else {
+								execute(_this._params.callback.afterSuccess, [_this._element, _this, event, data]);
+							}
 						}
 					}
 				}
-			}
+			});
+		};
+
+		_this._params.interceptors.beforeSend().then(() => {
+			submit();
 		});
 	}
 
@@ -515,7 +529,7 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		}
 	}
 
-	const collectData = function(data, fields) {
+	/*const collectData = function(data, fields) {
 		for (let name in fields) {
 			if (typeof fields[name] === 'object') {
 				for (let key in fields[name]) {
@@ -530,19 +544,19 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		}
 
 		return data;
-	}
+	}*/
 
 	if (!instance._params.submit) {
 		event.preventDefault();
 
-		let data = new FormData(instance._element);
+		//let data = new FormData(instance._element);
 
 		// TODO доделать
 		/*if (Array.isArray(instance._params.ajax.fields) && instance._params.ajax.fields.length) {
 			data = collectData(data, instance._params.ajax.fields);
 		}*/
 
-		return instance.request(data, event);
+		return instance.request(event);
 	}
 })
 
