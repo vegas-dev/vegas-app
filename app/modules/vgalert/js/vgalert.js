@@ -50,66 +50,10 @@ class VGAlert extends BaseModule {
 		return NAME_KEY
 	}
 
-	static run(... args) {
-
-	}
-
-	toggle(event) {
-
-	}
-
-	promise(event) {
-
-	}
-
-	_build() {
-		if (this._params.dialog === 'modal') {
-			return this._buildModal();
-		}
-		if (this._params.dialog === 'toast') {
-			return this._buildToast();
-		}
-	}
-
-	_buildModal() {
-		let id = 'vg-alert-' + makeRandomString(),
-			$modal = Selectors.find('.vg-alert-modal');
-
-		if ($modal) $modal.remove();
-
-		return VGModal.build(id, this._params.modal, (self) => {
-			let element = self._element;
-			element.classList.add('vg-alert-modal');
-
-			let $body = Selectors.find('.vg-modal-body', element);
-			if ($body) {
-				let html = '<div class="message">' + this._params.message + '</div>';
-
-				html += '<div class="buttons">';
-				if (this._params.elements.button) {
-					html += '<a href="#" data-vg-dismiss="modal" class="btn btn-primary">'+ this._params.elements.button +'</a>';
-				}
-				html += '</div>';
-
-				$body.innerHTML = html;
-			}
-		});
-	}
-
-	_buildToast() {
-
+	static call(options = {}) {
+		return new Promise(options => {})
 	}
 }
 
-/**
- * Data API implementation
- */
-EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-
-});
-
-/*window.alert = (message) => {
-	VGAlert.run(message);
-}*/
 
 export default VGAlert;
