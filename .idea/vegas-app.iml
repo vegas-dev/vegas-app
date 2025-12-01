@@ -6,6 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/public/!old/assets/build" />
       <excludeFolder url="file://$MODULE_DIR$/app/modules/vgnav/!old" />
+      <excludeFolder url="file://$MODULE_DIR$/app/modules/vgalert/js/!old" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

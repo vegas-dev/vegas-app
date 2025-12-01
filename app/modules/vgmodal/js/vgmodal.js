@@ -51,6 +51,7 @@ class VGModal extends BaseModule {
 			fields: [],
 			hash: false,
 			centered: false,
+			dismiss: true,
 			ajax: {
 				route: '',
 				target: '',
@@ -105,6 +106,8 @@ class VGModal extends BaseModule {
 	static build(id, params, callback) {
 		if (typeof id !== "string") return;
 
+		console.log(params)
+
 		let _element = document.createElement('div');
 		_element.classList.add('vg-modal', 'fade');
 		_element.id = id;let dialog = document.createElement('div');
@@ -117,14 +120,16 @@ class VGModal extends BaseModule {
 		let content = document.createElement('div');
 		content.classList.add('vg-modal-content');
 
-		let btnClose = document.createElement('button');
-		Manipulator.set(btnClose, 'type', 'button');
-		Manipulator.set(btnClose, 'data-vg-dismiss', 'modal');
-		Manipulator.set(btnClose, 'data-vg-target', '#' + id);
-		Manipulator.set(btnClose, 'aria-label', 'close');
-		btnClose.classList.add('vg-btn-close');
+		if ('dismiss' in params && params.dismiss) {
+			let btnClose = document.createElement('button');
+			Manipulator.set(btnClose, 'type', 'button');
+			Manipulator.set(btnClose, 'data-vg-dismiss', 'modal');
+			Manipulator.set(btnClose, 'data-vg-target', '#' + id);
+			Manipulator.set(btnClose, 'aria-label', 'close');
+			btnClose.classList.add('vg-btn-close');
 
-		content.append(btnClose);
+			content.append(btnClose);
+		}
 
 		let body = document.createElement('div');
 		body.classList.add('vg-modal-body');
