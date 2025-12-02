@@ -106,11 +106,12 @@ class VGModal extends BaseModule {
 	static build(id, params, callback) {
 		if (typeof id !== "string") return;
 
-		console.log(params)
-
 		let _element = document.createElement('div');
-		_element.classList.add('vg-modal', 'fade');
-		_element.id = id;let dialog = document.createElement('div');
+		_element.classList.add('vg-modal');
+		_element.classList.add('fade');
+		_element.id = id;
+
+		let dialog = document.createElement('div');
 		dialog.classList.add('vg-modal-dialog');
 
 		if ('centered' in params && params.centered) {
@@ -141,6 +142,9 @@ class VGModal extends BaseModule {
 		document.body.append(_element);
 
 		const modal = VGModal.getOrCreateInstance(_element, params);
+		if ('animation' in params) {
+			modal._animation(_element, VGModal.NAME_KEY, params.animation);
+		}
 
 		execute(callback, [modal]);
 

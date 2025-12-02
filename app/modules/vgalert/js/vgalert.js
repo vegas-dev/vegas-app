@@ -10,7 +10,41 @@ import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 
 class VGAlert {
 	constructor(params = {}) {
-		this._params = mergeDeepObject({
+		this._elementsDefault = {
+			buttons: {
+				agree: {
+					element: '',
+					tag: 'button',
+					attr: {
+						type: 'button',
+					},
+					toggle: 'data-vg-alert-agree',
+					class: [],
+					text: 'На всё согласен'
+				},
+				cancel: {
+					element: '',
+					tag: 'button',
+					attr: {
+						type: 'button',
+					},
+					toggle: 'data-vg-alert-cancel',
+					class: [],
+					text: 'Пошли на хуй'
+				}
+			},
+			message: {
+				title: 'Удалить это гавно',
+				description: 'Вы действительно собираетесь удалить всё это гавно с Вашего сайта?',
+			},
+			icons: {
+				danger: getSVG('danger'),
+				success: getSVG('success'),
+				info: getSVG('info'),
+			}
+		}
+
+		this._defaultParams = {
 			modal: {
 				centered: false,
 				backdrop: true,
@@ -18,57 +52,34 @@ class VGAlert {
 				keyboard: true,
 				dismiss: true,
 				animation: {
-					enable: true,
+					enable: false,
 					in: 'animate__rollIn',
 					out: 'animate__rollOut',
-					delay: 0,
+					delay: 300,
+					duration: 700
 				},
-			},
-			toast: {
-
-			},
-			elements: {
-				buttons: {
-					agree: {
-						element: '',
-						tag: 'button',
-						attr: {
-							type: 'button',
-						},
-						toggle: 'data-vg-alert-agree',
-						class: ['btn', 'btn-primary'],
-						text: 'На всё согласен'
-					},
-					cancel: {
-						element: '',
-						tag: 'button',
-						attr: {
-							type: 'button',
-						},
-						toggle: 'data-vg-alert-cancel',
-						class: ['btn', 'btn-outline-primary'],
-						text: 'Пошли на хуй'
-					}
-				},
-				messages: {
-					title: 'Удалить это гавно',
-					description: 'Вы действительно собираетесь удалить всё это гавно с Вашего сайта?',
-				},
-				icons: {
-					error: getSVG('error'),
-					danger: getSVG('danger'),
-					success: getSVG('success'),
-					waiting: getSVG('waiting'),
-				}
 			},
 			mode: 'confirm',
-			type: 'danger',
+			theme: 'danger',
 			callbacks: {
 				init: noop,
 				accept: noop,
 				cancel: noop,
-			}
-		}, params);
+			},
+			buttons: {},
+			message: {},
+		};
+
+		this._params = this.setParams(params);
+	}
+
+	setParams(params) {
+		params = mergeDeepObject(this._defaultParams, params);
+		params.buttons = mergeDeepObject(this._elementsDefault.buttons, params.buttons);
+		params.message = mergeDeepObject(this._elementsDefault.message, params.message);
+		params.icon = this._elementsDefault.icons[params.theme];
+
+		return params;
 	}
 
 	static call(options = {}) {
@@ -79,8 +90,8 @@ class VGAlert {
 		execute(context._params.callbacks.init, [context])
 
 		let container = modal._element,
-			agreeBtn = Selectors.find('[data-vg-alert="success"]', container),
-			cancelBtn = Selectors.find('[data-vg-dismiss="modal"]', container);
+			agreeBtn = Selectors.find('[data-vg-alert-agree]', container),
+			cancelBtn = Selectors.find('[data-vg-alert-cancel]', container);
 
 		return new Promise((resolve, reject) => {
 			if (context._params.mode === 'confirm') {
@@ -91,11 +102,11 @@ class VGAlert {
 						timestamp: new Date(),
 						message: 'Пользователь согласился',
 					});
+					modal.hide();
 				};
 
 				const handleCancel = () => {
-					cleanup();
-					reject(new Error('Пользователь отказался'));
+					modal.hide();
 				};
 
 				const cleanup = () => {
@@ -105,6 +116,11 @@ class VGAlert {
 
 				agreeBtn.addEventListener('click', handleAgree);
 				cancelBtn.addEventListener('click', handleCancel);
+
+				container.addEventListener('vg.modal.hide', () => {
+					cleanup();
+					reject(new Error('Пользователь отказался'));
+				})
 			}
 		})
 	}
@@ -169,37 +185,38 @@ class VGAlert {
 
 	_create(container, element, mode) {
 		if (element === 'button') {
-			if (this._params.elements.buttons[mode].element) {
-				return container.innerHTML += this._params.elements.buttons[mode].element;
+			let button = this._params.buttons[mode];
+			if (button.element) {
+				return container.innerHTML += button.element;
 			} else {
-				if (!this._params.elements.buttons[mode].tag) return '';
-				let button = document.createElement(this._params.elements.buttons[mode].tag);
-				Classes.add(button, this._params.elements.buttons[mode].class.join(' '));
+				if (!button.tag) return;
 
-				if (this._params.elements.buttons[mode].attr) {
-					let attr = this._params.elements.buttons[mode].attr;
+				let btn = document.createElement(button.tag);
+				Classes.add(btn, button.class.join(' '));
+
+				if (button.attr) {
+					let attr = button.attr;
 					for (const key in attr) {
-						Manipulator.set(button, key, attr[key]);
+						Manipulator.set(btn, key, attr[key]);
 					}
 				}
 
-				Manipulator.set(button, this._params.elements.buttons[mode].toggle, true);
+				Manipulator.set(btn, button.toggle, true);
+				btn.innerHTML = button.text;
 
-				button.innerHTML = this._params.elements.buttons[mode].text;
-
-				container.append(button);
+				container.append(btn);
 			}
 		}
 
 		if (element === 'icons') {
-			if (this._params.elements.icons[mode]) {
-				return container.innerHTML = this._params.elements.icons[mode];
+			if (this._params.icon) {
+				container.innerHTML = this._params.elements.icon;
 			}
 		}
 
 		if (element === 'messages') {
-			if (this._params.elements.messages[mode]) {
-				return container.innerHTML = this._params.elements.messages[mode];
+			if (this._params.message) {
+				container.innerHTML = this._params.message[mode];
 			}
 		}
 	}
