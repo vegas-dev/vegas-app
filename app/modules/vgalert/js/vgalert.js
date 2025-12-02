@@ -31,21 +31,21 @@ class VGAlert {
 				buttons: {
 					agree: {
 						element: '',
-						type: 'button',
+						tag: 'button',
 						attr: {
 							type: 'button',
-							'data-vg-alert': 'success'
 						},
+						toggle: 'data-vg-alert-agree',
 						class: ['btn', 'btn-primary'],
 						text: 'На всё согласен'
 					},
 					cancel: {
 						element: '',
-						type: 'button',
+						tag: 'button',
 						attr: {
 							type: 'button',
-							'data-vg-dismiss': 'modal'
 						},
+						toggle: 'data-vg-alert-cancel',
 						class: ['btn', 'btn-outline-primary'],
 						text: 'Пошли на хуй'
 					}
@@ -56,6 +56,7 @@ class VGAlert {
 				},
 				icons: {
 					error: getSVG('error'),
+					danger: getSVG('danger'),
 					success: getSVG('success'),
 					waiting: getSVG('waiting'),
 				}
@@ -79,15 +80,12 @@ class VGAlert {
 
 		let container = modal._element,
 			agreeBtn = Selectors.find('[data-vg-alert="success"]', container),
-			cancelBtn = Selectors.find('[data-vg-dismiss="modal"]', container),
-			messageDiv = Selectors.find('.vg-alert-message', container);
-
+			cancelBtn = Selectors.find('[data-vg-dismiss="modal"]', container);
 
 		return new Promise((resolve, reject) => {
 			if (context._params.mode === 'confirm') {
 				const handleAgree = () => {
 					cleanup();
-					messageDiv.innerHTML = '✅ Согласие получено!';
 					resolve({
 						accepted: true,
 						timestamp: new Date(),
@@ -97,7 +95,6 @@ class VGAlert {
 
 				const handleCancel = () => {
 					cleanup();
-					messageDiv.innerHTML = '❌ Согласие отклонено';
 					reject(new Error('Пользователь отказался'));
 				};
 
@@ -124,41 +121,48 @@ class VGAlert {
 
 			let $body = Selectors.find('.vg-modal-body', element);
 			if ($body) {
-				if (this._params.mode === 'confirm') {
-					let wrapper = document.createElement('div');
-					Classes.add(wrapper, 'vg-alert');
+				let wrapper = document.createElement('div');
+				Classes.add(wrapper, 'vg-alert-wrapper');
 
-					if (this._params.type === 'danger') {
-						Classes.add(wrapper, 'vg-alert-danger');
-					}
-
-					let content = document.createElement('div');
-					Classes.add(content, 'vg-alert-content');
-
-					let title = document.createElement('div');
-					Classes.add(title, 'vg-alert-content--title');
-					this._create(title, 'messages', 'title');
-
-					let description = document.createElement('div');
-					Classes.add(description, 'vg-alert-content--description');
-					this._create(description, 'messages', 'description');
-
-					let icon = document.createElement('div');
-					Classes.add(icon, 'vg-alert-icon');
-					this._create(icon, 'icons', 'error');
-
-					let buttons = document.createElement('div');
-					Classes.add(buttons, 'vg-alert-buttons');
-					this._create(buttons, 'button', 'agree');
-					this._create(buttons, 'button', 'cancel');
-
-					content.append(title);
-					content.append(description);
-					wrapper.append(icon);
-					wrapper.append(content);
-					$body.append(wrapper);
-					$body.append(buttons);
+				if (this._params.type === 'danger') {
+					Classes.add(wrapper, 'vg-alert-danger');
 				}
+
+				let content = document.createElement('div');
+				Classes.add(content, 'vg-alert-content');
+
+				let icon = document.createElement('div');
+				Classes.add(icon, 'vg-alert-content--icon');
+				this._create(icon, 'icons', this._params.type);
+
+				let message = document.createElement('div');
+				Classes.add(message, 'vg-alert-content--message');
+
+				let title = document.createElement('div');
+				Classes.add(title, 'vg-alert-content--title');
+				this._create(title, 'messages', 'title');
+
+				let description = document.createElement('div');
+				Classes.add(description, 'vg-alert-content--description');
+				this._create(description, 'messages', 'description');
+
+				message.append(title);
+				message.append(description);
+
+				content.append(icon);
+				content.append(message);
+
+				let buttons = document.createElement('div');
+				Classes.add(buttons, 'vg-alert-buttons');
+				this._create(buttons, 'button', 'cancel');
+
+				if (this._params.mode === 'confirm') {
+					this._create(buttons, 'button', 'agree');
+				}
+
+				wrapper.append(content);
+				$body.append(wrapper);
+				$body.append(buttons);
 			}
 		});
 	}
@@ -168,8 +172,8 @@ class VGAlert {
 			if (this._params.elements.buttons[mode].element) {
 				return container.innerHTML += this._params.elements.buttons[mode].element;
 			} else {
-				if (!this._params.elements.buttons[mode].type) return '';
-				let button = document.createElement(this._params.elements.buttons[mode].type);
+				if (!this._params.elements.buttons[mode].tag) return '';
+				let button = document.createElement(this._params.elements.buttons[mode].tag);
 				Classes.add(button, this._params.elements.buttons[mode].class.join(' '));
 
 				if (this._params.elements.buttons[mode].attr) {
@@ -178,6 +182,8 @@ class VGAlert {
 						Manipulator.set(button, key, attr[key]);
 					}
 				}
+
+				Manipulator.set(button, this._params.elements.buttons[mode].toggle, true);
 
 				button.innerHTML = this._params.elements.buttons[mode].text;
 
