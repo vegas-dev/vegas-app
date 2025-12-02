@@ -165,7 +165,7 @@ class VGAlert {
 				message.append(title);
 				message.append(description);
 
-				content.append(icon);
+				if (this._params.icon) content.append(icon);
 				content.append(message);
 
 				let buttons = document.createElement('div');
@@ -177,8 +177,8 @@ class VGAlert {
 				}
 
 				wrapper.append(content);
+				wrapper.append(buttons);
 				$body.append(wrapper);
-				$body.append(buttons);
 			}
 		});
 	}
@@ -221,6 +221,5 @@ class VGAlert {
 		}
 	}
 }
-
 
 export default VGAlert;
