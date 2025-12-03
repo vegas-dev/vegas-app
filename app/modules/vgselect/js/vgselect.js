@@ -308,7 +308,6 @@ class VGSelect extends BaseModule {
 		let observer = new MutationObserver(() => {
 			clearTimeout(observerTimout);
 			observerTimout = setTimeout(() => {
-				console.log('asdas')
 				VGSelect.build(select, true);
 			}, 10);
 		});
