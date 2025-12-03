@@ -222,5 +222,4 @@ class VGAlert {
 	}
 }
 
-
 export default VGAlert;

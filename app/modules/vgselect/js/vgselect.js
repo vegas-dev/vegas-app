@@ -308,12 +308,13 @@ class VGSelect extends BaseModule {
 		let observer = new MutationObserver(() => {
 			clearTimeout(observerTimout);
 			observerTimout = setTimeout(() => {
+				console.log('asdas')
 				VGSelect.build(select, true);
 			}, 10);
 		});
 
 		observer.observe(select, {
-			attributeFilter: ['disabled', 'required', 'style', 'hidden'],
+			attributeFilter: ['disabled', 'required', 'style', 'hidden', 'value', 'selected'],
 			childList: true,
 			subtree: true,
 			characterDataOldValue: true,

@@ -1,4 +1,4 @@
-export { default as VGAlert } from './app/modules/vgalert';
+/*export { default as VGAlert } from './app/modules/vgalert';*/
 export { default as VGCollapse } from './app/modules/vgcollapse';
 export { default as VGDropdown } from './app/modules/vgdropdown';
 export { default as VGFiles } from './app/modules/vgfiles';
