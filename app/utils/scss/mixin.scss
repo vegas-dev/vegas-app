@@ -9,3 +9,15 @@
 		}
 	}
 }
+
+@mixin mix-alert-color-mode($class) {
+	$colors: ['success', 'info', 'warning', 'danger'];
+
+	@each $value in $colors {
+		&.#{$class}-#{$value} {
+			@each $property, $val in get-alert-color($value) {
+				--#{$class}-#{$property}: #{$val};
+			}
+		}
+	}
+}

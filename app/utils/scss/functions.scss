@@ -20,3 +20,21 @@
 @function tint-color($color, $weight) {
 	@return mix(white, $color, $weight);
 }
+
+@function get-alert-color($type) {
+	@if $type == success {
+		@return $success-map;
+	}
+
+	@if $type == danger {
+		@return $danger-map;
+	}
+
+	@if $type == warning {
+		@return $warning-map;
+	}
+
+	@if $type == info {
+		@return $info-map;
+	}
+}

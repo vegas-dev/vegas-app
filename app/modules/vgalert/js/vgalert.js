@@ -7,6 +7,8 @@ import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
 
+const CLASS_NAME_ALERT = "vg-alert";
+
 class VGAlert {
 	constructor(params = {}) {
 		this._elementsDefault = {
@@ -29,7 +31,7 @@ class VGAlert {
 					},
 					toggle: 'data-vg-alert-cancel',
 					class: ['btn'],
-					text: 'Пошли на хуй'
+					text: 'Отмена'
 				}
 			},
 			message: {
@@ -38,6 +40,7 @@ class VGAlert {
 			},
 			icons: {
 				danger: getSVG('danger'),
+				warning: getSVG('warning'),
 				success: getSVG('success'),
 				info: getSVG('info'),
 			}
@@ -150,40 +153,37 @@ class VGAlert {
 	}
 
 	_buildModal() {
-		let id = 'vg-alert-' + makeRandomString(),
-			$modal = Selectors.find('.vg-alert-modal');
+		let id = CLASS_NAME_ALERT + '-' + makeRandomString(),
+			$modal = Selectors.find('.'+ CLASS_NAME_ALERT +'-modal');
 
 		if ($modal) $modal.remove();
 
 		return VGModal.build(id, this._params.modal, (self) => {
 			let element = self._element;
-			element.classList.add('vg-alert-modal');
+			element.classList.add(CLASS_NAME_ALERT + '-modal');
 
 			let $body = Selectors.find('.vg-modal-body', element);
 			if ($body) {
 				let wrapper = document.createElement('div');
-				Classes.add(wrapper, 'vg-alert-wrapper');
-
-				if (this._params.type === 'danger') {
-					Classes.add(wrapper, 'vg-alert-danger');
-				}
+				Classes.add(wrapper, CLASS_NAME_ALERT + '-wrapper');
+				Classes.add(wrapper, CLASS_NAME_ALERT + '-' + this._params.theme);
 
 				let content = document.createElement('div');
-				Classes.add(content, 'vg-alert-content');
+				Classes.add(content, CLASS_NAME_ALERT + '-content');
 
 				let icon = document.createElement('div');
-				Classes.add(icon, 'vg-alert-content--icon');
-				this._create(icon, 'icons', this._params.type);
+				Classes.add(icon, CLASS_NAME_ALERT + '-content--icon');
+				this._create(icon, 'icons', this._params.theme);
 
 				let message = document.createElement('div');
-				Classes.add(message, 'vg-alert-content--message');
+				Classes.add(message, CLASS_NAME_ALERT + '-content--message');
 
 				let title = document.createElement('div');
-				Classes.add(title, 'vg-alert-content--title');
+				Classes.add(title, CLASS_NAME_ALERT + '-content--title');
 				this._create(title, 'messages', 'title');
 
 				let description = document.createElement('div');
-				Classes.add(description, 'vg-alert-content--description');
+				Classes.add(description, CLASS_NAME_ALERT + '-content--description');
 				this._create(description, 'messages', 'description');
 
 				message.append(title);
@@ -238,7 +238,7 @@ class VGAlert {
 
 		if (element === 'icons') {
 			if (this._params.icon) {
-				container.innerHTML = this._params.elements.icon;
+				container.innerHTML = this._params.icon;
 			}
 		}
 

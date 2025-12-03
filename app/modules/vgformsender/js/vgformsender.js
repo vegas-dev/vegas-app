@@ -31,6 +31,8 @@ const NAME_KEY = 'vg.fs';
 /**
  * Constants Events
  */
+const CLASS_NAME_ALERT  = 'vg-form-sender-alert';
+
 const EVENT_KEY_SUCCESS = 'vg.fs.success';
 const EVENT_KEY_ERROR   = 'vg.fs.error';
 const EVENT_KEY_BEFORE  = 'vg.fs.before';
@@ -297,7 +299,7 @@ class VGFormSender extends BaseModule {
 						}
 					} else {
 						if ('errors' in response && normalizeData(response.errors)) {
-							status = normalizeData(response.errors) ? 'error' : 'success';
+							status = normalizeData(response.errors) ? 'danger' : 'success';
 						}
 					}
 				}
@@ -388,7 +390,9 @@ class VGFormSender extends BaseModule {
 	}
 
 	setDataRelationStatus($element, status, data, type) {
-		let $alert = Selectors.find('.vg-alert-' + status, $element);
+		if (status === 'error') status = 'danger';
+
+		let $alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-' + status, $element);
 
 		if (isObject(data)) {
 			if (status === 'error') {
@@ -435,11 +439,11 @@ class VGFormSender extends BaseModule {
 							code = ' ' + data.text + ' (' + data.code + ')';
 						}
 
-						if (!title) txt += '<h4 class="vg-alert-content--title">' + code + '</h4>';
-						else txt += '<h4 class="vg-alert-content--title">' + title + '</h4>';
+						if (!title) txt += '<h4 class="'+ CLASS_NAME_ALERT +'-content--title">' + code + '</h4>';
+						else txt += '<h4 class="'+ CLASS_NAME_ALERT +'-content--title">' + title + '</h4>';
 
 						if ('message' in response) {
-							txt += '<div class="vg-alert-content--message">' + response.message + '</div>'
+							txt += '<div class="'+ CLASS_NAME_ALERT +'-content--message">' + response.message + '</div>'
 						}
 
 						if ('errors' in response && this._params.alert.errors) {
@@ -469,13 +473,13 @@ class VGFormSender extends BaseModule {
 
 		if (!$alert) {
 			$alert = document.createElement('div');
-			$alert.classList.add('vg-alert', 'vg-alert-' + status, 'vg-alert-' + type);
+			$alert.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status, CLASS_NAME_ALERT + '-' + type);
 
 			let content = document.createElement('div');
-			content.classList.add('vg-alert-content');
+			content.classList.add(CLASS_NAME_ALERT + '-content');
 
 			let icon = document.createElement('div');
-			icon.classList.add('vg-alert-content--icon');
+			icon.classList.add(CLASS_NAME_ALERT + '-content--icon');
 
 			let i = document.createElement('i');
 			i.innerHTML = getSVG(status);
@@ -484,13 +488,13 @@ class VGFormSender extends BaseModule {
 			content.append(icon);
 
 			let text = document.createElement('div');
-			text.classList.add('vg-alert-content--text');
+			text.classList.add(CLASS_NAME_ALERT + '-content--text');
 			text.innerHTML = data.view;
 
 			content.append(text);
 			$alert.append(content);
 		} else {
-			let text = Selectors.find('.vg-alert-content--text', $alert);
+			let text = Selectors.find('.'+ CLASS_NAME_ALERT +'-content--text', $alert);
 			text.innerHTML = data.view;
 		}
 

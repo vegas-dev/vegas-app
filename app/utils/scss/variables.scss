@@ -54,25 +54,25 @@ $loader-map: (
 );
 
 // Colors Status
-$danger:        #dc3545 !default;
-$danger-border: tint-color($danger, 60%) !default;
-$danger-text:   shade-color($danger, 60%) !default;
-$danger-bg:     tint-color($danger, 80%) !default;
+$danger:        #FF2A2C !default;
+$danger-border: #FFCCC7 !default;
+$danger-text:   #DF0306 !default;
+$danger-bg:     #FFF2F0 !default;
 
-$success: #198754;
-$success-border: tint-color($success, 60%) !default;
-$success-text:   shade-color($success, 60%) !default;
-$success-bg:     tint-color($success, 80%) !default;
+$success: #4FD90B;
+$success-border: #BAF98A !default;
+$success-text:   #40BE02 !default;
+$success-bg:     #F6FFED !default;
 
 $warning: #FFC107;
-$warning-border: tint-color($warning, 60%) !default;
-$warning-text:   shade-color($warning, 60%) !default;
-$warning-bg:     tint-color($warning, 80%) !default;
+$warning-border: #FFDE79 !default;
+$warning-text:   #FFC107 !default;
+$warning-bg:     #FFF6DA !default;
 
-$info: #0DCAF0;
-$info-border: tint-color($info, 60%) !default;
-$info-text:   shade-color($info, 60%) !default;
-$info-bg:     tint-color($info, 80%) !default;
+$info: #1F8BFF;
+$info-border: #F0FAFF !default;
+$info-text:   #0471E5 !default;
+$info-bg:     #ADDDFF !default;
 
 $dark: #232323;
 $dark-border: shade-color($dark, 60%) !default;
@@ -80,24 +80,28 @@ $dark-text:   tint-color($dark, 60%) !default;
 $dark-bg:     shade-color($dark, 80%) !default;
 
 $success-map: (
+		icon: $success,
 		color: $success-text,
 		border-color: $success-border,
 		background-color: $success-bg
 );
 
 $danger-map: (
+		icon: $danger,
 		color: $danger-text,
 		border-color: $danger-border,
 		background-color: $danger-bg
 );
 
 $warning-map: (
+		icon: $warning,
 		color: $warning-text,
 		border-color: $warning-border,
 		background-color: $warning-bg
 );
 
 $info-map: (
+		icon: $info,
 		color: $info-text,
 		border-color: $info-border,
 		background-color: $info-bg
