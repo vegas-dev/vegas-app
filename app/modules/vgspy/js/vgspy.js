@@ -51,7 +51,6 @@ class VGSpy extends BaseModule {
 			parentScrollTop: 0
 		}
 		this._params = this._configAfterMerge(this._params);
-		console.log(this._params)
 
 		this.refresh();
 	}

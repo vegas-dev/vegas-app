@@ -167,7 +167,7 @@ class VGRollup  extends BaseModule {
 					element.classList.add(_this.classes.ellipsis);
 					element.style.webkitLineClamp = line;
 				} else {
-					console.log("Переменная [data-line] или параметр[line] не должны быть пустыми");
+					console.error("Переменная [data-line] или параметр[line] не должны быть пустыми");
 				}
 			}
 		}

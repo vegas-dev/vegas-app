@@ -70,12 +70,12 @@ class VGLoadMore extends BaseModule{
 			buttonParams = normalizeData(el.dataset.button);
 
 		if (!isObject(buttonParams)) {
-			console.log('Дата атрибут data-button должен быть в формате json и передавать объект');
+			console.error('Дата атрибут data-button должен быть в формате json и передавать объект');
 			return;
 		}
 
 		if (limit < offset) {
-			console.log('Параметр offset должен быть меньше или равен параметру limit');
+			console.error('Параметр offset должен быть меньше или равен параметру limit');
 			return;
 		}
 
