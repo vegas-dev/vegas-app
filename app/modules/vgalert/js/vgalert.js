@@ -1,12 +1,11 @@
-import {execute, makeRandomString, mergeDeepObject, noop} from "../../../utils/js/functions";
-import Selectors from "../../../utils/js/dom/selectors";
+import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal";
+
+import {isElement, isVisible, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
 import {getSVG} from "../../module-fn";
 import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
-
-/**
- * Constants
- */
+import Selectors from "../../../utils/js/dom/selectors";
+import EventHandler from "../../../utils/js/dom/event";
 
 class VGAlert {
 	constructor(params = {}) {
@@ -19,8 +18,8 @@ class VGAlert {
 						type: 'button',
 					},
 					toggle: 'data-vg-alert-agree',
-					class: [],
-					text: 'На всё согласен'
+					class: ['btn'],
+					text: 'Да, согласен'
 				},
 				cancel: {
 					element: '',
@@ -29,13 +28,13 @@ class VGAlert {
 						type: 'button',
 					},
 					toggle: 'data-vg-alert-cancel',
-					class: [],
+					class: ['btn'],
 					text: 'Пошли на хуй'
 				}
 			},
 			message: {
-				title: 'Удалить это гавно',
-				description: 'Вы действительно собираетесь удалить всё это гавно с Вашего сайта?',
+				title: 'Заголовок по умолчанию',
+				description: 'Описание текущего действия',
 			},
 			icons: {
 				danger: getSVG('danger'),
@@ -45,6 +44,14 @@ class VGAlert {
 		}
 
 		this._defaultParams = {
+			ajax: {
+				route: '',
+				target: '',
+				method: 'get',
+				loader: false,
+				once: false,
+				output: true,
+			},
 			modal: {
 				centered: false,
 				backdrop: true,
@@ -61,25 +68,11 @@ class VGAlert {
 			},
 			mode: 'confirm',
 			theme: 'danger',
-			callbacks: {
-				init: noop,
-				accept: noop,
-				cancel: noop,
-			},
 			buttons: {},
 			message: {},
 		};
 
-		this._params = this.setParams(params);
-	}
-
-	setParams(params) {
-		params = mergeDeepObject(this._defaultParams, params);
-		params.buttons = mergeDeepObject(this._elementsDefault.buttons, params.buttons);
-		params.message = mergeDeepObject(this._elementsDefault.message, params.message);
-		params.icon = this._elementsDefault.icons[params.theme];
-
-		return params;
+		this._params = this._setParams(params);
 	}
 
 	static call(options = {}) {
@@ -87,42 +80,73 @@ class VGAlert {
 		let modal = context._buildModal();
 		modal.show();
 
-		execute(context._params.callbacks.init, [context])
-
 		let container = modal._element,
 			agreeBtn = Selectors.find('[data-vg-alert-agree]', container),
 			cancelBtn = Selectors.find('[data-vg-alert-cancel]', container);
 
 		return new Promise((resolve, reject) => {
+			const handleAgree = () => {
+				cleanup();
+				resolve({
+					accepted: true,
+					timestamp: new Date(),
+				});
+				modal.hide();
+			};
+
+			const handleCancel = () => {
+				modal.hide();
+			};
+
+			const cleanup = () => {
+				if (agreeBtn) agreeBtn.removeEventListener('click', handleAgree);
+				if (cancelBtn) cancelBtn.removeEventListener('click', handleCancel);
+			};
+
 			if (context._params.mode === 'confirm') {
-				const handleAgree = () => {
-					cleanup();
-					resolve({
-						accepted: true,
-						timestamp: new Date(),
-						message: 'Пользователь согласился',
-					});
-					modal.hide();
-				};
-
-				const handleCancel = () => {
-					modal.hide();
-				};
-
-				const cleanup = () => {
-					agreeBtn.removeEventListener('click', handleAgree);
-					cancelBtn.removeEventListener('click', handleCancel);
-				};
-
-				agreeBtn.addEventListener('click', handleAgree);
-				cancelBtn.addEventListener('click', handleCancel);
+				if (agreeBtn) agreeBtn.addEventListener('click', handleAgree);
+				if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
 
 				container.addEventListener('vg.modal.hide', () => {
 					cleanup();
-					reject(new Error('Пользователь отказался'));
+
+					reject({
+						accepted: false,
+						timestamp: new Date(),
+					});
+				})
+			}
+
+			if (context._params.mode === 'info') {
+				if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
+
+				container.addEventListener('vg.modal.hide', () => {
+					cleanup();
+
+					reject({
+						accepted: false,
+						timestamp: new Date(),
+					});
 				})
 			}
 		})
+	}
+
+	static confirm(elem, options = {}) {
+		let context = new VGAlert(options);
+		if (context._params.mode !== 'confirm') return;
+
+		const instance = VGAlertConfirm.getOrCreateInstance(elem, context._params);
+		instance.run(VGAlert);
+	}
+
+	_setParams(params) {
+		params = mergeDeepObject(this._defaultParams, params);
+		params.buttons = mergeDeepObject(this._elementsDefault.buttons, params.buttons);
+		params.message = mergeDeepObject(this._elementsDefault.message, params.message);
+		params.icon = this._elementsDefault.icons[params.theme];
+
+		return params;
 	}
 
 	_buildModal() {
@@ -170,10 +194,14 @@ class VGAlert {
 
 				let buttons = document.createElement('div');
 				Classes.add(buttons, 'vg-alert-buttons');
-				this._create(buttons, 'button', 'cancel');
 
 				if (this._params.mode === 'confirm') {
+					this._create(buttons, 'button', 'cancel');
 					this._create(buttons, 'button', 'agree');
+				}
+
+				if (this._params.mode === 'info') {
+					this._create(buttons, 'button', 'cancel');
 				}
 
 				wrapper.append(content);
@@ -221,5 +249,89 @@ class VGAlert {
 		}
 	}
 }
+
+
+/**
+ * Constants
+ */
+const NAME      = 'alert';
+const NAME_KEY  = 'vg.alert';
+
+const SELECTOR_DATA_TOGGLE          = '[data-vg-toggle="alert"]';
+const EVENT_KEY_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
+
+const EVENT_KEY_LOADED              = 'vg.alert.loaded';
+const EVENT_KEY_ACCEPT              = 'vg.alert.accept';
+const EVENT_KEY_REJECT              = 'vg.alert.reject';
+
+class VGAlertConfirm extends BaseModule {
+	constructor(element, options = {}) {
+		super(element);
+
+		this._params = this._getParams(this._element, mergeDeepObject({
+
+		}, options));
+	}
+
+	static get NAME() {
+		return NAME;
+	}
+
+	static get NAME_KEY() {
+		return NAME_KEY
+	}
+
+	run(self) {
+		if (this._params.mode !== 'confirm') return;
+
+		self.call(this._params).then((resolve) => {
+			if (resolve.accepted) {
+				if (this._params.ajax.route) {
+					return this._ajax()
+				} else {
+					return resolve;
+				}
+			}
+		}).then((response) => {
+			EventHandler.trigger(this._element, EVENT_KEY_ACCEPT, {vgalert: response});
+		}).catch((error) => {
+			EventHandler.trigger(this._element, EVENT_KEY_REJECT, {vgalert: error});
+		})
+	}
+	_ajax() {
+		return new Promise((resolve) => {
+			this._route((status, data) => {
+				EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data});
+
+				resolve({
+					status: status,
+					data: data
+				});
+			})
+		});
+	}
+}
+
+EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, (event) => {
+	event.preventDefault();
+
+	let target = event.target;
+	if (!isVisible(target) || !isElement(target)) return;
+
+	VGAlert.confirm(target, {
+		message: {
+			title: 'Удалить этот товар',
+			description: 'Внимание этот товар будет удален'
+		},
+		buttons: {
+			agree: {
+				class: ['btn', 'btn-primary'],
+			},
+			cancel: {
+				class: ['btn', 'btn-outline-primary'],
+			}
+		}
+	});
+})
 
 export default VGAlert;
