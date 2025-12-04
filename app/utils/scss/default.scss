@@ -61,6 +61,7 @@
 	width: 7em;
 	height: 7em;
 }
+
 .vg-loader {
 	@include mix-vars('loader', $loader-map);
 	margin: var(--vg-loader-margin);
