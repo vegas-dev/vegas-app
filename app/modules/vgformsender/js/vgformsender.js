@@ -102,7 +102,8 @@ class VGFormSender extends BaseModule {
 				spinner: {
 					enabled: false,
 					element: '<span class="spinner-border spinner-border-sm me-2"></span>'
-				}
+				},
+				click: noop,
 			},
 		}, params));
 
@@ -229,11 +230,23 @@ class VGFormSender extends BaseModule {
 		EventHandler.trigger(_this._element, EVENT_KEY_SUCCESS, [event, _this, data]);
 	}
 
+	static buttonClick(formID, callback, status = 'before') {
+		const form = Selectors.find(formID);
+		if (form) {
+			const instance = VGFormSender.getOrCreateInstance(formID);
+			form.addEventListener('vg.fs.' + status, e => {
+				execute(callback, [form, instance])
+			})
+		}
+	}
+
 	_statusButton(status) {
 		if (!this._button) return;
 
 		if (status === 'before') {
-			const button = getDeepestLastChild(this._button) || this._button;
+			const button = this._button;
+
+			this._params.button.initial = this._button.innerHTML.trim();
 
 			if (this._params.button.spinner.enabled) {
 				this._button.insertAdjacentHTML('afterbegin', this._params.button.spinner.element);
@@ -246,19 +259,26 @@ class VGFormSender extends BaseModule {
 			if (this._params.button.disabled) {
 				Manipulator.set(this._button,'disabled', 'disabled');
 			}
+
+			execute(this._params.button.click, [this, this._button, 'before'])
 		}
 
 		if (status === 'after') {
 			if (this._params.button.enabled) {
+				console.log(this._params.button.initial)
 				this._button.innerHTML = this._params.button.initial;
 			}
+
 			if (this._params.button.disabled) {
 				Manipulator.remove(this._button,'disabled');
 			}
+
 			if (this._params.button.spinner.enabled) {
 				let spinner = this._button.querySelector('.spinner-border');
 				if (spinner) spinner.remove();
 			}
+
+			execute(this._params.button.click, [this, this._button, 'after'])
 		}
 	}
 
