@@ -1,3 +1,39 @@
+# VEGAS-APP 0.7.5 (Декабрь, 08, 2025)
+* В модуль VGFORSENDER добавлен параметр `fields` для программного добавление новых полей в FormData,
+если в значении объекта окажется массив или объект, то сформируется json строка
+```
+{
+  ...
+  fields: [
+    {
+      name: Andranik,
+      surname: Gasparyan
+    },
+    ...
+    {
+      json: [{key: value}]
+    }
+  ]
+}
+```
+* Хак на кнопку отправки `onclick` можно повесить колбек на событие
+```
+<button type="submit" class="btn btn-primary"
+  onclick='vg.VGFormSender.buttonClick("#form-simple", function (form, self) {
+    self._button.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+   }, "before")'
+>
+  <span>Сохранить</span>
+</button>
+```
+у модуля три события `before`, `error` и `success`
+
+* Исправлены ошибки в разных модулях
+
+## Новый модуль VGAlert
+
+---
+
 # VEGAS-APP 0.7.2 - 0.7.4 (Декабрь, 04, 2025)
 * Новые стили и иконки для success, info, danger, warning
 * Исправлены ошибки в разных модулях

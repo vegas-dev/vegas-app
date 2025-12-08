@@ -17,12 +17,6 @@ import {getSVG} from "../../module-fn";
 import VGHideShowPass from "./hideshowpass";
 
 /**
- * TODO
- * доделай динамическое добавление полей в форму,
- * но не меняй место их получения (их нужно получить прямо перед отправкой, после того как выполнился промис beforeSend)
- */
-
-/**
  * Constants
  */
 const NAME = 'form-sender';
@@ -107,9 +101,10 @@ class VGFormSender extends BaseModule {
 			},
 		}, params));
 
+		this._button = Selectors.find('[type="submit"]', this._element) || Selectors.find('[form="' + this._element.id + '"]') || null;
+
 		this._params.ajax.route = Manipulator.get(this._element, 'action').toLowerCase();
 		this._params.ajax.method = Manipulator.get(this._element, 'method').toLowerCase();
-		this._button = Selectors.find('[type="submit"]', this._element) || Selectors.find('[form="' + this._element.id + '"]') || null;
 
 		this._params.isBtnText   = Manipulator.get(this._element, 'data-btn-text') !== 'false';
 		this._params.isJsonParse = Manipulator.get(this._element, 'data-json-parse') !== 'false';
@@ -152,13 +147,23 @@ class VGFormSender extends BaseModule {
 		return this
 	}
 
-	request(data, event) {
+	request(event, data = null) {
 		const _this = this;
+		const mergeFormData = (target, source) => {
+			source.forEach((value, key) => {
+				target.set(key, value);
+			});
+			return target;
+		}
 
 		_this._alertBefore();
 
 		const submit = () => {
-			_this._params.ajax.data = new FormData(_this._element);
+			let formData = new FormData(_this._element);
+
+			if (data) _this._params.ajax.data = mergeFormData(data, formData);
+			else _this._params.ajax.data = formData;
+
 			_this._route(function (status, data) {
 				_this._element.classList.remove('was-validated');
 
@@ -265,7 +270,6 @@ class VGFormSender extends BaseModule {
 
 		if (status === 'after') {
 			if (this._params.button.enabled) {
-				console.log(this._params.button.initial)
 				this._button.innerHTML = this._params.button.initial;
 			}
 
@@ -553,34 +557,36 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		}
 	}
 
-	/*const collectData = function(data, fields) {
-		for (let name in fields) {
-			if (typeof fields[name] === 'object') {
-				for (let key in fields[name]) {
-					let arr = Object.keys(fields[name][key]).map(function (i) {
-						return fields[name][key][i];
-					});
-					data.append(name, arr);
-				}
-			} else {
-				data.append(name, fields[name]);
-			}
-		}
-
-		return data;
-	}*/
-
 	if (!instance._params.submit) {
 		event.preventDefault();
 
-		//let data = new FormData(instance._element);
+		const collectData = function(data, fields) {
+			fields.forEach(function(field) {
+				if (isObject(field)) {
+					let keys = Object.keys(field);
+					keys.forEach(function(key) {
+						let value = normalizeData(field[key]);
 
-		// TODO доделать
-		/*if (Array.isArray(instance._params.ajax.fields) && instance._params.ajax.fields.length) {
-			data = collectData(data, instance._params.ajax.fields);
-		}*/
+						if (Array.isArray(value) || isObject(value)) {
+							data.append(key, JSON.stringify(value));
+						} else {
+							data.append(key, value);
+						}
+					});
+				}
+			});
 
-		return instance.request(event);
+			return data;
+		}
+
+		let data = new FormData(instance._element),
+			fields = instance._params.fields;
+
+		if (Array.isArray(fields) && fields.length) {
+			data = collectData(data, fields);
+		}
+
+		return instance.request(event, data);
 	}
 })
 
