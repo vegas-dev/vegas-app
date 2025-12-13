@@ -204,7 +204,7 @@ class VGFiles extends BaseModule {
 		if (this._params.info) {
 			const $fileInfo = Selectors.find('.' + CLASS_NAME_INFO, this._element);
 			if ($fileInfo) {
-				let $list = Selectors.find('.' + CLASS_NAME_LIST);
+				let $list = Selectors.find('.' + CLASS_NAME_LIST, this._element);
 				if (!$list) {
 					$list = document.createElement('ul');
 					$list.classList.add(CLASS_NAME_LIST);

@@ -11,7 +11,7 @@
 }
 
 @mixin mix-alert-color-mode($class) {
-	$colors: ['success', 'info', 'warning', 'danger'];
+	$colors: ['success', 'info', 'warning', 'danger', 'dark'];
 
 	@each $value in $colors {
 		&.#{$class}-#{$value} {

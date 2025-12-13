@@ -13,17 +13,15 @@
 
 .vg-toast {
 	@include mix-vars('toast', $toast-map);
-	@include mix-vars('toast-danger', $toast-danger-map);
-	@include mix-vars('toast-success', $toast-success-map);
-	@include mix-vars('toast-warning', $toast-warning-map);
-	@include mix-vars('toast-info', $toast-info-map);
-	@include mix-vars('toast-dark', $toast-dark-map);
+	@include mix-alert-color-mode($class: vg-toast);
 	position: fixed;
 	width: var(--vg-toast-width);
 	height: var(--vg-toast-height);
 	z-index: var(--vg-toast-z-index);
 	padding: var(--vg-toast-indent);
 	transition: var(--vg-toast-transition);
+	opacity: 0;
+	visibility: hidden;
 
 	&.bottom {
 		padding-top: 0;
@@ -33,38 +31,13 @@
 		padding-bottom: 0;
 	}
 
-	&-danger {
-		--vg-toast-color: var(--vg-toast-danger-color);
-		--vg-toast-background-color: var(--vg-toast-danger-background-color);
-		--vg-toast-border-color: var(--vg-toast-danger-border-color);
-	}
-
-	&-success {
-		--vg-toast-color: var(--vg-toast-success-color);
-		--vg-toast-background-color: var(--vg-toast-success-background-color);
-		--vg-toast-border-color: var(--vg-toast-success-border-color);
-	}
-
-	&-warning {
-		--vg-toast-color: var(--vg-toast-warning-color);
-		--vg-toast-background-color: var(--vg-toast-warning-background-color);
-		--vg-toast-border-color: var(--vg-toast-warning-border-color);
-	}
-
-	&-info {
-		--vg-toast-color: var(--vg-toast-info-color);
-		--vg-toast-background-color: var(--vg-toast-info-background-color);
-		--vg-toast-border-color: var(--vg-toast-info-border-color);
-	}
-
-	&-dark {
-		--vg-toast-color: var(--vg-toast-dark-color);
-		--vg-toast-background-color: var(--vg-toast-dark-background-color);
-		--vg-toast-border-color: var(--vg-toast-dark-border-color);
-	}
-
 	&:not(.show) {
 		display: none;
+	}
+
+	&.shown {
+		opacity: 1;
+		visibility: visible;
 	}
 
 	&-wrapper {

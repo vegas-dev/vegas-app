@@ -13,6 +13,7 @@ const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="toast"]';
 
 const CLASS_NAME_OPEN    = 'vg-toast-open';
 const CLASS_NAME_SHOW    = 'show';
+const CLASS_NAME_SHOWN   = 'shown';
 
 const EVENT_KEY_HIDE     = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN   = `${NAME_KEY}.hidden`;
@@ -24,40 +25,40 @@ const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
 const EVENT_KEY_HIDE_PREVENTED  = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
 
+const defaultParams = {
+	static: true,
+	placement: 'bottom center',
+	autohide: false,
+	delay: 3000,
+	enableClickToast: true,
+	enableButtonClose: false,
+	keyboard: true,
+	theme: 'dark',
+	stack: {
+		enable: true,
+		max: 5
+	},
+	animation: {
+		enable: true,
+		in: 'animate__backInUp',
+		out: 'animate__backOutDown',
+		delay: 300,
+	},
+	ajax: {
+		route: '',
+		target: '',
+		method: 'get',
+		loader: false,
+		once: false,
+		output: true,
+	}
+};
+
 class VGToast extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
-		this._params = this._getParams(element, mergeDeepObject({
-			static: true,
-			placement: 'bottom center',
-			autohide: false,
-			delay: 3000,
-			enableClickToast: true,
-			enableButtonClose: true,
-			keyboard: true,
-			theme: 'dark',
-			stack: {
-				enable: true,
-				max: 5
-			},
-			animation: {
-				enable: true,
-				in: 'animate__fadeIn',
-				out: 'animate__fadeOut',
-				delay: 400,
-			},
-			ajax: {
-				route: '',
-				target: '',
-				method: 'get',
-				loader: false,
-				once: false,
-				output: true,
-			}
-		}, params));
-
-		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
+		this._params = this._getParams(element, mergeDeepObject(defaultParams, params));
 		this._animation(this._element, VGToast.NAME_KEY, this._params.animation);
 		this._dismissElement();
 		this._addEventListeners();
@@ -78,14 +79,7 @@ class VGToast extends BaseModule {
 	}
 
 	static build(text, params, callback) {
-		params = mergeDeepObject({
-			placement: 'bottom center',
-			static: false,
-			theme: 'dark',
-			stack: {
-				enable: false
-			}
-		}, params);
+		params = mergeDeepObject(defaultParams, {static: false, autohide: true}, params);
 
 		let target = document.createElement('div');
 		target.classList.add('vg-toast');
@@ -146,6 +140,10 @@ class VGToast extends BaseModule {
 		document.body.append(target);
 
 		let instance =  VGToast.getOrCreateInstance(target, params);
+		if ('animation' in params) {
+			instance._animation(target, VGToast.NAME_KEY, params.animation);
+		}
+
 		execute(callback, [instance]);
 		instance.show();
 	}
@@ -167,17 +165,19 @@ class VGToast extends BaseModule {
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget })
 		if (showEvent.defaultPrevented) return;
 
+		this._element?.classList.remove(CLASS_NAME_SHOW);
+
 		this._element.classList.add(CLASS_NAME_SHOW);
 		document.body.classList.add(CLASS_NAME_OPEN);
 
 		this._setPlacement();
 
 		const completeCallBack = () => {
-			this._element.classList.add(CLASS_NAME_SHOW);
-			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+			this._element.classList.add(CLASS_NAME_SHOWN);
 			this._scheduleHide();
+			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
 		}
-		this._queueCallback(completeCallBack, this._element, true, 0);
+		this._queueCallback(completeCallBack, this._element, true, this._params.animation.delay);
 	}
 
 	hide() {
@@ -185,6 +185,8 @@ class VGToast extends BaseModule {
 
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
+
+		this._element?.classList.remove(CLASS_NAME_SHOWN);
 
 		setTimeout(() => {
 			this._element?.classList.remove(CLASS_NAME_SHOW);

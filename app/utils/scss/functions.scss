@@ -37,4 +37,8 @@
 	@if $type == info {
 		@return $info-map;
 	}
+
+	@if $type == dark {
+		@return $dark-map;
+	}
 }
