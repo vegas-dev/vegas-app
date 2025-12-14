@@ -84,7 +84,11 @@ const Ajax = {
 		let x = Ajax.x();
 		x.open(method, url, async);
 		x.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-		if (method === 'POST') x.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+
+		if (!Ajax.checkFormData(data) && method === 'POST') {
+			x.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+		}
+
 		x.onreadystatechange = function () {
 			if (x.readyState === 4) {
 				switch (x.status) {
@@ -119,8 +123,20 @@ const Ajax = {
 	},
 
 	post: function (url, data, callback, async) {
-		data = JSON.stringify(data);
+		if (!Ajax.checkFormData(data)) {
+			data = JSON.stringify(data);
+		}
 		Ajax.send(url, callback, 'POST', data, async)
+	},
+
+	checkFormData: function (obj) {
+		return obj &&
+			typeof obj === 'object' &&
+			obj.constructor &&
+			obj.constructor.name === 'FormData' &&
+			typeof obj.append === 'function' &&
+			typeof obj.get === 'function' &&
+			typeof obj.getAll === 'function';
 	}
 };
 
