@@ -84,6 +84,7 @@ const Ajax = {
 		let x = Ajax.x();
 		x.open(method, url, async);
 		x.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+		if (method === 'POST') x.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
 		x.onreadystatechange = function () {
 			if (x.readyState === 4) {
 				switch (x.status) {
@@ -118,6 +119,7 @@ const Ajax = {
 	},
 
 	post: function (url, data, callback, async) {
+		data = JSON.stringify(data);
 		Ajax.send(url, callback, 'POST', data, async)
 	}
 };
