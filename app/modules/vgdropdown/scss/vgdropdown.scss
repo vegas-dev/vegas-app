@@ -22,8 +22,7 @@
 		min-width: var(--vg-dropdown-min-width);
 		position: absolute;
 		opacity: 0;
-		left: 0;
-		top: 100%;
+		padding-top: 2px;
 
 		&.open {
 			transition: none;

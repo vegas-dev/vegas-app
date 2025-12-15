@@ -37,6 +37,11 @@ class Params {
 		}
 
 		for (let key in mParams) {
+			if ('params' in mParams) {
+				mParams = mergeDeepObject(mParams, mParams.params);
+				delete mParams.params;
+			}
+
 			if (key.indexOf('-') !== -1) {
 				mParams = stringToNestedObjectWithValue(key, mParams[key], mParams);
 				delete mParams[key];

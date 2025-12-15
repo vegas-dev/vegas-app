@@ -32,11 +32,9 @@ class VGDropdown extends BaseModule {
 		super(element, params);
 
 		let defaultParams = {
-			offset: [0, 2],
 			backdrop: false,
 			overflow: false,
 			keyboard: false,
-			placement: 'bottom',
 			timeoutAnimation: 10,
 			hover: false,
 			ajax: {
@@ -48,7 +46,7 @@ class VGDropdown extends BaseModule {
 				output: true,
 			},
 			animation: {
-				fade: false,
+				fade: true,
 				enable: false,
 				in: 'animate__flipInY',
 				out: 'animate__flipOutY',
@@ -56,17 +54,13 @@ class VGDropdown extends BaseModule {
 			},
 		};
 
-		// Объединяем параметры корректно
 		this._params = this._getParams(element, mergeDeepObject(defaultParams, params));
 
 		const target = Selectors.getElementFromSelector(this._element);
 		this._parent = this._element.parentNode;
 		this._drop = target || Selectors.find(`.${TARGET_CONTAINER}`, this._parent);
 
-		if (!this._drop) {
-			console.warn('VGDropdown: не найден элемент .vg-dropdown-content или target по data-target');
-			return;
-		}
+		if (!this._drop) return;
 
 		this._isPlacement = false;
 		this.isFade = this._params.animation.fade;
@@ -96,17 +90,19 @@ class VGDropdown extends BaseModule {
 		const showEvent = EventHandler.trigger(this._drop, EVENT_KEY_SHOW, relatedTarget);
 		if (showEvent.defaultPrevented) return;
 
-		// Убираем всплывающие события на тач-устройствах
 		if ('ontouchstart' in document.documentElement) {
 			[].concat(...document.body.children).forEach(el => {
 				EventHandler.on(el, 'mouseover', noop);
 			});
 		}
 
+		console.log(this._params)
+
 		this._element.setAttribute('aria-expanded', 'true');
 		this._element.classList.add(CLASS_NAME_SHOW);
 		this._drop.classList.add(CLASS_NAME_SHOW);
 		this._setPlacement();
+		this._route();
 
 		if (this._params.backdrop && !this._params.hover) {
 			Backdrop.show();
@@ -174,7 +170,6 @@ class VGDropdown extends BaseModule {
 			document.body.classList.remove('dropdown-open');
 		}
 
-		// Задержка перед скрытием .show
 		setTimeout(() => {
 			const completeCallback = () => {
 				this._drop.classList.remove(CLASS_NAME_SHOW);
@@ -191,8 +186,7 @@ class VGDropdown extends BaseModule {
 			const placement = new Placement({
 				reference: this._element,
 				drop: this._drop,
-				offset: this._params.offset,
-				placement: this._params.placement,
+				placement: 'bottom-start',
 				boundary: 'clippingParents',
 				autoFlip: true,
 				overflowProtection: true,
