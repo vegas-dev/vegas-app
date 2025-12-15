@@ -36,6 +36,7 @@ class VGDropdown extends BaseModule {
 			overflow: false,
 			keyboard: false,
 			timeoutAnimation: 10,
+			placement: 'auto',
 			hover: false,
 			ajax: {
 				route: '',
@@ -95,8 +96,6 @@ class VGDropdown extends BaseModule {
 				EventHandler.on(el, 'mouseover', noop);
 			});
 		}
-
-		console.log(this._params)
 
 		this._element.setAttribute('aria-expanded', 'true');
 		this._element.classList.add(CLASS_NAME_SHOW);
@@ -183,13 +182,24 @@ class VGDropdown extends BaseModule {
 		if (!this._drop) return;
 
 		if (!this._isPlacement) {
+			let placementDefault = 'bottom-start',
+				autoFlip = false,
+				overflowProtection = false;
+
+			if (this._params.placement === 'auto') {
+				autoFlip = true;
+				overflowProtection = true;
+			} else {
+				placementDefault = this._params.placement
+			}
+
 			const placement = new Placement({
 				reference: this._element,
 				drop: this._drop,
-				placement: 'bottom-start',
+				placement: placementDefault,
 				boundary: 'clippingParents',
-				autoFlip: true,
-				overflowProtection: true,
+				autoFlip: autoFlip,
+				overflowProtection: overflowProtection,
 				fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
 			});
 
