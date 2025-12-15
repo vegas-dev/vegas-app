@@ -1,10 +1,11 @@
-import {execute, executeAfterTransition, isEmptyObj} from "../utils/js/functions";
+import {execute, executeAfterTransition, isEmptyObj, mergeDeepObject} from "../utils/js/functions";
 import Selectors from "../utils/js/dom/selectors";
 import Data from "../utils/js/dom/data";
 import Params from "../utils/js/components/params";
 import EventHandler from "../utils/js/dom/event";
-import {Ajax, getSVG} from "./module-fn";
+import {getSVG} from "./module-fn";
 import Animation from "../utils/js/components/animation";
+import Ajax from "../utils/js/components/ajax";
 
 class BaseModule {
 	constructor(element) {
@@ -65,18 +66,44 @@ class BaseModule {
 			}
 		}
 
-		setTimeout(() => {
-			Ajax[this._params.ajax.method](this._params.ajax.route, this._params.ajax.data || {}, (status, data) => {
+		const ajax = new Ajax();
+
+		let ajaxData = mergeDeepObject({
+			onProgress: (percent) => {
+				console.log(`Загрузка: ${percent}%`);
+			},
+			onSuccess: (data) => {
 				if ('once' in this._params.ajax && this._params.ajax.once) {
 					this._isLoaded = true;
 				}
 
 				if ('output' in this._params.ajax && this._params.ajax.output) {
-					setData(data.response);
+					setData(data.message);
 				}
 
-				execute(callback, [status, data, $content]);
-			});
+				execute(callback, ['success', data, $content]);
+			},
+			onError: (err) => {
+				if ('once' in this._params.ajax && this._params.ajax.once) {
+					this._isLoaded = true;
+				}
+
+				if ('output' in this._params.ajax && this._params.ajax.output) {
+					setData(err);
+				}
+
+				execute(callback, ['error', err, $content]);
+			}
+		}, this._params.ajax.data || {});
+
+		setTimeout(() => {
+			if (this._params.ajax.method === 'get') {
+				ajax.get(this._params.ajax.route, ajaxData);
+			}
+
+			if (this._params.ajax.method === 'post') {
+				ajax.post(this._params.ajax.route, ajaxData);
+			}
 		}, timeout)
 	}
 
