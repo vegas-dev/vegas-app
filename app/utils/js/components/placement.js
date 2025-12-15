@@ -3,138 +3,141 @@ import {Classes} from "../dom/manipulator";
 
 /**
  * Класс Placement, определяет и устанавливает местоположение элемента на странице.
- * TODO класс не дописан, не определяет сверху и снизу
  */
 
-const CLASS_NAME_RIGHT   = 'right';
-const CLASS_NAME_LEFT    = 'left';
-const CLASS_NAME_TOP     = 'top';
-const CLASS_NAME_BOTTOM  = 'bottom';
-
 class Placement {
-	constructor(arg = {}) {
-		this.params = mergeDeepObject({
-			element: null,
-			drop: null
-		}, arg);
+	constructor(config) {
+		this.reference = config.reference;
+		this.drop = config.drop;
+		this.offset = config.offset || [0, 0];
+		this.boundary = config.boundary || 'viewport';
+		this.autoFlip = config.autoFlip !== false;
+		this.overflowProtection = config.overflowProtection !== false;
+		this.placement = config.placement || 'bottom';
+		this.fallbackPlacements = config.fallbackPlacements || [];
 
-		this._drop = null;
-		this.drop = this.params.drop;
-
-		this._element = null;
-		this.element = this.params.element;
-
-		if (!this.drop) return false;
+		this._builtInPlacements = {
+			top: 'top',
+			'top-start': 'top-start',
+			'top-end': 'top-end',
+			bottom: 'bottom',
+			'bottom-start': 'bottom-start',
+			'bottom-end': 'bottom-end',
+			left: 'left',
+			'left-start': 'left-start',
+			'left-end': 'left-end',
+			right: 'right',
+			'right-start': 'right-start',
+			'right-end': 'right-end'
+		};
 	}
 
-	get drop() {
-		return this._drop;
+	_getPlacementRect(element) {
+		return element.getBoundingClientRect();
 	}
 
-	set drop(el) {
-		if (!el) return;
-		this._drop = el;
+	_getViewportRect() {
+		const doc = document.documentElement;
+		return {
+			width: doc.clientWidth,
+			height: doc.clientHeight,
+			left: 0,
+			top: 0,
+			right: doc.clientWidth,
+			bottom: doc.clientHeight
+		};
 	}
 
-	get element() {
-		return this._element;
-	}
+	_getOverflowConstraints() {
+		const refRect = this._getPlacementRect(this.reference);
+		const dropRect = this._getPlacementRect(this.drop);
+		const viewRect = this._getViewportRect();
+		const [xOffset, yOffset] = this.offset;
 
-	set element(el) {
-		if (!el) {
-			if (this.drop) {
-				this._element = this.drop.parentNode;
+		let placement = this.placement;
+
+		if (this.overflowProtection) {
+			const fallbacks = [this.placement, ...this.fallbackPlacements];
+			let best = null;
+
+			for (let p of fallbacks) {
+				let pos = this._calculatePosition(p, refRect, dropRect, xOffset, yOffset);
+				let overflow = this._calculateOverflow(pos, viewRect);
+
+				if (!best || overflow < best.overflow) {
+					best = { placement: p, position: pos, overflow };
+					if (overflow === 0) break;
+				}
 			}
+
+			placement = best.placement;
+			this._setStyles(best.position);
+		} else {
+			const pos = this._calculatePosition(placement, refRect, dropRect, xOffset, yOffset);
+			this._setStyles(pos);
 		}
 
-		this._element = el;
+		this.drop.setAttribute('data-placement', placement);
+	}
+
+	_calculatePosition(placement, refRect, dropRect, xOffset = 0, yOffset = 0) {
+		let top, left;
+
+		switch (placement) {
+			case 'top':
+			case 'top-start':
+				top = refRect.top - dropRect.height - yOffset;
+				left = placement === 'top-start' ? refRect.left + xOffset : refRect.left + (refRect.width - dropRect.width) / 2;
+				break;
+			case 'top-end':
+				top = refRect.top - dropRect.height - yOffset;
+				left = refRect.right - dropRect.width - xOffset;
+				break;
+			case 'bottom':
+			case 'bottom-start':
+				top = refRect.bottom + yOffset;
+				left = placement === 'bottom-start' ? refRect.left + xOffset : refRect.left + (refRect.width - dropRect.width) / 2;
+				break;
+			case 'bottom-end':
+				top = refRect.bottom + yOffset;
+				left = refRect.right - dropRect.width - xOffset;
+				break;
+			case 'left':
+				top = refRect.top + (refRect.height - dropRect.height) / 2;
+				left = refRect.left - dropRect.width - xOffset;
+				break;
+			case 'right':
+				top = refRect.top + (refRect.height - dropRect.height) / 2;
+				left = refRect.right + xOffset;
+				break;
+			default:
+				top = refRect.bottom + yOffset;
+				left = refRect.left + xOffset;
+		}
+
+		return { top, left };
+	}
+
+	_calculateOverflow(pos, viewRect) {
+		let overflow = 0;
+		if (pos.left < viewRect.left) overflow += viewRect.left - pos.left;
+		if (pos.top < viewRect.top) overflow += viewRect.top - pos.top;
+		if (pos.left + this.drop.offsetWidth > viewRect.right) overflow += (pos.left + this.drop.offsetWidth) - viewRect.right;
+		if (pos.top + this.drop.offsetHeight > viewRect.bottom) overflow += (pos.top + this.drop.offsetHeight) - viewRect.bottom;
+		return overflow;
+	}
+
+	_setStyles(pos) {
+		mergeDeepObject(this.drop.style, {
+			position: 'absolute',
+			top: `${pos.top}px`,
+			left: `${pos.left}px`,
+			margin: 0
+		})
 	}
 
 	_setPlacement() {
-		let rect = this._isElementInViewport(this.drop);
-
-		if (!rect.isView) {
-			if (!rect.isViewRight) {
-				Classes.remove(this.drop, CLASS_NAME_LEFT);
-				Classes.add(this.drop, CLASS_NAME_RIGHT);
-			}
-
-			if (!rect.isViewLeft) {
-				Classes.remove(this.drop, CLASS_NAME_RIGHT);
-				Classes.add(this.drop, CLASS_NAME_LEFT);
-			}
-
-			if (!rect.isViewTop) {
-				Classes.remove(this.drop, CLASS_NAME_BOTTOM);
-				Classes.add(this.drop, CLASS_NAME_TOP);
-			}
-
-			if (!rect.isViewBottom) {
-				Classes.remove(this.drop, CLASS_NAME_TOP);
-				Classes.add(this.drop, CLASS_NAME_BOTTOM);
-			}
-		}
-	}
-
-	_getPlacement() {
-		const _this = this;
-		const _parent = (self) => {
-			let parent = self.parentNode,
-				overflow = getComputedStyle(parent).overflow;
-
-			if (parent.tagName !== 'BODY') {
-				if (overflow === 'visible') {
-					_parent(parent)
-				} else {
-					return parent;
-				}
-			} else {
-				return null;
-			}
-		}
-
-		let isFixed = false, top, left,
-			bounds = _this.params.drop.getBoundingClientRect(),
-			parent = _this.params.element.getBoundingClientRect();
-
-		if (_parent(_this.params.element)) {
-			isFixed = true;
-			top = bounds.top;
-			left = bounds.left;
-		} else {
-			let styles = getComputedStyle(_this.params.drop);
-			top = normalizeData(styles.top.slice(0, -2));
-			left = normalizeData(styles.left.slice(0, -2));
-		}
-
-		if ((bounds.left + bounds.width) > window.innerWidth) {
-			left = parent.width - bounds.width;
-		}
-
-		return {
-			isFixed: isFixed,
-			top: top,
-			left: left
-		}
-	}
-
-	_isElementInViewport(element) {
-		const rect = element.getBoundingClientRect();
-		const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-		const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-
-		return {
-			isView: (
-				rect.top >= 0 &&
-				rect.left >= 0 &&
-				rect.bottom <= viewportHeight &&
-				rect.right <= viewportWidth
-			),
-			isViewRight: rect.right <= viewportWidth,
-			isViewLeft: rect.left >= 0,
-			isViewTop: rect.top >= 0,
-			isViewBottom: rect.bottom <= viewportHeight,
-		};
+		this._getOverflowConstraints();
 	}
 }
 

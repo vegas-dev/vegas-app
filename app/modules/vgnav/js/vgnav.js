@@ -23,7 +23,7 @@ const CLASS_NAME_ACTIVE    = 'active';
 /**
  * Constants toggle
  */
-const SELECTOR_DATA_TOGGLE = '.'+ CLASS_NAME +' a';
+const SELECTOR_DATA_TOGGLE = '.' + CLASS_NAME + ' a';
 
 /**
  * Constants Events
@@ -87,8 +87,12 @@ class VGNav extends BaseModule {
 		this.navigation = '.' + this._classes.wrapper;
 
 		if (this._params.animation.enable === false) {
-			this._params.animation.timeout = 10
+			this._params.animation.timeout = 10;
 		}
+
+		this._openDrops = new Map();
+		this._handleScroll = this._handleScroll.bind(this);
+		this._handleResize = this._handleResize.bind(this);
 	}
 
 	static get NAME() {
@@ -138,7 +142,7 @@ class VGNav extends BaseModule {
 					hamburger = '<span class="' + classes.hamburger + '--lines"><span></span><span></span><span></span></span>';
 
 				if (params.hamburger.title) {
-					mobileNavTitle = '<span class="' + classes.hamburger + '--title">'+ params.hamburger.title +'</span>';
+					mobileNavTitle = '<span class="' + classes.hamburger + '--title">' + params.hamburger.title + '</span>';
 				}
 
 				if (params.hamburger.body !== null) {
@@ -163,8 +167,8 @@ class VGNav extends BaseModule {
 			if ($dropdown_a.length) {
 				$dropdown_a.forEach(function (elem) {
 					if (!elem.querySelector('.toggle') && !elem.closest('.dots')) {
-						elem.setAttribute('aria-expanded', 'false')
-						elem.insertAdjacentHTML('beforeend', toggle)
+						elem.setAttribute('aria-expanded', 'false');
+						elem.insertAdjacentHTML('beforeend', toggle);
 					}
 				});
 			}
@@ -195,15 +199,32 @@ class VGNav extends BaseModule {
 		target.classList.add(CLASS_NAME_ACTIVE);
 
 		const $placement = new Placement({
-			drop: drop
-		})
+			reference: target,
+			drop: drop,
+			placement: 'bottom-start',
+			fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
+			offset: [0, 6],
+			boundary: 'clippingParents',
+			autoFlip: true,
+			overflowProtection: true
+		});
 
 		$placement._setPlacement();
 
+		this._openDrops.set(drop, {
+			reference: target,
+			placement: $placement,
+			scrollHandler: this._handleScroll,
+			resizeHandler: this._handleResize
+		});
+
+		window.addEventListener('scroll', this._handleScroll, { passive: true, capture: true });
+		window.addEventListener('resize', this._handleResize);
+
 		const completeCallBack = () => {
 			drop.classList.add(CLASS_NAME_FADE);
-			EventHandler.trigger(target, EVENT_KEY_SHOWN, relatedTarget)
-		}
+			EventHandler.trigger(target, EVENT_KEY_SHOWN, relatedTarget);
+		};
 		this._queueCallback(completeCallBack, drop, true, 10);
 	}
 
@@ -218,7 +239,7 @@ class VGNav extends BaseModule {
 		let element = relatedTarget.relatedTarget;
 
 		if ('elm' in relatedTarget && relatedTarget.elm) {
-			element = relatedTarget.elm
+			element = relatedTarget.elm;
 		}
 
 		if (element) {
@@ -245,13 +266,63 @@ class VGNav extends BaseModule {
 				if (index === 0) {
 					const completeCallback = () => {
 						el.classList.remove(CLASS_NAME_SHOW);
-						EventHandler.trigger(el, EVENT_KEY_HIDDEN, relatedTarget)
-					}
+						EventHandler.trigger(el, EVENT_KEY_HIDDEN, relatedTarget);
+					};
 
 					_this._queueCallback(completeCallback, el, true, 500);
 				}
+
+				const dropData = _this._openDrops.get(el);
+				if (dropData) {
+					window.removeEventListener('scroll', dropData.scrollHandler, { capture: true });
+					window.removeEventListener('resize', dropData.resizeHandler);
+					_this._openDrops.delete(el);
+				}
 			});
 		}
+	}
+
+	_handleScroll() {
+		for (const [drop, data] of this._openDrops.entries()) {
+			if (drop.offsetParent === null) {
+				this._cleanupDrop(drop);
+				continue;
+			}
+
+			data.placement._setPlacement();
+
+			if (!this._isElementInViewport(drop)) {
+				const target = data.reference;
+				this.hide({ relatedTarget: target });
+			}
+		}
+	}
+
+	_handleResize() {
+		for (const [drop, data] of this._openDrops.entries()) {
+			if (drop.offsetParent === null) continue;
+			data.placement._setPlacement();
+		}
+	}
+
+	_cleanupDrop(drop) {
+		const dropData = this._openDrops.get(drop);
+		if (dropData) {
+			window.removeEventListener('scroll', dropData.scrollHandler, { capture: true });
+			window.removeEventListener('resize', dropData.resizeHandler);
+			this._openDrops.delete(drop);
+		}
+	}
+
+	_isElementInViewport(el) {
+		const rect = el.getBoundingClientRect();
+		const viewHeight = window.innerHeight || document.documentElement.clientHeight;
+		const viewWidth = window.innerWidth || document.documentElement.clientWidth;
+
+		const vertInView = (rect.top <= viewHeight) && ((rect.top + rect.height) >= 0);
+		const horInView = (rect.left <= viewWidth) && ((rect.left + rect.width) >= 0);
+
+		return vertInView && horInView;
 	}
 
 	static init(element, params = {}) {
@@ -276,7 +347,7 @@ class VGNav extends BaseModule {
 
 					let relatedTarget = {
 						relatedTarget: target
-					}
+					};
 
 					instance.show(relatedTarget);
 				});
@@ -293,9 +364,9 @@ class VGNav extends BaseModule {
 					}
 
 					currentElem = null;
-					instance.hide({relatedTarget: relatedTarget, elm: elm});
-				})
-			})
+					instance.hide({ relatedTarget: relatedTarget, elm: elm });
+				});
+			});
 		}
 
 		const vgNavSidebar = document.getElementById('sidebar-nav');
@@ -314,16 +385,16 @@ class VGNav extends BaseModule {
 
 	static clearDrops(event) {
 		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) {
-			return
+			return;
 		}
 
-		VGNav.hideOpenDrops(event)
+		VGNav.hideOpenDrops(event);
 	}
 
 	static hideOpenDrops(event) {
-		[... Selectors.findAll('.dropdown:not(.disabled):not(:disabled).active')].forEach((el) => {
+		[...Selectors.findAll('.dropdown:not(.disabled):not(:disabled).active')].forEach((el) => {
 			let target = event.target,
-				drop   = target.closest('.dropdown');
+				drop = target.closest('.dropdown');
 
 			if (el !== drop) {
 				const nav = el.closest('.vg-nav');
@@ -337,9 +408,9 @@ class VGNav extends BaseModule {
 					return;
 				}
 
-				const relatedTarget = { relatedTarget: el }
+				const relatedTarget = { relatedTarget: el };
 
-				context.hide(relatedTarget)
+				context.hide(relatedTarget);
 			}
 		});
 	}
@@ -375,16 +446,16 @@ EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (
 
 	if (dropContent && isFirst) {
 		if (drop.classList.contains('active')) {
-			instance.hide({relatedTarget: drop});
+			instance.hide({ relatedTarget: drop });
 			return;
 		}
 	} else {
 		[...Selectors.findAll('.active', nav)].forEach(function (el) {
-			instance.hide({relatedTarget: el})
+			instance.hide({ relatedTarget: el });
 		});
 	}
 
-	instance.show({relatedTarget: drop});
+	instance.show({ relatedTarget: drop });
 });
 
 export default VGNav;
