@@ -1,0 +1,72 @@
+[data-vg-placement^="bottom"] {
+	top: 100%;
+}
+
+[data-vg-placement^="top"] {
+	bottom: 100%;
+}
+
+[data-vg-placement="bottom-start"] {
+	left: 0;
+
+	[data-vg-placement^="bottom"] {
+		top: 0;
+	}
+
+	[data-vg-placement="bottom-start"] {
+		left: -100%;
+	}
+}
+
+[data-vg-placement="bottom-end"] {
+	right: 0;
+
+	[data-vg-placement^="bottom"] {
+		top: 0;
+	}
+
+	[data-vg-placement="bottom-start"] {
+		right: 100%;
+		left: auto;
+	}
+}
+
+[data-vg-placement="top-start"] {
+	left: 0;
+
+	[data-vg-placement^="top"] {
+		bottom: 0;
+	}
+
+	[data-vg-placement="top-start"] {
+		left: -100%;
+	}
+
+	[data-vg-placement="bottom-start"] {
+		left: -100%;
+	}
+
+	[data-vg-placement^="bottom"] {
+		top: 0;
+	}
+}
+
+[data-vg-placement="top-end"] {
+	right: 0;
+
+	[data-vg-placement^="top"] {
+		bottom: 0;
+	}
+
+	[data-vg-placement^="bottom"] {
+		top: 0;
+	}
+
+	[data-vg-placement="top-start"] {
+		left: -100%;
+	}
+
+	[data-vg-placement="bottom-start"] {
+		left: -100%;
+	}
+}

@@ -55,7 +55,8 @@ class VGNav extends BaseModule {
 				enable: true,
 				always: false,
 				title: '',
-				body: null
+				body: null,
+				target: '#sidebar-nav'
 			},
 			callbacks: {
 				afterInit: noop,

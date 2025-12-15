@@ -77,7 +77,7 @@ class Placement {
 			this._setStyles(pos);
 		}
 
-		this.drop.setAttribute('data-placement', placement);
+		this.drop.setAttribute('data-vg-placement', placement);
 	}
 
 	_calculatePosition(placement, refRect, dropRect, xOffset = 0, yOffset = 0) {

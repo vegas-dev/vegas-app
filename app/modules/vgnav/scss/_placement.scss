@@ -1,44 +1,6 @@
 &.vg-nav-horizontal {
 	.vg-nav-wrapper {
 		flex-direction: row;
-
-		.dropdown {
-			> .dropdown-content {
-				&.left, .left {
-					left: 0;
-				}
-
-				&.right, .right {
-					right: 0;
-				}
-
-				&.top, .top {
-					top: 0;
-				}
-
-				&.bottom, .bottom {
-					bottom: 0;
-				}
-
-				.dropdown {
-					ul.left {
-						left: 100%;
-					}
-
-					ul.right {
-						right: 100%;
-					}
-
-					ul.top {
-						top: 100%;
-					}
-
-					ul.bottom {
-						bottom: 100%;
-					}
-				}
-			}
-		}
 	}
 }
 
@@ -46,64 +8,17 @@
 	.vg-nav-wrapper {
 		flex-direction: column;
 
-		.dropdown {
-			> ul {
-				&.left, .left {
-					left: 100%;
-				}
-
-				&.right, .right {
-					right: 100%;
-				}
-
-				&.top, .top {
-					top: 100%;
-				}
-
-				&.bottom, .bottom {
-					bottom: 100%;
-				}
-
-				&.fade {
-					&.top {
-						top: 0;
-					}
-					&.bottom {
-						bottom: 0;
-					}
-				}
-			}
-
-			&.show {
-				&.top {
-					> ul {
-						top: 0;
-					}
-				}
-				&.bottom {
-					> ul {
-						bottom: 0;
-					}
-				}
-			}
+		[data-vg-placement=top-start], [data-vg-placement=bottom-start] {
+			left: 100%;
 		}
 
-		.dropdown-mega {
-			position: relative;
+		[data-vg-placement^=bottom] {
+			top: 0;
+		}
 
-			.dropdown-mega-container {
-				left: 100%;
-				top: 100%;
-
-				&.fade {
-					&.top {
-						top: 0;
-					}
-
-					&.bottom {
-						bottom: 0;
-					}
-				}
+		[data-vg-placement^=bottom] {
+			[data-vg-placement=top-start] {
+				bottom: 0;
 			}
 		}
 	}
