@@ -15,14 +15,6 @@ class Ajax {
 		};
 		this.withCredentials = options.withCredentials || false;
 		this.csrfToken = options._token || this._getCsrfToken();
-
-		console.log(this.csrfToken)
-
-		if (this.csrfToken) {
-			options._token = this.csrfToken
-		}
-
-		console.log(options);
 	}
 
 	_getCsrfToken() {
@@ -58,6 +50,10 @@ class Ajax {
 		const fullUrl = this.baseUrl + url;
 		const isFormData = body instanceof FormData;
 		const requestHeaders = { ...this.defaultHeaders, ...headers };
+
+		if (!isFormData && this.csrfToken) {
+			body._token = this.csrfToken
+		}
 
 		// Для JSON устанавливаем заголовок, для FormData — НЕЛЬЗЯ
 		if (!isFormData && !('Content-Type' in headers)) {
