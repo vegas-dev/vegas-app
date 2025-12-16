@@ -98,11 +98,11 @@ class BaseModule {
 		}
 
 		setTimeout(() => {
-			if (this._params.ajax.method === 'get') {
+			if (this._params.ajax.method.toLowerCase() === 'get') {
 				ajax.get(this._params.ajax.route, ajaxData);
 			}
 
-			if (this._params.ajax.method === 'post') {
+			if (this._params.ajax.method.toLowerCase() === 'post') {
 				ajax.post(this._params.ajax.route, this._params.ajax.data, ajaxData);
 			}
 		}, timeout)

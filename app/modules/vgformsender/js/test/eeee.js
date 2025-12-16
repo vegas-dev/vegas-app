@@ -1,9 +1,10 @@
 import BaseModule from "../../base-module";
-import {Manipulator} from "../../../utils/js/dom/manipulator";
+import { Manipulator } from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
 import {
-	execute, getDeepestLastChild,
+	execute,
+	getDeepestLastChild,
 	isObject,
 	isVisible,
 	makeRandomString,
@@ -13,9 +14,9 @@ import {
 } from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
-import {getSVG} from "../../module-fn";
-/*import VGHideShowPass from "./hideshowpass";*/
-import {Sanitizer} from "../../../utils/js/components/templater";
+import { getSVG } from "../../module-fn";
+import VGHideShowPass from "./hideshowpass";
+import { Sanitizer } from "../../../utils/js/components/templater";
 
 /**
  * Constants
@@ -26,11 +27,11 @@ const NAME_KEY = 'vg.fs';
 /**
  * Constants Events
  */
-const CLASS_NAME_ALERT  = 'vg-form-sender-alert';
+const CLASS_NAME_ALERT = 'vg-form-sender-alert';
 
 const EVENT_KEY_SUCCESS = 'vg.fs.success';
-const EVENT_KEY_ERROR   = 'vg.fs.error';
-const EVENT_KEY_BEFORE  = 'vg.fs.before';
+const EVENT_KEY_ERROR = 'vg.fs.error';
+const EVENT_KEY_BEFORE = 'vg.fs.before';
 
 const EVENT_SUBMIT_DATA_API = `submit.${NAME_KEY}.data.api`;
 
@@ -100,38 +101,30 @@ class VGFormSender extends BaseModule {
 				},
 				click: noop,
 			},
-			sanitizer: {
-				allowedTags: ['div', 'span', 'p', 'a', 'img', 'table', 'tr' ,'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-				allowedAttributes: {
-					'a': ['href', 'class'],
-					'img': ['src', 'alt']
-				},
-				allowedSchemes: ['https', 'mailto']
-			}
 		}, params));
 
+		// Кэшируем элементы
 		this._button = null;
 		this._cachedElements = new Map();
 
 		this._initElements();
 	}
 
-	static get NAME() {
-		return NAME;
-	}
-
-	static get NAME_KEY() {
-		return NAME_KEY;
-	}
-
+	/**
+	 * Инициализация и кэширование DOM-элементов
+	 * @private
+	 */
 	_initElements() {
+		// Кэшируем основные элементы
 		this._button = Selectors.find('[type="submit"]', this._element) ||
 			Selectors.find('[form="' + this._element.id + '"]') ||
 			null;
 
+		// Кэшируем поля формы
 		const fields = Selectors.findAll('input, textarea, select', this._element);
 		this._cachedElements.set('fields', fields);
 
+		// Устанавливаем параметры
 		this._params.ajax.route = Manipulator.get(this._element, 'action') || this._params.ajax.route;
 		this._params.ajax.method = Manipulator.get(this._element, 'method') || this._params.ajax.method;
 
@@ -145,9 +138,18 @@ class VGFormSender extends BaseModule {
 		}
 	}
 
+	static get NAME() {
+		return NAME;
+	}
+
+	static get NAME_KEY() {
+		return NAME_KEY;
+	}
+
 	build() {
 		this._element.classList.add(this._params.classes.general);
 
+		// Используем кэшированные поля
 		const fields = this._cachedElements.get('fields');
 		if (fields) {
 			fields.forEach((el) => {
@@ -162,15 +164,9 @@ class VGFormSender extends BaseModule {
 			this._element.classList.add(this._params.classes.validation);
 		}
 
-		/*if (this._params.pass.enabled) {
-			[... Selectors.findAll('input[type="password"]', this._element)].forEach((el) => {
-				VGHideShowPass.init(el, this._params.pass);
-			})
-		}*/
-
 		execute(this._params.callback.afterInit, [this._element, this]);
 
-		return this
+		return this;
 	}
 
 	request(event, data = null) {
@@ -180,7 +176,7 @@ class VGFormSender extends BaseModule {
 				target.set(key, value);
 			});
 			return target;
-		}
+		};
 
 		_this._alertBefore();
 
@@ -236,6 +232,7 @@ class VGFormSender extends BaseModule {
 		const _this = this;
 
 		if (_this._params.alert.type === 'collapse') {
+			// Кэшируем поиск collapse
 			const collapseClass = _this._params.classes.alertCollapse;
 			if (!_this._cachedElements.has('collapses') || document.querySelector('.' + collapseClass + '.show')) {
 				const collapses = document.getElementsByClassName(collapseClass);
@@ -286,8 +283,8 @@ class VGFormSender extends BaseModule {
 		if (form) {
 			const instance = VGFormSender.getOrCreateInstance(form);
 			form.addEventListener('vg.fs.' + status, e => {
-				execute(callback, [form, instance])
-			})
+				execute(callback, [form, instance]);
+			});
 		}
 	}
 
@@ -295,8 +292,6 @@ class VGFormSender extends BaseModule {
 		if (!this._button) return;
 
 		if (status === 'before') {
-			const button = this._button;
-
 			this._params.button.initial = this._button.innerHTML.trim();
 
 			if (this._params.button.spinner.enabled) {
@@ -304,14 +299,14 @@ class VGFormSender extends BaseModule {
 			}
 
 			if (this._params.button.enabled) {
-				button.innerHTML = this._params.button.send
+				this._button.innerHTML = this._params.button.send;
 			}
 
 			if (this._params.button.disabled) {
-				Manipulator.set(this._button,'disabled', 'disabled');
+				Manipulator.set(this._button, 'disabled', 'disabled');
 			}
 
-			execute(this._params.button.click, [this, this._button, 'before'])
+			execute(this._params.button.click, [this, this._button, 'before']);
 		}
 
 		if (status === 'after') {
@@ -320,23 +315,28 @@ class VGFormSender extends BaseModule {
 			}
 
 			if (this._params.button.disabled) {
-				Manipulator.remove(this._button,'disabled');
+				Manipulator.remove(this._button, 'disabled');
 			}
 
 			if (this._params.button.spinner.enabled) {
-				let spinner = this._button.querySelector('.spinner-border');
+				const spinner = this._button.querySelector('.spinner-border');
 				if (spinner) spinner.remove();
 			}
 
-			execute(this._params.button.click, [this, this._button, 'after'])
+			execute(this._params.button.click, [this, this._button, 'after']);
 		}
 	}
 
 	_jsonParse(data, status) {
 		const _this = this;
 
-		if (_this._params.isJsonParse) {
-			_this.alert(normalizeData(data), status);
+		if (_this._params.isJsonParse && typeof data === 'string') {
+			try {
+				const parserData = JSON.parse(data);
+				_this.alert(parserData, status);
+			} catch (e) {
+				_this.alert(data, status);
+			}
 		} else {
 			_this.alert(data, status);
 		}
@@ -358,7 +358,7 @@ class VGFormSender extends BaseModule {
 									message: 'Something went wrong, please repeat later'
 								},
 								text: 'Something went wrong, please repeat later'
-							}
+							};
 						}
 					} else {
 						if ('errors' in response && normalizeData(response.errors)) {
@@ -374,56 +374,53 @@ class VGFormSender extends BaseModule {
 		}
 
 		if (_this._params.alert.type === 'modal') {
-			_this._alertModal(data, status)
+			_this._alertModal(data, status);
 		}
 
 		if (_this._params.alert.type === 'collapse') {
-			_this._alertCollapse(data, status)
+			_this._alertCollapse(data, status);
 		}
 	}
 
 	_alertModal(data, status) {
 		const _this = this;
 
-		// Есть ли открытые модалки, закрываем
-		[...document.getElementsByClassName('modal')].forEach(function (element) {
-			if (element && element.classList.contains('show')) {
-				let mBS = bootstrap?.Modal?.getOrCreateInstance(element);
-				mBS.hide();
+		// Кэшируем поиск модалок
+		const modals = document.querySelectorAll('.modal.show, .vg-modal.show');
+		modals.forEach(element => {
+			if (element.classList.contains('modal') && window.bootstrap?.Modal) {
+				const bsModal = window.bootstrap.Modal.getInstance(element);
+				if (bsModal) bsModal.hide();
+			}
+			if (element.classList.contains('vg-modal')) {
+				const vgModal = VGModal.getInstance(element);
+				if (vgModal) vgModal.hide();
 			}
 		});
 
-		[...document.getElementsByClassName('vg-modal')].forEach(function (element) {
-			if (element && element.classList.contains('show')) {
-				const mVG = VGModal.getOrCreateInstance(element);
-				mVG.hide([mVG]);
-			}
-		});
-
-		let id = _this._params.classes.general + '-' + makeRandomString(),
-			$modal = Selectors.find('.' + _this._params.classes.alertModal);
-
+		const randomId = _this._params.classes.general + '-' + makeRandomString();
+		const $modal = document.querySelector('.' + _this._params.classes.alertModal);
 		if ($modal) $modal.remove();
 
 		setTimeout(() => {
-			VGModal.init(id, {
-				dismiss: true,
+			VGModal.init(randomId, {
 				classes: {
 					alert: _this._params.classes.alertModal
 				}
 			}, function (self) {
-				let element = self._element;
+				const element = self._element;
 				element.classList.add(_this._params.classes.alertModal);
 
-				let $body = Selectors.find('.vg-modal-body', element);
-				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
+				const $body = element.querySelector('.vg-modal-body');
+				if ($body) {
+					$body.innerHTML = '';
+					$body.appendChild(_this.setDataRelationStatus(element, status, data, 'modal'));
+				}
 
 				self.toggle();
 
 				if (_this._params.alert.delay > 0) {
-					setTimeout(() => {
-						self.hide();
-					}, _this._params.alert.delay)
+					setTimeout(() => self.hide(), _this._params.alert.delay);
 				}
 			});
 		}, _this._params.timeout);
@@ -432,132 +429,71 @@ class VGFormSender extends BaseModule {
 	_alertCollapse(data, status) {
 		const _this = this;
 
-		let $collapse = Selectors.find('.' + _this._params.classes.alertCollapse);
+		let $collapse = document.querySelector('.' + _this._params.classes.alertCollapse);
 		if (!$collapse) {
 			$collapse = document.createElement('div');
-			$collapse.classList.add(_this._params.classes.alertCollapse);
-			$collapse.classList.add('vg-collapse');
+			$collapse.classList.add(_this._params.classes.alertCollapse, 'vg-collapse');
 			$collapse.id = _this._params.classes.general + '-' + makeRandomString();
-			$collapse.append(_this.setDataRelationStatus($collapse, status, data, 'collapse'));
-
+			$collapse.appendChild(_this.setDataRelationStatus($collapse, status, data, 'collapse'));
 			_this._element.prepend($collapse);
+		} else {
+			// Обновляем содержимое существующего collapse
+			const existingAlert = $collapse.querySelector(`.${CLASS_NAME_ALERT}`);
+			if (existingAlert) {
+				$collapse.removeChild(existingAlert);
+			}
+			$collapse.appendChild(_this.setDataRelationStatus($collapse, status, data, 'collapse'));
 		}
 
-		let collapse = VGCollapse.getOrCreateInstance($collapse, {toggle: false});
-		collapse.toggle();
+		const collapse = VGCollapse.getOrCreateInstance($collapse, { toggle: false });
+		collapse.show();
 
 		if (_this._params.alert.delay > 0) {
-			setTimeout(() => {
-				collapse.hide();
-			}, _this._params.alert.delay)
+			setTimeout(() => collapse.hide(), _this._params.alert.delay);
 		}
 	}
 
 	setDataRelationStatus($element, status, data, type) {
 		if (status === 'error') status = 'danger';
 
-		let $alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-' + status, $element);
-
-		if (isObject(data)) {
-			if (status === 'error') {
-				if ('code' in data && data.code !== 200) {
-					if ('text' in data && !data.text) {
-						const messages = {
-							400: 'Bad Request',
-							401: 'Unauthorized',
-							403: 'Forbidden',
-							404: 'Not Found',
-							413: 'Payload Too Large',
-							422: 'Unprocessable Entity',
-							500: 'Internal Server Error',
-							504: 'Gateway Timeout'
-						};
-						data.text = messages[data.code] || 'Something went wrong, please repeat later';
-					}
-				}
-			}
-
-			if ('response' in data) {
-				let response = normalizeData(data.response), title = '', txt = '', code = '';
-				const sanitizer = new Sanitizer(this._params.sanitizer);
-
-				if (typeof response !== 'string') {
-					if (!('view' in response)) {
-						if ('title' in response) title = response.title;
-						if (status === 'error' && data.code !== 200 && this._params.alert.errors) {
-							code = ' ' + data.text + ' (' + data.code + ')';
-						}
-
-						if (!title) txt += '<h4 class="'+ CLASS_NAME_ALERT +'-content--title">' + code + '</h4>';
-						else txt += '<h4 class="'+ CLASS_NAME_ALERT +'-content--title">' + title + '</h4>';
-
-						if ('message' in response) {
-							txt += '<div class="'+ CLASS_NAME_ALERT +'-content--message">' + response.message + '</div>'
-						}
-
-						if ('errors' in response && this._params.alert.errors) {
-							let errors = normalizeData(response.errors) || null;
-							if (isObject(errors)) {
-								for (const error in errors) {
-									if (Array.isArray(errors[error])) {
-										errors[error].forEach(function (t) {
-											txt += '<div>'+ t +'</div>';
-										})
-									} else {
-										txt = '<div>'+ errors[error] +'</div>';
-									}
-								}
-							}
-						}
-
-						txt = sanitizer.sanitizeHTML(txt);
-
-						data = {
-							view: txt
-						}
-					}
-				} else {
-					response = sanitizer.sanitizeHTML(response);
-					data.view = response;
-				}
-			}
-		}
-
+		// Проверяем существование alert через кэшированный селектор
+		let $alert = $element.querySelector(`.${CLASS_NAME_ALERT}-${status}`);
 		if (!$alert) {
 			$alert = document.createElement('div');
-			$alert.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status, CLASS_NAME_ALERT + '-' + type);
+			$alert.className = `${CLASS_NAME_ALERT} ${CLASS_NAME_ALERT}-${status} ${CLASS_NAME_ALERT}-${type}`;
 
-			let content = document.createElement('div');
-			content.classList.add(CLASS_NAME_ALERT + '-content');
+			const content = document.createElement('div');
+			content.className = `${CLASS_NAME_ALERT}-content`;
 
-			let icon = document.createElement('div');
-			icon.classList.add(CLASS_NAME_ALERT + '-content--icon');
+			const icon = document.createElement('div');
+			icon.className = `${CLASS_NAME_ALERT}-content--icon`;
+			icon.innerHTML = getSVG(status);
 
-			let i = document.createElement('i');
-			i.innerHTML = getSVG(status);
+			const text = document.createElement('div');
+			text.className = `${CLASS_NAME_ALERT}-content--text`;
 
-			icon.append(i);
-			content.append(icon);
+			if (isObject(data) && 'view' in data) {
+				text.innerHTML = data.view;
+			} else {
+				text.textContent = typeof data === 'string' ? data : JSON.stringify(data);
+			}
 
-			let text = document.createElement('div');
-			text.classList.add(CLASS_NAME_ALERT + '-content--text');
-			text.innerHTML = data.view;
-
-			content.append(text);
+			content.append(icon, text);
 			$alert.append(content);
 		} else {
-			let text = Selectors.find('.'+ CLASS_NAME_ALERT +'-content--text', $alert);
-			text.innerHTML = data.view;
+			const textEl = $alert.querySelector(`.${CLASS_NAME_ALERT}-content--text`);
+			if (textEl) {
+				if (isObject(data) && 'view' in data) {
+					textEl.innerHTML = data.view;
+				} else {
+					textEl.textContent = typeof data === 'string' ? data : JSON.stringify(data);
+				}
+			}
 		}
 
 		return $alert;
 	}
 
-	/**
-	 * Инициализация
-	 * @param element
-	 * @param params
-	 */
 	static init(element, params = {}) {
 		const instance = VGFormSender.getOrCreateInstance(element, params);
 		instance.build();
@@ -578,9 +514,7 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		if (!instance._element.checkValidity()) {
 			event.preventDefault();
 			event.stopPropagation();
-
 			instance._element.classList.add(instance._params.classes.wasValidate);
-
 			return false;
 		}
 	}
@@ -591,24 +525,17 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 		const collectData = function(data, fields) {
 			fields.forEach(function(field) {
 				if (isObject(field)) {
-					let keys = Object.keys(field);
-					keys.forEach(function(key) {
+					Object.keys(field).forEach(function(key) {
 						let value = normalizeData(field[key]);
-
-						if (Array.isArray(value) || isObject(value)) {
-							data.append(key, JSON.stringify(value));
-						} else {
-							data.append(key, value);
-						}
+						data.append(key, Array.isArray(value) || isObject(value) ? JSON.stringify(value) : value);
 					});
 				}
 			});
-
 			return data;
-		}
+		};
 
-		let data = new FormData(instance._element),
-			fields = instance._params.fields;
+		let data = new FormData(instance._element);
+		const fields = instance._params.fields;
 
 		if (Array.isArray(fields) && fields.length) {
 			data = collectData(data, fields);
@@ -616,6 +543,6 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 
 		return instance.request(event, data);
 	}
-})
+});
 
 export default VGFormSender;

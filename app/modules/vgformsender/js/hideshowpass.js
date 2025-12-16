@@ -67,7 +67,7 @@ class VGHideShowPass extends BaseModule{
 			this._params.template = 'pass-open';
 		}
 
-		new Templater(this._element, this._params).render();
+		//new Templater(this._element, this._params).render();
 	}
 }
 

@@ -110,10 +110,19 @@ class VGFormSender extends BaseModule {
 			}
 		}, params));
 
-		this._button = null;
-		this._cachedElements = new Map();
+		this._button = Selectors.find('[type="submit"]', this._element) || Selectors.find('[form="' + this._element.id + '"]') || null;
 
-		this._initElements();
+		this._params.ajax.route = Manipulator.get(this._element, 'action').toLowerCase();
+		this._params.ajax.method = Manipulator.get(this._element, 'method').toLowerCase();
+
+		this._params.isBtnText   = Manipulator.get(this._element, 'data-btn-text') !== 'false';
+		this._params.isJsonParse = Manipulator.get(this._element, 'data-json-parse') !== 'false';
+		this._params.isShowPass  = Manipulator.get(this._element, 'data-show-pass') === 'true';
+
+		if (this._button) {
+			this._params = this._getParams(this._button, this._params);
+			this._params.button.initial = this._button.innerHTML || this._params.button.initial;
+		}
 	}
 
 	static get NAME() {
@@ -124,38 +133,14 @@ class VGFormSender extends BaseModule {
 		return NAME_KEY;
 	}
 
-	_initElements() {
-		this._button = Selectors.find('[type="submit"]', this._element) ||
-			Selectors.find('[form="' + this._element.id + '"]') ||
-			null;
-
-		const fields = Selectors.findAll('input, textarea, select', this._element);
-		this._cachedElements.set('fields', fields);
-
-		this._params.ajax.route = Manipulator.get(this._element, 'action') || this._params.ajax.route;
-		this._params.ajax.method = Manipulator.get(this._element, 'method') || this._params.ajax.method;
-
-		this._params.isBtnText = Manipulator.get(this._element, 'data-btn-text') !== 'false';
-		this._params.isJsonParse = Manipulator.get(this._element, 'data-json-parse') !== 'false';
-		this._params.isShowPass = Manipulator.get(this._element, 'data-show-pass') === 'true';
-
-		if (this._button) {
-			this._params = this._getParams(this._button, this._params);
-			this._params.button.initial = this._button.innerHTML.trim() || this._params.button.initial;
-		}
-	}
-
 	build() {
 		this._element.classList.add(this._params.classes.general);
 
-		const fields = this._cachedElements.get('fields');
-		if (fields) {
-			fields.forEach((el) => {
-				if (isVisible(el) && el.parentElement) {
-					el.parentElement.classList.add(this._params.classes.content);
-				}
-			});
-		}
+		[... Selectors.findAll('input, textarea, select', this._element)].forEach((el) => {
+			if (isVisible(el)) {
+				el.parentElement.classList.add(this._params.classes.content)
+			}
+		});
 
 		if (this._params.validate) {
 			Manipulator.set(this._element, 'novalidate', '');
@@ -236,17 +221,11 @@ class VGFormSender extends BaseModule {
 		const _this = this;
 
 		if (_this._params.alert.type === 'collapse') {
-			const collapseClass = _this._params.classes.alertCollapse;
-			if (!_this._cachedElements.has('collapses') || document.querySelector('.' + collapseClass + '.show')) {
-				const collapses = document.getElementsByClassName(collapseClass);
-				_this._cachedElements.set('collapses', collapses);
-
-				[...collapses].forEach(function (element) {
-					if (element.classList.contains('show')) {
-						VGCollapse.getOrCreateInstance(element, { toggle: false }).hide();
-					}
-				});
-			}
+			[...document.getElementsByClassName(_this._params.classes.alertCollapse)].forEach(function (element) {
+				if (element && element.classList.contains('show')) {
+					VGCollapse.getOrCreateInstance(element, {toggle: false}).hide();
+				}
+			});
 		}
 
 		_this._statusButton('before');
@@ -335,8 +314,15 @@ class VGFormSender extends BaseModule {
 	_jsonParse(data, status) {
 		const _this = this;
 
-		if (_this._params.isJsonParse) {
-			_this.alert(normalizeData(data), status);
+		if (_this._params.isJsonParse && typeof data === 'string') {
+			let parserData = {};
+
+			try {
+				parserData = JSON.parse(data);
+				_this.alert(parserData, status);
+			} catch (e) {
+				_this.alert(data, status);
+			}
 		} else {
 			_this.alert(data, status);
 		}
@@ -388,7 +374,7 @@ class VGFormSender extends BaseModule {
 		// Есть ли открытые модалки, закрываем
 		[...document.getElementsByClassName('modal')].forEach(function (element) {
 			if (element && element.classList.contains('show')) {
-				let mBS = bootstrap?.Modal?.getOrCreateInstance(element);
+				let mBS = bootstrap.Modal.getOrCreateInstance(element);
 				mBS.hide();
 			}
 		});
@@ -407,7 +393,6 @@ class VGFormSender extends BaseModule {
 
 		setTimeout(() => {
 			VGModal.init(id, {
-				dismiss: true,
 				classes: {
 					alert: _this._params.classes.alertModal
 				}
@@ -479,6 +464,7 @@ class VGFormSender extends BaseModule {
 
 			if ('response' in data) {
 				let response = normalizeData(data.response), title = '', txt = '', code = '';
+
 				const sanitizer = new Sanitizer(this._params.sanitizer);
 
 				if (typeof response !== 'string') {
