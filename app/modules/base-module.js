@@ -68,20 +68,21 @@ class BaseModule {
 
 		const ajax = new Ajax();
 
-		let ajaxData = mergeDeepObject({
-			onProgress: (percent) => {
-				console.log(`Загрузка: ${percent}%`);
-			},
+		let ajaxData = {
 			onSuccess: (data) => {
+				let result = {
+					code: 200,
+					response: data,
+				}
 				if ('once' in this._params.ajax && this._params.ajax.once) {
 					this._isLoaded = true;
 				}
 
 				if ('output' in this._params.ajax && this._params.ajax.output) {
-					setData(data.message);
+					setData(result.response);
 				}
 
-				execute(callback, ['success', data, $content]);
+				execute(callback, ['success', result, $content]);
 			},
 			onError: (err) => {
 				if ('once' in this._params.ajax && this._params.ajax.once) {
@@ -94,7 +95,7 @@ class BaseModule {
 
 				execute(callback, ['error', err, $content]);
 			}
-		}, this._params.ajax.data || {});
+		}
 
 		setTimeout(() => {
 			if (this._params.ajax.method === 'get') {
@@ -102,7 +103,7 @@ class BaseModule {
 			}
 
 			if (this._params.ajax.method === 'post') {
-				ajax.post(this._params.ajax.route, ajaxData);
+				ajax.post(this._params.ajax.route, this._params.ajax.data, ajaxData);
 			}
 		}, timeout)
 	}

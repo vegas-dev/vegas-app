@@ -1,3 +1,5 @@
+import {mergeDeepObject, noop} from "../functions";
+
 class Ajax {
 	/**
 	 * Конфигурация запроса
@@ -17,6 +19,11 @@ class Ajax {
 		this.csrfToken = options._token || this._getCsrfToken();
 	}
 
+	/**
+	 * Получение csrf токена из тега meta
+	 * @returns {string}
+	 * @private
+	 */
 	_getCsrfToken() {
 		const meta = document.querySelector('meta[name="csrf-token"]');
 		if (meta) return meta.getAttribute('content');
@@ -42,17 +49,20 @@ class Ajax {
 		body = null,
 		headers = {},
 		onProgress = null,
-		onSuccess = (data) => console.log(data),
-		onError = (error) => console.error(error),
+		onSuccess = (data) => noop(),
+		onError = (error) => noop(),
 		onUploadStart = () => {},
 		onUploadEnd = () => {}
 	} = {}) {
 		const fullUrl = this.baseUrl + url;
 		const isFormData = body instanceof FormData;
 		const requestHeaders = { ...this.defaultHeaders, ...headers };
+		const token = {};
 
 		if (!isFormData && this.csrfToken) {
-			body._token = this.csrfToken
+			token.body = JSON.stringify({
+				_token: this.csrfToken
+			})
 		}
 
 		// Для JSON устанавливаем заголовок, для FormData — НЕЛЬЗЯ
@@ -85,12 +95,11 @@ class Ajax {
 		}
 
 		// Остальные случаи — fetch
-		return this._makeFetch(fullUrl, {
+		return this._makeFetch(fullUrl, mergeDeepObject({
 			method,
 			headers: requestHeaders,
-			body: isFormData ? body : JSON.stringify(body),
 			withCredentials: this.withCredentials
-		}, onSuccess, onError);
+		}, token), onSuccess, onError);
 	}
 
 	/**
