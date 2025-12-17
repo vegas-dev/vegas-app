@@ -2,9 +2,8 @@ import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {isDisabled, mergeDeepObject} from "../../../utils/js/functions";
-import {Templater} from "../../../utils/js/components/templater";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
-import {getSVG} from "../../module-fn";
+import Html from "../../../utils/js/components/templater";
 
 /**
  * Constants
@@ -62,19 +61,16 @@ class VGHideShowPass extends BaseModule{
 	}
 
 	build(isShow = false) {
+		let classes = this._params.classes.join(' '), elm = '';
+		const HTML = Html('string');
+
 		if (!isShow) {
-			let elm = Templater.createElement('span', {
-				attrs: {
-					'data-vg-toggle': 'pass',
-					'class': 'alert(2)',
-					'title': 'Показать',
-					'data-bs-toggle': 'tooltip'
-				},
-				text: getSVG('eye')
-			});
+			elm = HTML.component('eye', {class: classes});
 		} else {
-			this._params.template = 'pass-open';
+			elm = HTML.component('eye', {class: classes, type: 'hide'});
 		}
+
+		this._element.insertAdjacentHTML(this._params.insert, elm);
 	}
 }
 

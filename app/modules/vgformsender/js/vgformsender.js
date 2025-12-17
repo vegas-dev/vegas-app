@@ -3,7 +3,7 @@ import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import VGModal from "../../vgmodal/js/vgmodal";
 import {
-	execute, getDeepestLastChild,
+	execute,
 	isObject,
 	isVisible,
 	makeRandomString,
@@ -14,8 +14,7 @@ import {
 import Selectors from "../../../utils/js/dom/selectors";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import {getSVG} from "../../module-fn";
-/*import VGHideShowPass from "./hideshowpass";*/
-import {Sanitizer} from "../../../utils/js/components/templater";
+import VGHideShowPass from "./hideshowpass";
 
 /**
  * Constants
@@ -162,11 +161,11 @@ class VGFormSender extends BaseModule {
 			this._element.classList.add(this._params.classes.validation);
 		}
 
-		/*if (this._params.pass.enabled) {
+		if (this._params.pass.enabled) {
 			[... Selectors.findAll('input[type="password"]', this._element)].forEach((el) => {
 				VGHideShowPass.init(el, this._params.pass);
 			})
-		}*/
+		}
 
 		execute(this._params.callback.afterInit, [this._element, this]);
 
@@ -279,16 +278,6 @@ class VGFormSender extends BaseModule {
 				data: data
 			}
 		});
-	}
-
-	static buttonClick(formID, callback, status = 'before') {
-		const form = Selectors.find(formID);
-		if (form) {
-			const instance = VGFormSender.getOrCreateInstance(form);
-			form.addEventListener('vg.fs.' + status, e => {
-				execute(callback, [form, instance])
-			})
-		}
 	}
 
 	_statusButton(status) {
@@ -510,14 +499,11 @@ class VGFormSender extends BaseModule {
 							}
 						}
 
-						txt = sanitizer.sanitizeHTML(txt);
-
 						data = {
 							view: txt
 						}
 					}
 				} else {
-					response = sanitizer.sanitizeHTML(response);
 					data.view = response;
 				}
 			}
@@ -561,6 +547,16 @@ class VGFormSender extends BaseModule {
 	static init(element, params = {}) {
 		const instance = VGFormSender.getOrCreateInstance(element, params);
 		instance.build();
+	}
+
+	static buttonClick(formID, callback, status = 'before') {
+		const form = Selectors.find(formID);
+		if (form) {
+			const instance = VGFormSender.getOrCreateInstance(form);
+			form.addEventListener('vg.fs.' + status, e => {
+				execute(callback, [form, instance])
+			})
+		}
 	}
 }
 
