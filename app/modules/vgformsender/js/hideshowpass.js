@@ -2,8 +2,9 @@ import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {isDisabled, mergeDeepObject} from "../../../utils/js/functions";
-import Templater from "../../../utils/js/components/templater";
+import {Templater} from "../../../utils/js/components/templater";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
+import {getSVG} from "../../module-fn";
 
 /**
  * Constants
@@ -62,10 +63,19 @@ class VGHideShowPass extends BaseModule{
 
 	build(isShow = false) {
 		if (!isShow) {
-			this._params.template = 'pass-close';
+			let elm = Templater.createElement('span', {
+				attrs: {
+					'data-vg-toggle': 'pass',
+					'class': 'alert(2)',
+					'title': 'Показать',
+					'data-bs-toggle': 'tooltip'
+				},
+				text: getSVG('eye')
+			});
 		} else {
 			this._params.template = 'pass-open';
 		}
+
 
 		//new Templater(this._element, this._params).render();
 	}
