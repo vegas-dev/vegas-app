@@ -17,12 +17,23 @@ const langs = {
 			},
 			'form-sender': {
 				'bootstrap_not_found': 'VGApp не удалось найти bootstrap, модалки не будут закрыты, попробуйте сделать это через коллбек afterSend.'
+			},
+			alert: {
+				title: 'Заголовок по умолчанию',
+				description: 'Описание текущего действия',
+				reason: 'Алерт уже открыт'
 			}
 		},
 		titles: {
 			errors: {
 				title: 'Ошибка',
 				titles: 'Ошибки'
+			}
+		},
+		buttons: {
+			alert: {
+				agree: 'Да, согласен',
+				cancel: 'Отмена'
 			}
 		}
 	},
@@ -42,12 +53,23 @@ const langs = {
 			},
 			'form-sender': {
 				'bootstrap_not_found': 'VGApp could not find bootstrap, the modals will not be closed, try to do this through the afterSend callback.'
+			},
+			alert: {
+				title: 'Default header',
+				description: 'Description of the current action',
+				reason: 'Alert already open'
 			}
 		},
 		titles: {
 			errors: {
 				title: 'Error',
 				titles: 'Errors'
+			}
+		},
+		buttons: {
+			alert: {
+				agree: 'Yeah, I agree',
+				cancel: 'Cancel'
 			}
 		}
 	},
@@ -79,4 +101,8 @@ function lang_messages(lg, module) {
 	return lang(lg, 'messages', module) || {};
 }
 
-export {lang, lang_messages, lang_titles};
+function lang_buttons(lg, module) {
+	return lang(lg, 'buttons', module) || {};
+}
+
+export {lang, lang_messages, lang_titles, lang_buttons};
