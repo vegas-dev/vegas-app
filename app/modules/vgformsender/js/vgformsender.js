@@ -82,6 +82,7 @@ class VGFormSender extends BaseModule {
 				afterInit: noop,
 				afterSuccess: noop,
 				afterError: noop,
+				afterSend: noop,
 			},
 			interceptors: {
 				beforeSend: () => new Promise((resolve, reject) => resolve()),
@@ -196,6 +197,8 @@ class VGFormSender extends BaseModule {
 					data.response = _this._params.response;
 				}
 
+				execute(_this._params.callback.afterSend, [_this._element, _this, status, data]);
+
 				if (_this._params.alert.enabled) {
 					if (typeof status === 'string' && status === 'error') {
 						if (_this._params.redirect.error) {
@@ -264,6 +267,8 @@ class VGFormSender extends BaseModule {
 				data: data
 			}
 		});
+
+		execute(this._params.callback.afterError, [this._element, this, 'error', data]);
 	}
 
 	_alertSuccess(event, data) {
@@ -278,6 +283,8 @@ class VGFormSender extends BaseModule {
 				data: data
 			}
 		});
+
+		execute(this._params.callback.afterError, [this._element, this, 'success', data]);
 	}
 
 	_statusButton(status) {
@@ -358,9 +365,18 @@ class VGFormSender extends BaseModule {
 			}
 		}
 
-		if (!_this._params.alert.enabled) {
-			return;
+		if (status === 'error') {
+			const statusMatch = data.message.match(/Ошибка (\d+):/);
+			if (statusMatch) {
+				data = {
+					code: parseInt(statusMatch[1]),
+				}
+			}
+
+			console.log(data)
 		}
+
+		if (!_this._params.alert.enabled) return;
 
 		if (_this._params.alert.type === 'modal') {
 			_this._alertModal(data, status)
@@ -377,8 +393,12 @@ class VGFormSender extends BaseModule {
 		// Есть ли открытые модалки, закрываем
 		[...document.getElementsByClassName('modal')].forEach(function (element) {
 			if (element && element.classList.contains('show')) {
-				let mBS = bootstrap?.Modal?.getOrCreateInstance(element);
-				mBS.hide();
+				if (typeof bootstrap !== 'undefined') {
+					let mBS = bootstrap.Modal?.getOrCreateInstance(element);
+					mBS.hide();
+				} else {
+					console.warn('VGApp не удалось найти bootstrap, модалки не будут закрыты, попробуйте сделать это через коллбек afterSend.')
+				}
 			}
 		});
 
@@ -468,7 +488,6 @@ class VGFormSender extends BaseModule {
 
 			if ('response' in data) {
 				let response = normalizeData(data.response), title = '', txt = '', code = '';
-				const sanitizer = new Sanitizer(this._params.sanitizer);
 
 				if (typeof response !== 'string') {
 					if (!('view' in response)) {
