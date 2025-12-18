@@ -1,3 +1,15 @@
+# VEGAS-APP 0.7.7 - 0.7.8 (Декабрь, 18, 2025)
+* Дополнен модуль VGFormSender. В директории модуля появился файл readme.md. Добавлен JSDoc
+* Удалена набор функций Ajax в module-fn и добавлен самостоятельный класс Ajax с более продвинутой логикой работы с XHR
+* Добавлен в компоненты класс LaravelHtmlBuilder, на лету создающий шаблоны и элементы 
+```js
+  const tmpl = Html('dom'); // или 'string'
+  let elm = tmpl.div({...attrbuttes}, 'text');
+```
+* Начата работа над компонентом Lang доступные функции `lang_titles(lang, module)` и `lang_messages(lang, module)` (в разработке)
+* Исправлены ошибки в разных модулях
+
+---
 # VEGAS-APP 0.7.6 (Декабрь, 13, 2025)
 * Исправлена анимация в модуле VGToast
 * Добавлены темы `theme:` `['success', 'info', 'warning', 'danger', 'dark']` для модуля VGToast
@@ -6,11 +18,10 @@
 ---
 
 # VEGAS-APP 0.7.5 (Декабрь, 08, 2025)
-* В модуль VGFORSENDER добавлен параметр `fields` для программного добавление новых полей в FormData,
+* В модуль VGFORMSENDER добавлен параметр `fields` для программного добавление новых полей в FormData,
 если в значении объекта окажется массив или объект, то сформируется json строка
-```
+```js
 {
-  ...
   fields: [
     {
       name: Andranik,
@@ -24,7 +35,7 @@
 }
 ```
 * Хак на кнопку отправки `onclick` можно повесить колбек на событие
-```
+```html
 <button type="submit" class="btn btn-primary"
   onclick='vg.VGFormSender.buttonClick("#form-simple", function (form, self) {
     self._button.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;

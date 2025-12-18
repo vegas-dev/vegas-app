@@ -1,3 +1,34 @@
+/**
+ * VGFormSender Module
+ *
+ * Этот модуль отвечает за отправку форм с поддержкой AJAX, валидации, отображения уведомлений
+ * (модальные окна или collapse), обработки ошибок, спиннеров для кнопок и многое другое.
+ * Поддерживает кастомизацию через параметры и data-атрибуты.
+ *
+ * @class VGFormSender
+ * @extends BaseModule
+ *
+ * @param {HTMLElement} element - DOM-элемент формы
+ * @param {Object} params - Параметры инициализации
+ *
+ * @example
+ * VGFormSender.init(document.getElementById('myForm'), {
+ *   ajax: {
+ *     route: '/submit',
+ *     method: 'post'
+ *   },
+ *   alert: {
+ *     type: 'modal',
+ *     enabled: true
+ *   },
+ *   callback: {
+ *     afterSuccess: (form, instance, event, data) => {
+ *       console.log('Форма успешно отправлена');
+ *     }
+ *   }
+ * });
+ */
+
 import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal/js/vgmodal";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
@@ -19,26 +50,64 @@ import {
 } from "../../../utils/js/functions";
 
 /**
- * Constants
+ * Константа: имя модуля
+ * @type {string}
  */
 const NAME = 'form-sender';
+
+/**
+ * Константа: ключ модуля для использования в data-атрибутах и событиях
+ * @type {string}
+ */
 const NAME_KEY = 'vg.fs';
 
 /**
- * Constants Events
+ * CSS-класс для алертов
+ * @type {string}
  */
 const CLASS_NAME_ALERT  = 'vg-form-sender-alert';
 
+/**
+ * Событие: успешная отправка формы
+ * @type {string}
+ */
 const EVENT_KEY_SUCCESS = 'vg.fs.success';
+
+/**
+ * Событие: ошибка при отправке формы
+ * @type {string}
+ */
 const EVENT_KEY_ERROR   = 'vg.fs.error';
+
+/**
+ * Событие: перед отправкой формы
+ * @type {string}
+ */
 const EVENT_KEY_BEFORE  = 'vg.fs.before';
 
+/**
+ * Событие: обработка нативной отправки формы
+ * @type {string}
+ */
 const EVENT_SUBMIT_DATA_API = `submit.${NAME_KEY}.data.api`;
 
+/**
+ * Основной класс модуля формы
+ */
 class VGFormSender extends BaseModule {
+	/**
+	 * Создаёт экземпляр VGFormSender
+	 * @param {HTMLElement} element - Элемент формы
+	 * @param {Object} params - Параметры конфигурации
+	 */
 	constructor(element, params = {}) {
 		super(element, params);
 
+		/**
+		 * Объединённые параметры с дефолтными значениями
+		 * @type {Object}
+		 * @private
+		 */
 		this._params = this._getParams(element, mergeDeepObject({
 			response: {
 				enabled: false,
@@ -107,20 +176,45 @@ class VGFormSender extends BaseModule {
 			lang: 'ru'
 		}, params));
 
+		/**
+		 * Кнопка отправки формы
+		 * @type {HTMLElement|null}
+		 * @private
+		 */
 		this._button = null;
+
+		/**
+		 * Кэш для часто используемых элементов
+		 * @type {Map<string, any>}
+		 * @private
+		 */
 		this._cachedElements = new Map();
 
 		this._initElements();
 	}
 
+	/**
+	 * Возвращает имя модуля
+	 * @returns {string}
+	 * @static
+	 */
 	static get NAME() {
 		return NAME;
 	}
 
+	/**
+	 * Возвращает ключ модуля
+	 * @returns {string}
+	 * @static
+	 */
 	static get NAME_KEY() {
 		return NAME_KEY;
 	}
 
+	/**
+	 * Инициализация внутренних элементов: кнопка, поля, параметры
+	 * @private
+	 */
 	_initElements() {
 		this._button = Selectors.find('[type="submit"]', this._element) ||
 			Selectors.find('[form="' + this._element.id + '"]') ||
@@ -142,6 +236,10 @@ class VGFormSender extends BaseModule {
 		}
 	}
 
+	/**
+	 * Построение формы: добавление классов, инициализация паролей, валидации
+	 * @returns {VGFormSender}
+	 */
 	build() {
 		this._element.classList.add(this._params.classes.general);
 
@@ -170,6 +268,11 @@ class VGFormSender extends BaseModule {
 		return this
 	}
 
+	/**
+	 * Отправка формы (AJAX или нативная)
+	 * @param {Event} event - DOM-событие отправки
+	 * @param {FormData|null} data - Дополнительные данные для отправки
+	 */
 	request(event, data = null) {
 		const _this = this;
 		const mergeFormData = (target, source) => {
@@ -231,6 +334,10 @@ class VGFormSender extends BaseModule {
 		});
 	}
 
+	/**
+	 * Действия перед отправкой формы: блокировка кнопки, триггер события
+	 * @private
+	 */
 	_alertBefore() {
 		const _this = this;
 
@@ -252,6 +359,12 @@ class VGFormSender extends BaseModule {
 		EventHandler.trigger(_this._element, EVENT_KEY_BEFORE, _this);
 	}
 
+	/**
+	 * Обработка ошибки: отображение алерта, вызов колбэка
+	 * @param {Event} event - DOM-событие
+	 * @param {Object} data - Данные ответа
+	 * @private
+	 */
 	_alertError(event, data) {
 		const _this = this;
 
@@ -266,6 +379,12 @@ class VGFormSender extends BaseModule {
 		});
 	}
 
+	/**
+	 * Обработка успеха: отображение алерта, вызов колбэка
+	 * @param {Event} event - DOM-событие
+	 * @param {Object} data - Данные ответа
+	 * @private
+	 */
 	_alertSuccess(event, data) {
 		const _this = this;
 
@@ -280,6 +399,11 @@ class VGFormSender extends BaseModule {
 		});
 	}
 
+	/**
+	 * Управление состоянием кнопки отправки
+	 * @param {'before'|'after'} status - Статус: до/после отправки
+	 * @private
+	 */
 	_statusButton(status) {
 		if (!this._button) return;
 
@@ -321,6 +445,12 @@ class VGFormSender extends BaseModule {
 		}
 	}
 
+	/**
+	 * Парсинг JSON-ответа и вызов алерта
+	 * @param {Object} data - Данные ответа
+	 * @param {'success'|'error'} status - Статус ответа
+	 * @private
+	 */
 	_jsonParse(data, status) {
 		const _this = this;
 
@@ -331,6 +461,11 @@ class VGFormSender extends BaseModule {
 		}
 	}
 
+	/**
+	 * Отображение алерта в зависимости от типа (modal/collapse)
+	 * @param {Object|string} data - Данные для отображения
+	 * @param {string} status - Статус: success, error, danger и т.д.
+	 */
 	alert(data, status) {
 		if (isObject(data)) {
 			if (('code' in data) && data.code && data.code === 200) {
@@ -368,10 +503,16 @@ class VGFormSender extends BaseModule {
 		}
 	}
 
+	/**
+	 * Показ алерта в виде модального окна
+	 * @param {Object} data - Данные для отображения
+	 * @param {string} status - Статус (success/error)
+	 * @private
+	 */
 	_alertModal(data, status) {
 		const _this = this;
 
-		// Есть ли открытые модалки, закрываем
+		// Закрытие всех открытых модальных окон
 		[...document.getElementsByClassName('modal')].forEach(function (element) {
 			if (element && element.classList.contains('show')) {
 				if (typeof bootstrap !== 'undefined') {
@@ -422,6 +563,12 @@ class VGFormSender extends BaseModule {
 		}, _this._params.timeout);
 	}
 
+	/**
+	 * Показ алерта в виде collapse
+	 * @param {Object} data - Данные для отображения
+	 * @param {string} status - Статус (success/error)
+	 * @private
+	 */
 	_alertCollapse(data, status) {
 		const _this = this;
 
@@ -446,6 +593,14 @@ class VGFormSender extends BaseModule {
 		}
 	}
 
+	/**
+	 * Формирование содержимого алерта (заголовок, текст, иконка)
+	 * @param {HTMLElement} $element - Родительский элемент
+	 * @param {string} status - Статус (success/danger и т.д.)
+	 * @param {Object} data - Данные ответа
+	 * @param {'modal'|'collapse'} type - Тип алерта
+	 * @returns {HTMLElement} - DOM-элемент с контентом
+	 */
 	setDataRelationStatus($element, status, data, type) {
 		let response = normalizeData(data.response) || data,
 			$alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-content', $element);
@@ -531,15 +686,25 @@ class VGFormSender extends BaseModule {
 	}
 
 	/**
-	 * Инициализация
-	 * @param element
-	 * @param params
+	 * Статический метод инициализации формы
+	 * @param {HTMLElement} element - Форма
+	 * @param {Object} params - Параметры
+	 * @example
+	 * VGFormSender.init(formElement, { validate: true });
 	 */
 	static init(element, params = {}) {
 		const instance = VGFormSender.getOrCreateInstance(element, params);
 		instance.build();
 	}
 
+	/**
+	 * Подписка на события кнопки формы
+	 * @param {string} formID - CSS-селектор формы
+	 * @param {Function} callback - Колбэк-функция
+	 * @param {'before'|'after'} status - Статус события
+	 * @example
+	 * VGFormSender.buttonClick('#myForm', (form, instance) => { ... }, 'before');
+	 */
 	static buttonClick(formID, callback, status = 'before') {
 		const form = Selectors.find(formID);
 		if (form) {
@@ -551,6 +716,9 @@ class VGFormSender extends BaseModule {
 	}
 }
 
+/**
+ * Обработчик события отправки формы
+ */
 EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 	if (!Manipulator.has(event.target, 'data-vgformsender')) {
 		return;
