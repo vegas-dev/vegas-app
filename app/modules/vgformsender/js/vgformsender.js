@@ -2,7 +2,7 @@ import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal/js/vgmodal";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import VGHideShowPass from "./hideshowpass";
-import lang from "../../../utils/js/components/lang";
+import {lang_titles, lang_messages} from "../../../utils/js/components/lang";
 import Html from "../../../utils/js/components/templater";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
@@ -104,23 +104,13 @@ class VGFormSender extends BaseModule {
 				},
 				click: noop,
 			},
-			sanitizer: {
-				allowedTags: ['div', 'span', 'p', 'a', 'img', 'table', 'tr' ,'td', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-				allowedAttributes: {
-					'a': ['href', 'class'],
-					'img': ['src', 'alt']
-				},
-				allowedSchemes: ['https', 'mailto']
-			}
+			lang: 'ru'
 		}, params));
 
 		this._button = null;
 		this._cachedElements = new Map();
 
 		this._initElements();
-
-		let m = lang('ru', 'titles', 'errors');
-		console.log(m)
 	}
 
 	static get NAME() {
@@ -342,7 +332,6 @@ class VGFormSender extends BaseModule {
 	}
 
 	alert(data, status) {
-
 		if (isObject(data)) {
 			if (('code' in data) && data.code && data.code === 200) {
 				if ('response' in data && data.response) {
@@ -352,8 +341,8 @@ class VGFormSender extends BaseModule {
 							status = 'danger';
 							data = {
 								response: {
-									title: 'Error',
-									message: 'Something went wrong, please repeat later'
+									title: lang_titles(this._params.lang, 'errors').title,
+									message: lang_messages(this._params.lang, 'errors').went_wrong
 								}
 							}
 						}
@@ -389,7 +378,7 @@ class VGFormSender extends BaseModule {
 					let mBS = bootstrap.Modal?.getOrCreateInstance(element);
 					mBS.hide();
 				} else {
-					console.warn('VGApp не удалось найти bootstrap, модалки не будут закрыты, попробуйте сделать это через коллбек afterSend.')
+					console.warn(lang_messages(_this._params.lang, NAME).bootstrap_not_found)
 				}
 			}
 		});
@@ -418,8 +407,6 @@ class VGFormSender extends BaseModule {
 
 				let $content = Selectors.find('.vg-modal-content', element);
 				if ($content) $content.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status);
-
-				console.log(element)
 
 				let $body = Selectors.find('.vg-modal-body', element);
 				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
@@ -470,21 +457,21 @@ class VGFormSender extends BaseModule {
 				response = data.response.view
 			} else if (typeof response !== 'string') {
 				if (status === 'danger') {
-					response.title = 'Error';
+					response.title = lang_titles(this._params.lang, 'errors').title;
 
 					if ('code' in data && data.code !== 200) {
 						const messages = {
-							400: 'Bad Request',
-							401: 'Unauthorized',
-							403: 'Forbidden',
-							404: 'Not Found',
-							413: 'Payload Too Large',
-							419: 'Problems with the CSRF token',
-							422: 'Unprocessable Entity',
-							500: 'Internal Server Error',
-							504: 'Gateway Timeout'
+							400: lang_messages(this._params.lang, 'errors')[400],
+							401: lang_messages(this._params.lang, 'errors')[401],
+							403: lang_messages(this._params.lang, 'errors')[403],
+							404: lang_messages(this._params.lang, 'errors')[404],
+							413: lang_messages(this._params.lang, 'errors')[413],
+							419: lang_messages(this._params.lang, 'errors')[419],
+							422: lang_messages(this._params.lang, 'errors')[422],
+							500: lang_messages(this._params.lang, 'errors')[500],
+							504: lang_messages(this._params.lang, 'errors')[504],
 						};
-						response.message = messages[data.code] || 'Something went wrong, please repeat later';
+						response.message = messages[data.code] || lang_messages(this._params.lang, 'errors').went_wrong;
 						response.title += ' (' + data.code + ')';
 					}
 

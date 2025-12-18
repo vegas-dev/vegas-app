@@ -1,43 +1,82 @@
-import {execute, normalizeData} from "../functions";
+import {normalizeData} from "../functions";
+
+const langs = {
+	ru: {
+		messages: {
+			errors: {
+				went_wrong: 'Что-то пошло не так, повторите позже',
+				"400": 'Неверный запрос',
+				"401": 'Не авторизован',
+				"403": 'Запрещено',
+				"404": 'Не найдено',
+				"413": 'Слишком большой запрос',
+				"419": 'Проблемы с токеном CSRF',
+				"422": 'Неверный запрос',
+				"500": 'Внутренняя ошибка сервера',
+				"504": 'Превышено время ожидания'
+			},
+			'form-sender': {
+				'bootstrap_not_found': 'VGApp не удалось найти bootstrap, модалки не будут закрыты, попробуйте сделать это через коллбек afterSend.'
+			}
+		},
+		titles: {
+			errors: {
+				title: 'Ошибка',
+				titles: 'Ошибки'
+			}
+		}
+	},
+	en: {
+		messages: {
+			errors: {
+				went_wrong: 'Something went wrong, please repeat later',
+				"400": 'Bad Request',
+				"401": 'Unauthorized',
+				"403": 'Forbidden',
+				"404": 'Not Found',
+				"413": 'Payload Too Large',
+				"419": 'Problems with the CSRF token',
+				"422": 'Unprocessable Entity',
+				"500": 'Internal Server Error',
+				"504": 'Gateway Timeout'
+			},
+			'form-sender': {
+				'bootstrap_not_found': 'VGApp could not find bootstrap, the modals will not be closed, try to do this through the afterSend callback.'
+			}
+		},
+		titles: {
+			errors: {
+				title: 'Error',
+				titles: 'Errors'
+			}
+		}
+	},
+};
 
 class Lang {
-	constructor(lang, mode, module) {
-		this.currentLang = lang || 'ru';
-		this.currentModule = module || 'default';
-		this.currentMode = mode || 'titles';
-		this.path = '../../../utils/lang';
-
-		return this.loadModule();
+	constructor(lang = 'en') {
+		this.lang = lang;
 	}
 
-	async loadModule() {
-		let path = this.path + '/' + this.currentLang + '/' + this.currentMode + '.json';
+	get() {
+		let data = langs[this.lang];
 
-		try {
-			const module = await import(path, {
-				assert: { type: 'json' }
-			});
+		if (!data) data = langs['en'];
 
-			return module.default;
-		} catch (error) {
-			console.warn(error);
-		}
-	}
-
-	static get(lang, mode, module, callback) {
-		let instance = new Lang(lang, mode, module);
-		return instance.then(i18n => {
-			let m = normalizeData(i18n);
-			execute(callback, [m[module]]);
-
-			return m[module];
-		})
+		return normalizeData(data);
 	}
 }
 
-async function lang(lang, mode, module) {
-	const result = await Lang.get(lang, mode, module);
-	return result;
+function lang(lg, mode, module) {
+	return new Lang(lg).get()[mode][module];
 }
 
-export default lang;
+function lang_titles(lg, module) {
+	return lang(lg, 'titles', module) || {};
+}
+
+function lang_messages(lg, module) {
+	return lang(lg, 'messages', module) || {};
+}
+
+export {lang, lang_messages, lang_titles};
