@@ -20,17 +20,17 @@ class LaravelHtmlBuilder {
 	/**
 	 * Создание HTML элемента
 	 */
-	element(tag, attributes = {}, content = null) {
+	element(tag, attributes = {}, content = null, option = {}) {
 		if (this.mode === 'dom' && this.document) {
-			return this._createDomElement(tag, attributes, content);
+			return this._createDomElement(tag, attributes, content, option);
 		}
-		return this._createHtmlString(tag, attributes, content);
+		return this._createHtmlString(tag, attributes, content, option);
 	}
 
 	/**
 	 * Создание DOM элемента
 	 */
-	_createDomElement(tag, attributes, content) {
+	_createDomElement(tag, attributes, content, option = {}) {
 		const element = this.document.createElement(tag);
 
 		// Установка атрибутов
@@ -49,7 +49,11 @@ class LaravelHtmlBuilder {
 			} else if (content instanceof Node) {
 				element.appendChild(content);
 			} else {
-				element.textContent = content;
+				if ('isHTML' in option && option.isHTML) {
+					element.innerHTML = content;
+				} else {
+					element.textContent = content;
+				}
 			}
 		}
 
@@ -78,7 +82,7 @@ class LaravelHtmlBuilder {
 	/**
 	 * Создание HTML строки
 	 */
-	_createHtmlString(tag, attributes, content) {
+	_createHtmlString(tag, attributes, content, isHTML = false) {
 		const attrString = this._attributesToString(attributes);
 		const isSelfClosing = this.tags.selfClosing.includes(tag);
 
@@ -160,20 +164,24 @@ class LaravelHtmlBuilder {
 	/**
 	 * Методы для конкретных элементов
 	 */
-	div(attributes = {}, content = '') {
-		return this.element('div', attributes, content);
+	div(attributes = {}, content = '', options = {}) {
+		return this.element('div', attributes, content, options);
 	}
 
-	span(attributes = {}, content = '') {
-		return this.element('span', attributes, content);
+	span(attributes = {}, content = '', options = {}) {
+		return this.element('span', attributes, content, options);
 	}
 
-	p(attributes = {}, content = '') {
-		return this.element('p', attributes, content);
+	i(attributes = {}, content = '', options = {}) {
+		return this.element('i', attributes, content, options);
 	}
 
-	a(href, content = '', attributes = {}) {
-		return this.element('a', { href, ...attributes }, content);
+	p(attributes = {}, content = '', options = {}) {
+		return this.element('p', attributes, content, options);
+	}
+
+	a(href, content = '', attributes = {}, options = {}) {
+		return this.element('a', { href, ...attributes }, content, options);
 	}
 
 	img(src, alt = '', attributes = {}) {
@@ -189,16 +197,16 @@ class LaravelHtmlBuilder {
 		});
 	}
 
-	button(content = '', type = 'button', attributes = {}) {
-		return this.element('button', { type, ...attributes }, content);
+	button(content = '', type = 'button', attributes = {}, options = {}) {
+		return this.element('button', { type, ...attributes }, content, options);
 	}
 
-	form(action = '', method = 'post', attributes = {}, content = '') {
-		return this.element('form', { action, method, ...attributes }, content);
+	form(action = '', method = 'post', attributes = {}, content = '', options = {}) {
+		return this.element('form', { action, method, ...attributes }, content, options);
 	}
 
-	label(forId, content, attributes = {}) {
-		return this.element('label', { for: forId, ...attributes }, content);
+	label(forId, content, attributes = {}, options = {}) {
+		return this.element('label', { for: forId, ...attributes }, content, options);
 	}
 
 	textarea(name, content = '', attributes = {}) {
@@ -217,6 +225,10 @@ class LaravelHtmlBuilder {
 			this.element('li', {}, item)
 		);
 		return this.element('ol', attributes, listItems);
+	}
+
+	h4(attributes = {}, content = '', options = {}) {
+		return this.element('h4', attributes, content, options);
 	}
 
 	/**
@@ -363,8 +375,8 @@ function Html(mode = 'string') {
 			}
 
 			// Динамическое создание метода для любого тега
-			return function(attributes = {}, content = '') {
-				return target.element(prop, attributes, content);
+			return function(attributes = {}, content = '', options = {}) {
+				return target.element(prop, attributes, content, options);
 			};
 		}
 	};

@@ -1,7 +1,13 @@
 import BaseModule from "../../base-module";
+import VGModal from "../../vgmodal/js/vgmodal";
+import VGCollapse from "../../vgcollapse/js/vgcollapse";
+import VGHideShowPass from "./hideshowpass";
+import lang from "../../../utils/js/components/lang";
+import Html from "../../../utils/js/components/templater";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
-import VGModal from "../../vgmodal/js/vgmodal";
+import Selectors from "../../../utils/js/dom/selectors";
+import {getSVG} from "../../module-fn";
 import {
 	execute,
 	isObject,
@@ -11,10 +17,6 @@ import {
 	noop,
 	normalizeData
 } from "../../../utils/js/functions";
-import Selectors from "../../../utils/js/dom/selectors";
-import VGCollapse from "../../vgcollapse/js/vgcollapse";
-import {getSVG} from "../../module-fn";
-import VGHideShowPass from "./hideshowpass";
 
 /**
  * Constants
@@ -69,6 +71,8 @@ class VGFormSender extends BaseModule {
 				target: '',
 				method: 'get',
 				timeout: 1000,
+				loader: false,
+				output: true
 			},
 			classes: {
 				general: 'vg-form-sender',
@@ -114,6 +118,9 @@ class VGFormSender extends BaseModule {
 		this._cachedElements = new Map();
 
 		this._initElements();
+
+		let m = lang('ru', 'titles', 'errors');
+		console.log(m)
 	}
 
 	static get NAME() {
@@ -191,13 +198,13 @@ class VGFormSender extends BaseModule {
 			else _this._params.ajax.data = formData;
 
 			_this._route(function (status, data) {
+				execute(_this._params.callback.afterSend, [_this._element, _this, status, data]);
+
 				_this._element.classList.remove('was-validated');
 
 				if (_this._params.response.enabled) {
 					data.response = _this._params.response;
 				}
-
-				execute(_this._params.callback.afterSend, [_this._element, _this, status, data]);
 
 				if (_this._params.alert.enabled) {
 					if (typeof status === 'string' && status === 'error') {
@@ -267,8 +274,6 @@ class VGFormSender extends BaseModule {
 				data: data
 			}
 		});
-
-		execute(this._params.callback.afterError, [this._element, this, 'error', data]);
 	}
 
 	_alertSuccess(event, data) {
@@ -283,8 +288,6 @@ class VGFormSender extends BaseModule {
 				data: data
 			}
 		});
-
-		execute(this._params.callback.afterError, [this._element, this, 'success', data]);
 	}
 
 	_statusButton(status) {
@@ -339,7 +342,6 @@ class VGFormSender extends BaseModule {
 	}
 
 	alert(data, status) {
-		const _this = this;
 
 		if (isObject(data)) {
 			if (('code' in data) && data.code && data.code === 200) {
@@ -347,13 +349,12 @@ class VGFormSender extends BaseModule {
 					let response = normalizeData(data.response);
 					if (typeof response === 'string') {
 						if (response.indexOf("Parse error") !== -1 || response.indexOf("syntax error") !== -1) {
-							status = 'error';
+							status = 'danger';
 							data = {
 								response: {
 									title: 'Error',
 									message: 'Something went wrong, please repeat later'
-								},
-								text: 'Something went wrong, please repeat later'
+								}
 							}
 						}
 					} else {
@@ -362,28 +363,19 @@ class VGFormSender extends BaseModule {
 						}
 					}
 				}
+			} else {
+				status = 'danger'
 			}
 		}
 
-		if (status === 'error') {
-			const statusMatch = data.message.match(/Ошибка (\d+):/);
-			if (statusMatch) {
-				data = {
-					code: parseInt(statusMatch[1]),
-				}
-			}
+		if (!this._params.alert.enabled) return;
 
-			console.log(data)
+		if (this._params.alert.type === 'modal') {
+			this._alertModal(data, status)
 		}
 
-		if (!_this._params.alert.enabled) return;
-
-		if (_this._params.alert.type === 'modal') {
-			_this._alertModal(data, status)
-		}
-
-		if (_this._params.alert.type === 'collapse') {
-			_this._alertCollapse(data, status)
+		if (this._params.alert.type === 'collapse') {
+			this._alertCollapse(data, status)
 		}
 	}
 
@@ -424,6 +416,11 @@ class VGFormSender extends BaseModule {
 				let element = self._element;
 				element.classList.add(_this._params.classes.alertModal);
 
+				let $content = Selectors.find('.vg-modal-content', element);
+				if ($content) $content.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status);
+
+				console.log(element)
+
 				let $body = Selectors.find('.vg-modal-body', element);
 				if ($body) $body.append(_this.setDataRelationStatus(element, status, data, 'modal'));
 
@@ -463,96 +460,84 @@ class VGFormSender extends BaseModule {
 	}
 
 	setDataRelationStatus($element, status, data, type) {
-		if (status === 'error') status = 'danger';
-
-		let $alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-' + status, $element);
+		let response = normalizeData(data.response) || data,
+			$alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-content', $element);
 
 		if (isObject(data)) {
-			if (status === 'error') {
-				if ('code' in data && data.code !== 200) {
-					if ('text' in data && !data.text) {
+			let view = '';
+
+			if ('view' in data.response) {
+				response = data.response.view
+			} else if (typeof response !== 'string') {
+				if (status === 'danger') {
+					response.title = 'Error';
+
+					if ('code' in data && data.code !== 200) {
 						const messages = {
 							400: 'Bad Request',
 							401: 'Unauthorized',
 							403: 'Forbidden',
 							404: 'Not Found',
 							413: 'Payload Too Large',
+							419: 'Problems with the CSRF token',
 							422: 'Unprocessable Entity',
 							500: 'Internal Server Error',
 							504: 'Gateway Timeout'
 						};
-						data.text = messages[data.code] || 'Something went wrong, please repeat later';
+						response.message = messages[data.code] || 'Something went wrong, please repeat later';
+						response.title += ' (' + data.code + ')';
 					}
-				}
-			}
 
-			if ('response' in data) {
-				let response = normalizeData(data.response), title = '', txt = '', code = '';
+					if ('errors' in response && this._params.alert.errors) {
+						let errors = normalizeData(response.errors) || null;
+						response.message = [];
 
-				if (typeof response !== 'string') {
-					if (!('view' in response)) {
-						if ('title' in response) title = response.title;
-						if (status === 'error' && data.code !== 200 && this._params.alert.errors) {
-							code = ' ' + data.text + ' (' + data.code + ')';
-						}
-
-						if (!title) txt += '<h4 class="'+ CLASS_NAME_ALERT +'-content--title">' + code + '</h4>';
-						else txt += '<h4 class="'+ CLASS_NAME_ALERT +'-content--title">' + title + '</h4>';
-
-						if ('message' in response) {
-							txt += '<div class="'+ CLASS_NAME_ALERT +'-content--message">' + response.message + '</div>'
-						}
-
-						if ('errors' in response && this._params.alert.errors) {
-							let errors = normalizeData(response.errors) || null;
-							if (isObject(errors)) {
-								for (const error in errors) {
-									if (Array.isArray(errors[error])) {
-										errors[error].forEach(function (t) {
-											txt += '<div>'+ t +'</div>';
-										})
-									} else {
-										txt = '<div>'+ errors[error] +'</div>';
-									}
+						if (isObject(errors)) {
+							for (const error in errors) {
+								if (Array.isArray(errors[error])) {
+									errors[error].forEach((t) => response.message.push(t))
+								} else {
+									response.message.push(errors[error]);
 								}
 							}
 						}
-
-						data = {
-							view: txt
-						}
 					}
-				} else {
-					data.view = response;
 				}
+
+				const elm = Html('string');
+
+				view = elm.h4({class: CLASS_NAME_ALERT +'-content--title'}, response.title);
+
+				if (Array.isArray(response.message)) {
+					response.message.forEach(message => {
+						view += elm.div({
+							class: CLASS_NAME_ALERT +'-content--message'
+						}, message);
+					})
+				} else {
+					view += elm.div({
+						class: CLASS_NAME_ALERT +'-content--message'
+					}, response.message);
+				}
+
+				response = view;
 			}
 		}
 
 		if (!$alert) {
-			$alert = document.createElement('div');
-			$alert.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status, CLASS_NAME_ALERT + '-' + type);
+			const elm = Html('dom');
 
-			let content = document.createElement('div');
-			content.classList.add(CLASS_NAME_ALERT + '-content');
-
-			let icon = document.createElement('div');
-			icon.classList.add(CLASS_NAME_ALERT + '-content--icon');
-
-			let i = document.createElement('i');
-			i.innerHTML = getSVG(status);
-
-			icon.append(i);
-			content.append(icon);
-
-			let text = document.createElement('div');
-			text.classList.add(CLASS_NAME_ALERT + '-content--text');
-			text.innerHTML = data.view;
-
-			content.append(text);
-			$alert.append(content);
+			$alert = elm.div({
+				class: CLASS_NAME_ALERT + '-' + type
+			}, [
+				elm.div({class: CLASS_NAME_ALERT + '-content'}, [
+					elm.i({class: CLASS_NAME_ALERT + '-content--icon'}, getSVG(status), {isHTML: true}),
+					elm.div({class: CLASS_NAME_ALERT + '-content--text'}, response, {isHTML: true})
+				]),
+			]);
 		} else {
-			let text = Selectors.find('.'+ CLASS_NAME_ALERT +'-content--text', $alert);
-			text.innerHTML = data.view;
+			let text = Selectors.find('.vg-modal-body', $element);
+			text.innerHTML = response;
 		}
 
 		return $alert;

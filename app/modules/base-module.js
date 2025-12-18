@@ -1,4 +1,4 @@
-import {execute, executeAfterTransition, isEmptyObj, mergeDeepObject} from "../utils/js/functions";
+import {execute, executeAfterTransition, isEmptyObj} from "../utils/js/functions";
 import Selectors from "../utils/js/dom/selectors";
 import Data from "../utils/js/dom/data";
 import Params from "../utils/js/components/params";
@@ -6,6 +6,7 @@ import EventHandler from "../utils/js/dom/event";
 import {getSVG} from "./module-fn";
 import Animation from "../utils/js/components/animation";
 import Ajax from "../utils/js/components/ajax";
+import Html from "../utils/js/components/templater";
 
 class BaseModule {
 	constructor(element) {
@@ -34,14 +35,28 @@ class BaseModule {
 		}
 	}
 
+	/**
+	 * Метод для отправки данных на сервер
+	 * данные для работы должны быть в this._params.ajax
+	 * - route = ссылка для отправки данных, обязательное поле
+	 * - method = по умолчанию get
+	 * - target = элемент (#container-request), куда будут выгружен ответ сервер, тип строка
+	 * - loader = спиннер загрузки использует класс vg-loader (в дефолтных стилях), по умолчанию false
+	 * - once = сделает всего один запрос (например: при открытии модалки несколько раз), по умолчанию false
+	 * - output = не помню зачем (где-то используется), по умолчанию false
+	 * - timeout = задержка перед отправкой, по умолчанию 0
+	 * @param callback
+	 */
 	_route(callback) {
 		let $content = null,
 			timeout = this._params.ajax.timeout || 0;
 
 		if (this._isLoaded) return;
 
-		const setData = (data) => {
-			if ($content) $content.innerHTML = data;
+		const setData = (response) => {
+			if (typeof response === "string") {
+				if ($content) $content.innerHTML = response;
+			}
 		};
 
 		if (!this._params.hasOwnProperty('ajax')) {
@@ -60,40 +75,32 @@ class BaseModule {
 			$content = Selectors.find(this._params.ajax.target);
 		}
 
-		if ('loader' in this._params.ajax && this._params.ajax.loader) {
-			if ('output' in this._params.ajax && this._params.ajax.output) {
-				setData('<div class="vg-loader"></div>');
+		if (('loader' in this._params.ajax && this._params.ajax.loader) && ('output' in this._params.ajax && this._params.ajax.output)) {
+			setData(Html('string').div({class: 'vg-loader'}));
+		}
+
+		let completeAjaxRequest = (data, status) => {
+			if ('loader' in this._params.ajax && this._params.ajax.loader) setData('');
+
+			if ('once' in this._params.ajax && this._params.ajax.once) {
+				this._isLoaded = true;
 			}
+
+			if ('output' in this._params.ajax && this._params.ajax.output) {
+				setData(data.response);
+			}
+
+			execute(callback, [status, data, $content]);
 		}
 
 		const ajax = new Ajax();
 
 		let ajaxData = {
 			onSuccess: (data) => {
-				let result = {
-					code: 200,
-					response: data,
-				}
-				if ('once' in this._params.ajax && this._params.ajax.once) {
-					this._isLoaded = true;
-				}
-
-				if ('output' in this._params.ajax && this._params.ajax.output) {
-					setData(result.response);
-				}
-
-				execute(callback, ['success', result, $content]);
+				completeAjaxRequest(data, 'success')
 			},
 			onError: (err) => {
-				if ('once' in this._params.ajax && this._params.ajax.once) {
-					this._isLoaded = true;
-				}
-
-				if ('output' in this._params.ajax && this._params.ajax.output) {
-					setData(err);
-				}
-
-				execute(callback, ['error', err, $content]);
+				completeAjaxRequest(err, 'error')
 			}
 		}
 
@@ -105,7 +112,7 @@ class BaseModule {
 			if (this._params.ajax.method.toLowerCase() === 'post') {
 				ajax.post(this._params.ajax.route, this._params.ajax.data, ajaxData);
 			}
-		}, timeout)
+		}, timeout);
 	}
 
 	_dismissElement() {

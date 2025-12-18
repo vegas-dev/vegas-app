@@ -83,32 +83,37 @@ $success-map: (
 		icon: $success,
 		color: $success-text,
 		border-color: $success-border,
-		background-color: $success-bg
+		background-color: $success-bg,
+		close: shade-color($success-text, 80%)
 );
 
 $danger-map: (
 		icon: $danger,
 		color: $danger-text,
 		border-color: $danger-border,
-		background-color: $danger-bg
+		background-color: $danger-bg,
+		close: shade-color($danger-text, 80%)
 );
 
 $warning-map: (
 		icon: $warning,
 		color: $warning-text,
 		border-color: $warning-border,
-		background-color: $warning-bg
+		background-color: $warning-bg,
+		close: shade-color($warning-text, 80%)
 );
 
 $info-map: (
 		icon: $info,
 		color: $info-text,
 		border-color: $info-border,
-		background-color: $info-bg
+		background-color: $info-bg,
+		close: shade-color($info-text, 80%)
 );
 
 $dark-map: (
 		color: $dark-text,
 		border-color: $dark-border,
-		background-color: $dark-bg
+		background-color: $dark-bg,
+		close: shade-color($dark-text, 80%)
 );

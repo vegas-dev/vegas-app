@@ -1,4 +1,4 @@
-import {mergeDeepObject, noop} from "../functions";
+import {mergeDeepObject, noop, normalizeData} from "../functions";
 
 class Ajax {
 	/**
@@ -160,18 +160,20 @@ class Ajax {
 
 			xhr.onload = () => {
 				if (xhr.status >= 200 && xhr.status < 300) {
-					let data;
-					try {
-						data = JSON.parse(xhr.responseText);
-					} catch {
-						data = xhr.responseText;
-					}
+					let data = {
+						code: xhr.status,
+						response: normalizeData(xhr.responseText)
+					};
 					onSuccess(data);
 					resolve(data);
 				} else {
 					const error = new Error(`Ошибка ${xhr.status}: ${xhr.statusText}`);
-					onError(error);
-					reject(error);
+					let data = {
+						code: xhr.status,
+						response: error
+					}
+					onError(data);
+					reject(data);
 				}
 				onUploadEnd();
 			};
