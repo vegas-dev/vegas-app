@@ -13,5 +13,29 @@
 
 
 .vg-accordion {
+	@include mix-vars('accordion', $collapse-accordion-map);
+	position: relative;
+	border: var(--vg-accordion-border);
+	border-radius: var(--vg-accordion-border-radius);
 
+	&-item {
+		border-top: 0;
+		border-left: 0;
+		border-right: 0;
+		border-bottom: var(--vg-accordion-border);
+
+		&:last-child {
+			border: none;
+		}
+	}
+
+	&-button {
+		display: block;
+		padding: var(--vg-accordion-padding);
+	}
+
+	&-content {
+		display: block;
+		padding: var(--vg-accordion-padding);
+	}
 }

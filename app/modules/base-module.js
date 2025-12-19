@@ -54,8 +54,6 @@ class BaseModule {
 		if (this._isLoaded) return;
 
 		const setData = (response) => {
-			console.log(response)
-
 			if (typeof response === "string") {
 				if ($content) $content.innerHTML = response;
 			} else if (isObject(response) && !isEmptyObj(response)) {
