@@ -113,11 +113,33 @@ class Ajax {
 				}
 				const contentType = response.headers.get('content-type');
 				if (contentType && contentType.includes('application/json')) {
-					return response.json();
+					return {
+						code: response.status,
+						response: response.json()
+					};
 				}
-				return response.text();
+
+				return {
+					code: response.status,
+					response: response.text()
+				};
 			})
-			.then(data => onSuccess(data))
+			.then(data => {
+				if ('response' in data) {
+					if (data.response instanceof Promise) {
+						data.response.then(text => {
+							onSuccess({
+								code: data.code,
+								response: text
+							})
+						})
+					} else {
+						onSuccess(data)
+					}
+				} else {
+					onSuccess(data)
+				}
+			})
 			.catch(error => onError(error));
 	}
 

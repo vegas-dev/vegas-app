@@ -37,7 +37,7 @@ class VGCollapse extends BaseModule {
 				target: '',
 				method: 'get',
 				loader: false,
-				once: false,
+				once: true,
 				output: true,
 			}
 		}, params));
@@ -97,6 +97,8 @@ class VGCollapse extends BaseModule {
 		const startEvent = EventHandler.trigger(_this._element, EVENT_KEY_SHOW);
 		if (startEvent.defaultPrevented) return;
 
+		_this._route();
+
 		for (const activeInstance of activeChildren) {
 			activeInstance.hide();
 		}
@@ -108,8 +110,6 @@ class VGCollapse extends BaseModule {
 
 		_this._addAriaAndCollapsedClass(_this._triggerArray, true);
 		_this._isTransitioning = true;
-
-		_this._route();
 
 		const complete = () => {
 			_this._isTransitioning = false;

@@ -1,4 +1,4 @@
-import {execute, executeAfterTransition, isEmptyObj} from "../utils/js/functions";
+import {execute, executeAfterTransition, isEmptyObj, isObject, normalizeData} from "../utils/js/functions";
 import Selectors from "../utils/js/dom/selectors";
 import Data from "../utils/js/dom/data";
 import Params from "../utils/js/components/params";
@@ -54,8 +54,16 @@ class BaseModule {
 		if (this._isLoaded) return;
 
 		const setData = (response) => {
+			console.log(response)
+
 			if (typeof response === "string") {
 				if ($content) $content.innerHTML = response;
+			} else if (isObject(response) && !isEmptyObj(response)) {
+				Object.values(response).forEach(value => {
+					if (typeof value === "string") {
+						if ($content) $content.innerHTML = value;
+					}
+				});
 			}
 		};
 
@@ -87,7 +95,11 @@ class BaseModule {
 			}
 
 			if ('output' in this._params.ajax && this._params.ajax.output) {
-				setData(data.response);
+				if ('response' in data) {
+					setData(normalizeData(data.response))
+				} else {
+					setData(data);
+				}
 			}
 
 			execute(callback, [status, data, $content]);
