@@ -119,13 +119,11 @@ class VGFiles extends BaseModule {
 			$count.innerHTML = this._files.length + (this._files.length ? '<span>[' + this._getSizes(this._files, true) + ']</span>' : '');
 		}
 
-		this.clear();
-		this.setImages(this._files, true);
-		this.setInfoList(this._files, true);
+		this.change()
 	}
 
-	change(input) {
-		let values = input.files,
+	change(input = null) {
+		let values = input !== null ? input.files : this._files,
 			appended_files = [];
 
 		this.clear();
@@ -133,25 +131,14 @@ class VGFiles extends BaseModule {
 		if (!this._params.allowed) this._files = [];
 
 		if (values.length) {
-			if (this._params.limits.count !== 1) {
+			/*if (this._params.limits.count !== 1) {
 				input.removeAttribute('id');
 				input.removeAttribute('data-vg-toggle');
 				input.classList.add(CLASS_NAME_FAKE);
 				input.onchange = null;
 
-				let $container = Selectors.find('.' + CLASS_NAME_CONTAINER + '-inputs', this._element);
-				if (!$container) {
-					$container = this._tpl.div({
-						class: `${CLASS_NAME_CONTAINER}-inputs`,
-					}, '');
-					this._element.prepend($container);
-				}
-
-				let accept = this.accept ? 'accept="' + this.accept + '"' : '';
-				$container.insertAdjacentHTML('beforeEnd', '<input type="file" name="'+ this.name +'" id="'+ this.id +'" data-vg-toggle="files" ' + accept + ' multiple>');
-
 				this._addEventListener();
-			}
+			}*/
 
 			appended_files = this.append(values);
 
@@ -162,6 +149,23 @@ class VGFiles extends BaseModule {
 
 					let $count = Selectors.find('.' + CLASS_NAME_INFO + '--wrapper-count', $fileInfo);
 					if ($count) $count.innerHTML = appended_files.length + '<span>[' + this._getSizes(appended_files, true) + ']</span>';
+
+					const inputName = this.name || 'files[]';
+					appended_files.forEach((file, index) => {
+						// Создаём Blob из файла и input типа file
+						const fileInput = document.createElement('input');
+						fileInput.type = 'file';
+						fileInput.name = `${inputName}[${index}]`;
+						fileInput.dataset.vgFiles = 'generated';
+						fileInput.style.display = 'none';
+
+						// Создаём DataTransfer для установки файла
+						const dataTransfer = new DataTransfer();
+						dataTransfer.items.add(file);
+						fileInput.files = dataTransfer.files;
+
+						console.log(fileInput)
+					});
 
 					this.setImages(appended_files);
 					this.setInfoList(appended_files);
