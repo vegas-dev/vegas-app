@@ -7,6 +7,18 @@ import Overflow from "../../../utils/js/components/overflow";
 import Backdrop from "../../../utils/js/components/backdrop";
 import {dismissTrigger} from "../../module-fn";
 
+/**
+ * Константы, используемые в модуле выпадающего списка.
+ * @type {Object}
+ * @property {string} NAME - Имя модуля.
+ * @property {string} NAME_KEY - Уникальный ключ модуля с префиксом.
+ * @property {string} CLASS_NAME_SHOW - CSS-класс для отображения элемента.
+ * @property {string} CLASS_NAME_FADE - CSS-класс для эффекта затухания.
+ * @property {string} CLASS_NAME_OPEN - CSS-класс для немигающего открытия.
+ * @property {string} TARGET_CONTAINER - Класс контейнера выпадающего меню.
+ * @property {string} PARENT_CONTAINER - Класс родительского контейнера.
+ * @property {string} SELECTOR_DATA_TOGGLE - Селектор элемента-переключателя.
+ */
 const NAME             = 'dropdown';
 const NAME_KEY         = 'vg.dropdown';
 const CLASS_NAME_SHOW  = 'show';
@@ -16,26 +28,75 @@ const TARGET_CONTAINER = 'vg-dropdown-content';
 const PARENT_CONTAINER = 'vg-dropdown';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="dropdown"]';
 
+/**
+ * События, генерируемые модулем.
+ * @type {Object}
+ */
 const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
+const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
 
-const EVENT_KEYUP_DATA_API =     `keyup.${NAME_KEY}.data.api`;
-const EVENT_KEYDOWN_DATA_API =   `keydown.${NAME_KEY}.data.api`;
-const EVENT_CLICK_DATA_API =     `click.${NAME_KEY}.data.api`;
+/**
+ * Делегированные события на уровне документа.
+ * @type {Object}
+ */
+const EVENT_KEYUP_DATA_API     = `keyup.${NAME_KEY}.data.api`;
+const EVENT_KEYDOWN_DATA_API   = `keydown.${NAME_KEY}.data.api`;
+const EVENT_CLICK_DATA_API     = `click.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
-const EVENT_MOUSEOUT_DATA_API =  `mouseout.${NAME_KEY}.data.api`;
+const EVENT_MOUSEOUT_DATA_API  = `mouseout.${NAME_KEY}.data.api`;
 
+/**
+ * Компонент выпадающего списка (Dropdown).
+ *
+ * @extends BaseModule
+ *
+ * @example
+ * const dropdown = new VGDropdown(document.querySelector('[data-vg-toggle="dropdown"]'), {
+ *   placement: 'bottom-start',
+ *   hover: true,
+ *   animation: {
+ *     enable: true,
+ *     in: 'animate__fadeIn',
+ *     out: 'animate__fadeOut',
+ *     delay: 150
+ *   }
+ * });
+ *
+ * @example <caption>Инициализация через data-атрибуты</caption>
+ * <div class="vg-dropdown">
+ *   <button data-vg-toggle="dropdown" aria-expanded="false">Меню</button>
+ *   <div class="vg-dropdown-content">Содержимое меню</div>
+ * </div>
+ */
 class VGDropdown extends BaseModule {
+	/**
+	 * Создаёт экземпляр VGDropdown.
+	 *
+	 * @param {HTMLElement} element - Элемент-переключатель (кнопка).
+	 * @param {Object} [params] - Пользовательские параметры.
+	 * @param {string} [params.placement='auto'] - Позиция выпадающего окна: 'top', 'bottom', 'left', 'right', 'auto' и т.д.
+	 * @param {boolean} [params.hover=false] - Открывать по наведению мыши.
+	 * @param {Object} [params.ajax] - Параметры AJAX-загрузки.
+	 * @param {string} [params.ajax.route=''] - URL для загрузки контента.
+	 * @param {string} [params.ajax.target=''] - Селектор внутри drop для вставки данных.
+	 * @param {string} [params.ajax.method='get'] - HTTP-метод.
+	 * @param {boolean} [params.ajax.loader=false] - Показывать ли лоадер.
+	 * @param {boolean} [params.ajax.once=false] - Загружать один раз.
+	 * @param {boolean} [params.ajax.output=true] - Вставлять ли ответ в DOM.
+	 * @param {Object} [params.animation] - Настройки анимации.
+	 * @param {boolean} [params.animation.fade=false] - Использовать fade-анимацию.
+	 * @param {boolean} [params.animation.enable=false] - Включить CSS-анимации.
+	 * @param {string} [params.animation.in='animate__flipInY'] - Класс для анимации входа.
+	 * @param {string} [params.animation.out='animate__flipOutY'] - Класс для анимации выхода.
+	 * @param {number} [params.animation.delay=300] - Задержка перед завершением скрытия (в мс).
+	 */
 	constructor(element, params) {
 		super(element, params);
 
 		let defaultParams = {
-			backdrop: false,
-			overflow: false,
-			keyboard: false,
-			timeoutAnimation: 10,
 			placement: 'auto',
 			hover: false,
 			ajax: {
@@ -71,18 +132,36 @@ class VGDropdown extends BaseModule {
 		this._animation(this._drop, VGDropdown.NAME_KEY, this._params.animation);
 	}
 
+	/**
+	 * Возвращает имя компонента.
+	 * @return {string}
+	 */
 	static get NAME() {
 		return NAME;
 	}
 
+	/**
+	 * Возвращает уникальный ключ компонента.
+	 * @return {string}
+	 */
 	static get NAME_KEY() {
 		return NAME_KEY;
 	}
 
+	/**
+	 * Переключает состояние выпадающего списка (открыто/закрыто).
+	 * @return {void}
+	 */
 	toggle() {
 		return this._isShown() ? this.hide() : this.show();
 	}
 
+	/**
+	 * Открывает выпадающий список.
+	 * @fires VGDropdown#show - Перед открытием.
+	 * @fires VGDropdown#shown - После открытия.
+	 * @return {void}
+	 */
 	show() {
 		if (isDisabled(this._element) || this._isShown()) return;
 
@@ -101,18 +180,12 @@ class VGDropdown extends BaseModule {
 		this._element.classList.add(CLASS_NAME_SHOW);
 		this._drop.classList.add(CLASS_NAME_SHOW);
 		this._setPlacement();
-		this._route();
-
-		if (this._params.backdrop && !this._params.hover) {
-			Backdrop.show();
-		}
-
-		if (this._params.overflow) {
-			Overflow.append();
-			document.body.classList.add('dropdown-open');
-		}
 
 		const completeCallback = () => {
+			this._route((status, data) => {
+				EventHandler.trigger(this._element, EVENT_KEY_LOADED, { stats: status, data });
+			});
+
 			if (this.isFade) {
 				this._drop.classList.add(CLASS_NAME_FADE);
 			} else if (!this.isAnimation) {
@@ -124,19 +197,39 @@ class VGDropdown extends BaseModule {
 		this._queueCallback(completeCallback, this._drop, this.isAnimation || this.isFade, 50);
 	}
 
+	/**
+	 * Закрывает выпадающий список.
+	 * @fires VGDropdown#hide - Перед закрытием.
+	 * @fires VGDropdown#hidden - После закрытия.
+	 * @return {void}
+	 */
 	hide() {
 		if (isDisabled(this._element) || !this._isShown()) return;
 		this._completeHide({ relatedTarget: this._element });
 	}
 
+	/**
+	 * Удаляет инстанс компонента и очищает обработчики событий.
+	 * @return {void}
+	 */
 	dispose() {
 		super.dispose();
 	}
 
+	/**
+	 * Проверяет, открыто ли выпадающее меню.
+	 * @return {boolean} - `true`, если открыто.
+	 * @private
+	 */
 	_isShown() {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
+	/**
+	 * Полностью закрывает меню с анимацией и callback.
+	 * @param {Object} relatedTarget - Событие-инициатор.
+	 * @private
+	 */
 	_completeHide(relatedTarget) {
 		const hideEvent = EventHandler.trigger(this._drop, EVENT_KEY_HIDE, relatedTarget);
 		if (hideEvent.defaultPrevented) return;
@@ -156,19 +249,6 @@ class VGDropdown extends BaseModule {
 			this._drop.classList.remove(CLASS_NAME_OPEN);
 		}
 
-		if (this._params.backdrop && !this._params.hover) {
-			Backdrop.hide(() => {
-				if (this._params.overflow) {
-					Overflow.destroy();
-				}
-			});
-		}
-
-		if (this._params.overflow) {
-			Overflow.destroy();
-			document.body.classList.remove('dropdown-open');
-		}
-
 		setTimeout(() => {
 			const completeCallback = () => {
 				this._drop.classList.remove(CLASS_NAME_SHOW);
@@ -178,6 +258,10 @@ class VGDropdown extends BaseModule {
 		}, this._params.animation.delay);
 	}
 
+	/**
+	 * Устанавливает позицию выпадающего окна с помощью вспомогательного класса Placement.
+	 * @private
+	 */
 	_setPlacement() {
 		if (!this._drop) return;
 
@@ -209,6 +293,12 @@ class VGDropdown extends BaseModule {
 		this._isPlacement = true;
 	}
 
+	/**
+	 * Инициализирует компонент на указанном элементе и устанавливает обработчики событий.
+	 * @param {HTMLElement} element - Элемент-переключатель.
+	 * @param {Object} [params] - Параметры инициализации.
+	 * @return {VGDropdown} - Экземпляр компонента.
+	 */
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);
 
@@ -253,8 +343,15 @@ class VGDropdown extends BaseModule {
 			event.preventDefault();
 			instance.toggle();
 		});
+
+		return instance;
 	}
 
+	/**
+	 * Скрывает все открытые выпадающие списки.
+	 * @param {Event} event - Событие, инициировавшее скрытие.
+	 * @static
+	 */
 	static hideOpenToggles(event) {
 		const openToggles = Selectors.findAll(`${SELECTOR_DATA_TOGGLE}:not(.disabled):not(:disabled).${CLASS_NAME_SHOW}`);
 		for (const toggle of openToggles) {
@@ -279,6 +376,11 @@ class VGDropdown extends BaseModule {
 		}
 	}
 
+	/**
+	 * Обработчик клавиатурных событий (стрелки, Esc).
+	 * @param {KeyboardEvent} event - Клавиатурное событие.
+	 * @static
+	 */
 	static keydownHandler(event) {
 		const isInput = /input|textarea/i.test(event.target.tagName);
 		const isEscapeEvent = event.key === 'Escape';
@@ -307,6 +409,11 @@ class VGDropdown extends BaseModule {
 		}
 	}
 
+	/**
+	 * Обработчик кликов и Tab для закрытия выпадающих списков.
+	 * @param {Event} event - Событие (click или keyup).
+	 * @static
+	 */
 	static clearDrops(event) {
 		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) {
 			return;
@@ -314,7 +421,5 @@ class VGDropdown extends BaseModule {
 		VGDropdown.hideOpenToggles(event);
 	}
 }
-
-dismissTrigger(VGDropdown);
 
 export default VGDropdown;

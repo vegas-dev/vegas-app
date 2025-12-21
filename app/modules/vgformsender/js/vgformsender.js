@@ -356,7 +356,11 @@ class VGFormSender extends BaseModule {
 		}
 
 		_this._statusButton('before');
-		EventHandler.trigger(_this._element, EVENT_KEY_BEFORE, _this);
+		EventHandler.trigger(_this._element, EVENT_KEY_BEFORE, {
+			vgformsender: {
+				self: _this
+			}
+		});
 	}
 
 	/**
