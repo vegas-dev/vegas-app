@@ -37,12 +37,12 @@ class VGFiles extends BaseModule {
 			lang: document.documentElement.lang || 'ru',
 			limits: {
 				count: 0,
-				sizes: 1 // MB
+				sizes: 0 // MB
 			},
 			image: false,
 			detach: true,
 			info: true,
-			types: ['image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"],
+			types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
 		}, params));
 
 		const toggleEl = Selectors.find('[data-vg-toggle]', this._element);
