@@ -24,329 +24,346 @@ const CLASS_NAME_LIST      = `${CLASS_NAME_INFO}--list`;
 const CLASS_NAME_DROP      = `${CLASS_NAME_CONTAINER}-drop`;
 const CLASS_NAME_ERRORS    = `${CLASS_NAME_CONTAINER}-errors`;
 
-const EVENT_KEY_CHANGE   = `${NAME_KEY}.change`;
+const EVENT_KEY_CHANGE              = `${NAME_KEY}.change`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 const EVENT_KEY_DISMISS_DATA_API    = `click.${NAME_KEY}.data.api`;
 
 class VGFiles extends BaseModule {
-	constructor(element, params = {}) {
-		super(element, params);
+    constructor(element, params = {}) {
+        super(element, params);
 
-		this._params = this._getParams(this._element, mergeDeepObject({
-			allowed: true,
-			lang: document.documentElement.lang || 'ru',
-			limits: {
-				count: 0,
-				sizes: 10 // MB
-			},
-			image: false,
-			detach: true,
-			info: true,
-			types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
-		}, params));
+        this._params = this._getParams(this._element, mergeDeepObject({
+            allowed: true,
+            lang: document.documentElement.lang || 'ru',
+            limits: {
+                count: 0,
+                sizes: 10, // MB per file
+                total: 0   // MB for all files (0 - no limit)
+            },
+            image: false,
+            detach: true,
+            info: true,
+            types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
+        }, params));
 
-		const toggleEl = Selectors.find('[data-vg-toggle]', this._element);
-		this.id     = toggleEl?.id || undefined;
-		this.name   = toggleEl?.name || 'files[]';
-		this.accept = toggleEl?.getAttribute('accept') || undefined;
+        const toggleEl = Selectors.find('[data-vg-toggle]', this._element);
+        this.id     = toggleEl?.id || undefined;
+        this.name   = toggleEl?.name || 'files[]';
+        this.accept = toggleEl?.getAttribute('accept') || undefined;
 
-		this._tpl    = Html('dom');
-		this._files  = [];
-		this._errors = [];
-		this._objectUrls = [];
+        this._tpl    = Html('dom');
+        this._files  = [];
+        this._errors = [];
+        this._objectUrls = [];
 
-		this._init();
-		this._addEventListener();
-	}
+        this._nodes = {
+            info: Selectors.find(`.${CLASS_NAME_INFO}`, this._element),
+            drop: Selectors.find(`.${CLASS_NAME_DROP}`, this._element)
+        };
 
-	static get NAME() { return NAME; }
-	static get NAME_KEY() { return NAME_KEY; }
+        this._init();
+        this._addEventListener();
+    }
 
-	_init() {
-		this._dragDrop = Selectors.find(`.${CLASS_NAME_DROP}`, this._element);
-		if (this._dragDrop) {
-			new DragDropFiles(this._dragDrop, this._params).init();
-		}
-	}
+    static get NAME() { return NAME; }
+    static get NAME_KEY() { return NAME_KEY; }
 
-	build() {
-		const $fileInfo = Selectors.find(`.${CLASS_NAME_INFO}`, this._element);
-		if (!$fileInfo) return;
+    _init() {
+        if (this._nodes.drop) {
+            new DragDropFiles(this._nodes.drop, this._params).init();
+        }
+    }
 
-		this._updateCounter($fileInfo);
-		this.change();
-	}
+    build() {
+        if (!this._nodes.info) return;
 
-	change(input = null) {
-		const values = input?.files || this._files;
-		
-		this.clear();
-		if (!this._params.allowed) this._files = [];
+        this._updateCounter();
+        this.change();
+    }
 
-		if (values.length) {
-			this._cleanupErrors();
-			const appendedFiles = this.append(values);
+    change(input = null) {
+        const incomingFiles = input?.files || this._files;
 
-			if (appendedFiles.length) {
-				this._generateHiddenInputs(appendedFiles);
-				this._renderUI(appendedFiles);
-			}
+        if (input && !input.files.length) {
+            return;
+        }
 
-			EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: appendedFiles });
-		}
-	}
+        this.clear();
+        if (!this._params.allowed) {
+            this._files = [];
+            return;
+        }
 
-	_renderUI(files) {
-		const $fileInfo = Selectors.find(`.${CLASS_NAME_INFO}`, this._element);
-		if (!$fileInfo) return;
+        if (incomingFiles.length) {
+            this._cleanupErrors();
+            const processedFiles = this.append(incomingFiles);
 
-		Classes.add($fileInfo, 'show');
-		this._updateCounter($fileInfo);
-		this.setImages(files);
-		this.setInfoList(files);
-	}
+            if (processedFiles.length) {
+                this._generateHiddenInputs(processedFiles);
+                this._renderUI(processedFiles);
+            }
 
-	_updateCounter(container) {
-		const $count = Selectors.find(`.${CLASS_NAME_INFO}--wrapper-count`, container);
-		if ($count) {
-			const sizeText = this._files.length ? `<span>[${this._getSizes(this._files, true)}]</span>` : '';
-			$count.innerHTML = `${this._files.length}${sizeText}`;
-		}
-	}
+            EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: processedFiles });
+        }
+    }
 
-	_generateHiddenInputs(files) {
-		this._cleanupFakeInputs();
-		files.forEach((file, index) => {
-			const input = document.createElement('input');
-			input.type = 'file';
-			input.name = `${this.name.replace('[]', '')}[${index}]`;
-			input.dataset.vgFiles = 'generated';
-			Manipulator.hide(input);
+    _renderUI(files) {
+        if (!this._nodes.info) return;
 
-			const dataTransfer = new DataTransfer();
-			dataTransfer.items.add(file);
-			input.files = dataTransfer.files;
+        Classes.add(this._nodes.info, 'show');
+        this._updateCounter();
+        this._renderImages(files);
+        this._renderInfoList(files);
+    }
 
-			this._element.appendChild(input);
-		});
-	}
+    _updateCounter() {
+        if (!this._nodes.info) return;
+        const $count = Selectors.find(`.${CLASS_NAME_INFO}--wrapper-count`, this._nodes.info);
+        if ($count) {
+            const sizeText = this._files.length ? `<span>[${this._getSizes(this._files, true)}]</span>` : '';
+            $count.innerHTML = `${this._files.length}${sizeText}`;
+        }
+    }
 
-	append(values) {
-		const newFiles = Array.from(values);
-		const allFiles = [...this._files, ...newFiles];
+    _generateHiddenInputs(files) {
+        this._cleanupFakeInputs();
+        const fragment = document.createDocumentFragment();
 
-		this._files = allFiles.reduce((acc, file) => {
-			const isDuplicate = acc.some(f => f.name === file.name && f.size === file.size && f.type === file.type);
-			if (!isDuplicate) acc.push(file);
-			return acc;
-		}, []);
+        files.forEach((file, index) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.name = `${this.name.replace('[]', '')}[${index}]`;
+            input.dataset.vgFiles = 'generated';
+            Manipulator.hide(input);
 
-		this._files = this._filterFiles(this._files);
-		this._renderErrors();
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+            fragment.appendChild(input);
+        });
 
-		return this._files;
-	}
+        this._element.appendChild(fragment);
+    }
 
-	removeFile(button) {
-		const fileData = {
-			name: normalizeData(Manipulator.get(button, 'data-name')),
-			size: normalizeData(Manipulator.get(button, 'data-size')),
-			type: normalizeData(Manipulator.get(button, 'data-type')),
-		};
+    append(values) {
+        const fileMap = new Map(this._files.map(f => [`${f.name}-${f.size}-${f.lastModified}`, f]));
 
-		this._files = this._files.filter(f => 
-			!(f.name === fileData.name && f.size === fileData.size && f.type === fileData.type)
-		);
+        Array.from(values).forEach(file => {
+            fileMap.set(`${file.name}-${file.size}-${file.lastModified}`, file);
+        });
 
-		this._files.length ? this.build() : this.clear(true);
-	}
+        this._files = this._filterFiles(Array.from(fileMap.values()));
+        this._renderErrors();
 
-	clear(all = false) {
-		this._revokeUrls();
-		
-		const selectors = [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`];
-		selectors.forEach(s => {
-			const el = Selectors.find(s, this._element);
-			if (el) el.innerHTML = '';
-		});
+        return this._files;
+    }
 
-		if (all) {
-			Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
-			this._cleanupFakeInputs();
-			this._cleanupErrors();
-			const $info = Selectors.find(`.${CLASS_NAME_INFO}`, this._element);
-			if ($info) Classes.remove($info, 'show');
-			this._files = [];
-		}
-	}
+    removeFile(button) {
+        const name = normalizeData(Manipulator.get(button, 'data-name'));
+        const size = normalizeData(Manipulator.get(button, 'data-size'));
 
-	_revokeUrls() {
-		this._objectUrls.forEach(url => URL.revokeObjectURL(url));
-		this._objectUrls = [];
-	}
+        this._files = this._files.filter(f => !(f.name === name && f.size === size));
+        this._files.length ? this.build() : this.clear(true);
+    }
 
-	setImages(files) {
-		if (!this._params.image) return;
+    clear(all = false) {
+        this._revokeUrls();
 
-		const $fileInfo = Selectors.find(`.${CLASS_NAME_INFO}`, this._element);
-		let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element);
+        [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
+            const el = Selectors.find(selector, this._element);
+            if (el) el.innerHTML = '';
+        });
 
-		if (!$container && $fileInfo) {
-			$container = this._tpl.div({ class: CLASS_NAME_IMAGES });
-			$fileInfo.prepend($container);
-		}
+        if (all) {
+            Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
+            this._cleanupFakeInputs();
+            this._cleanupErrors();
 
-		files.forEach(file => {
-			const src = URL.createObjectURL(file);
-			this._objectUrls.push(src);
-			$container.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
-		});
-	}
+            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+            this._files = [];
+        }
+    }
 
-	setInfoList(files) {
-		if (!this._params.info) return;
+    _revokeUrls() {
+        this._objectUrls.forEach(url => URL.revokeObjectURL(url));
+        this._objectUrls = [];
+    }
 
-		const $fileInfo = Selectors.find(`.${CLASS_NAME_INFO}`, this._element);
-		let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+    _renderImages(files) {
+        if (!this._params.image || !this._nodes.info) return;
 
-		if (!$list && $fileInfo) {
-			$list = this._tpl.ul([], { class: CLASS_NAME_LIST });
-			$fileInfo.append($list);
-		}
+        let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element);
 
-		files.forEach((file, i) => {
-			const $li = this._tpl.li({}, [
-				this._tpl.span({class: 'iteration'}, `${i + 1}.`),
-				this._tpl.span({class: 'name'}, file.name),
-				this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
-			]);
+        if (!$container) {
+            $container = this._tpl.div({ class: CLASS_NAME_IMAGES });
+            this._nodes.info.prepend($container);
+        }
 
-			if (this._params.detach) {
-				const $btn = this._tpl.button('✕', 'button', {
-					type: 'button',
-					'data-dismiss': 'file',
-					'data-name': file.name,
-					'data-size': file.size,
-					'data-type': file.type
-				});
-				$li.append($btn);
-			}
-			$list.append($li);
-		});
-	}
+        const fragment = document.createDocumentFragment();
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const src = URL.createObjectURL(file);
+                this._objectUrls.push(src);
+                fragment.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
+            }
+        });
+        $container.appendChild(fragment);
+    }
 
-	_filterFiles(files) {
-		this._errors = [];
-		let filtered = files;
+    _renderInfoList(files) {
+        if (!this._params.info || !this._nodes.info) return;
 
-		// Filter Type
-		if (this._params.types?.length) {
-			filtered = filtered.filter(f => {
-				const ok = this._checkType(f.type);
-				if (!ok) this._errors.push('is-types');
-				return ok;
-			});
-		}
+        let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
 
-		// Filter Size
-		const maxSize = this._params.limits.sizes * 1024 * 1024;
-		filtered = filtered.filter(f => {
-			const ok = f.size <= maxSize;
-			if (!ok) this._errors.push('is-sizes');
-			return ok;
-		});
+        if (!$list) {
+            $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
+            this._nodes.info.append($list);
+        }
 
-		// Filter Count
-		if (this._params.limits.count > 0 && filtered.length > this._params.limits.count) {
-			this._errors.push('is-count');
-			filtered = filtered.slice(0, this._params.limits.count);
-		}
+        const fragment = document.createDocumentFragment();
+        files.forEach((file, i) => {
+            const $li = this._tpl.li({}, [
+                this._tpl.span({class: 'iteration'}, `${i + 1}.`),
+                this._tpl.span({class: 'name'}, file.name),
+                this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
+            ]);
 
-		return filtered;
-	}
+            if (this._params.detach) {
+                $li.append(this._tpl.button('✕', 'button', {
+                    type: 'button',
+                    'data-dismiss': 'file',
+                    'data-name': file.name,
+                    'data-size': file.size,
+                    'data-type': file.type
+                }));
+            }
+            fragment.appendChild($li);
+        });
+        $list.appendChild(fragment);
+    }
 
-	_getSizes(size, isArray = false) {
-		const totalSize = isArray ? size.reduce((acc, f) => acc + f.size, 0) : size;
-		const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'];
-		const index = totalSize > 0 ? Math.min(Math.floor(Math.log(totalSize) / Math.log(1024)), units.length - 1) : 0;
+    _filterFiles(files) {
+        this._errors = new Set();
+        const { sizes, total, count, types } = this._params.limits;
+        const maxSize = sizes * 1024 * 1024;
+        const maxTotalSize = total * 1024 * 1024;
 
-		return new Intl.NumberFormat(this._params.lang, {
-			style: 'unit',
-			unit: units[index],
-			unitDisplay: 'short',
-			maximumFractionDigits: 2
-		}).format(totalSize / Math.pow(1024, index));
-	}
+        let currentTotalSize = 0;
+        const filtered = [];
 
-	_checkType(type) {
-		return this._params.types.includes(type);
-	}
+        for (const file of files) {
+            if (count > 0 && filtered.length >= count) {
+                this._errors.add('is-count');
+                break;
+            }
 
-	_cleanupFakeInputs() {
-		Selectors.findAll(SELECTOR_DATA_FAKE, this._element).forEach(el => el.remove());
-	}
+            let isValid = true;
 
-	_cleanupErrors() {
-		this._errors = [];
-		Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element)?.remove();
-	}
+            if (this._params.types?.length && !this._params.types.includes(file.type)) {
+                this._errors.add('is-types');
+                isValid = false;
+            }
 
-	_renderErrors() {
-		if (!this._errors.length) return;
+            if (file.size > maxSize) {
+                this._errors.add('is-sizes');
+                isValid = false;
+            }
 
-		const uniqueErrors = [...new Set(this._errors)];
-		const messages = lang_messages(this._params.lang, NAME) || this._getFallbackErrors();
+            if (isValid && maxTotalSize > 0) {
+                if (currentTotalSize + file.size > maxTotalSize) {
+                    this._errors.add('is-total-size');
+                    isValid = false;
+                } else {
+                    currentTotalSize += file.size;
+                }
+            }
 
-		let $errorCont = Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element);
-		if (!$errorCont) {
-			$errorCont = this._tpl.div({ class: CLASS_NAME_ERRORS });
-			Selectors.find(`.${CLASS_NAME_INFO}`, this._element)?.before($errorCont);
-		}
+            if (isValid) {
+                filtered.push(file);
+            }
+        }
 
-		uniqueErrors.forEach(errKey => {
-			const msg = messages[errKey] || errKey;
-			$errorCont.append(this._tpl.span({ class: 'error-item' }, [this._tpl.span({}, msg)]));
-		});
-	}
+        return filtered;
+    }
 
-	_getFallbackErrors() {
-		return {
-			'is-count': `Limit: ${this._params.limits.count}`,
-			'is-sizes': `Max size: ${this._params.limits.sizes}MB`,
-			'is-types': `Allowed: ${this._params.types.join(', ')}`
-		};
-	}
+    _getSizes(size, isArray = false) {
+        const totalSize = isArray ? size.reduce((acc, f) => acc + f.size, 0) : size;
+        const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'];
+        const index = totalSize > 0 ? Math.min(Math.floor(Math.log(totalSize) / Math.log(1024)), units.length - 1) : 0;
 
-	_addEventListener() {
-		Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element).forEach(el => {
-			el.addEventListener('change', () => this.change(el));
-		});
+        return new Intl.NumberFormat(this._params.lang, {
+            style: 'unit',
+            unit: units[index],
+            unitDisplay: 'short',
+            maximumFractionDigits: 2
+        }).format(totalSize / Math.pow(1024, index));
+    }
 
-		const $dismiss = Selectors.find('[data-dismiss="vg-files"]', this._element);
-		$dismiss?.addEventListener('click', (e) => {
-			e.preventDefault();
-			this.clear(true);
-		});
-	}
+    _cleanupFakeInputs() {
+        Selectors.findAll(SELECTOR_DATA_FAKE, this._element).forEach(el => el.remove());
+    }
 
-	dispose() {
-		this.clear(true);
-		super.dispose();
-	}
+    _cleanupErrors() {
+        this._errors = new Set();
+        Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element)?.remove();
+    }
+
+    _renderErrors() {
+        if (!this._errors.size) return;
+
+        const messages = lang_messages(this._params.lang, NAME) || this._getFallbackErrors();
+
+        let $errorCont = Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element);
+        if (!$errorCont) {
+            $errorCont = this._tpl.div({ class: CLASS_NAME_ERRORS });
+            Selectors.find(`.${CLASS_NAME_INFO}`, this._element)?.before($errorCont);
+        }
+
+        this._errors.forEach(errKey => {
+            const msg = messages[errKey] || errKey;
+            $errorCont.append(this._tpl.span({ class: 'error-item' }, [this._tpl.span({}, msg)]));
+        });
+    }
+
+    _getFallbackErrors() {
+        return {
+            'is-count': `Limit: ${this._params.limits.count}`,
+            'is-sizes': `Max size: ${this._params.limits.sizes}MB`,
+            'is-total-size': `Total max size: ${this._params.limits.total}MB`,
+            'is-types': `Allowed: ${this._params.types.join(', ')}`
+        };
+    }
+
+    _addEventListener() {
+        Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element).forEach(el => {
+            el.addEventListener('change', () => this.change(el));
+        });
+
+        const $dismiss = Selectors.find('[data-dismiss="vg-files"]', this._element);
+        $dismiss?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.clear(true);
+        });
+    }
+
+    dispose() {
+        this.clear(true);
+        super.dispose();
+    }
 }
 
 /**
  * Data API
  */
 EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, () => {
-	Selectors.findAll(`.${CLASS_NAME_CONTAINER}`).forEach(el => VGFiles.getOrCreateInstance(el));
+    Selectors.findAll(`.${CLASS_NAME_CONTAINER}`).forEach(el => VGFiles.getOrCreateInstance(el));
 });
 
 EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS, function (event) {
-	const target = event.target.closest(`.${CLASS_NAME_CONTAINER}`);
-	if (!target) return;
-	event.preventDefault();
-	VGFiles.getOrCreateInstance(target).removeFile(this);
+    const target = event.target.closest(`.${CLASS_NAME_CONTAINER}`);
+    if (!target) return;
+    event.preventDefault();
+    VGFiles.getOrCreateInstance(target).removeFile(this);
 });
 
 export default VGFiles;

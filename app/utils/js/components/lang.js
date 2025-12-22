@@ -21,7 +21,8 @@ const langs = {
 			'files': {
 				'is-count': 'Превышен лимит по количеству файлов',
 				'is-sizes': 'Превышен размер файл',
-				'is-types': 'Недопустимый тип файла'
+				'is-types': 'Недопустимый тип файла',
+				'is-total-size': 'Превышен максимально разрешённый размер для выбранных файлов'
 			},
 			alert: {
 				title: 'Заголовок по умолчанию',
@@ -67,7 +68,8 @@ const langs = {
 			'files': {
 				'is-count': 'Exceeded the limit on the number of files',
 				'is-sizes': 'File size exceeded',
-				'is-types': 'Invalid file type'
+				'is-types': 'Invalid file type',
+				'is-total-size': 'The maximum allowed size for the selected files has been exceeded'
 			},
 		},
 		titles: {
