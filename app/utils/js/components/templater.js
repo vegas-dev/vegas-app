@@ -220,6 +220,10 @@ class LaravelHtmlBuilder {
 		return this.element('ul', attributes, listItems);
 	}
 
+	li(attributes = {}, content, options) {
+		return this.element('li', attributes, content, options);
+	}
+
 	ol(items = [], attributes = {}) {
 		const listItems = items.map(item =>
 			this.element('li', {}, item)

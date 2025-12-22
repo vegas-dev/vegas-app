@@ -50,6 +50,19 @@
 		}
 	}
 
+	&-errors {
+		padding: 10px 0;
+
+		span {
+			font-size: 16px;
+			color: red;
+			display: block;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+
 	&-drop {
 		background-color: #fff;
 		background-image: none;

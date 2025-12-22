@@ -18,6 +18,11 @@ const langs = {
 			'form-sender': {
 				'bootstrap_not_found': 'VGApp не удалось найти bootstrap, модалки не будут закрыты, попробуйте сделать это через коллбек afterSend.'
 			},
+			'files': {
+				'is-count': 'Превышен лимит по количеству файлов',
+				'is-sizes': 'Превышен размер файл',
+				'is-types': 'Недопустимый тип файла'
+			},
 			alert: {
 				title: 'Заголовок по умолчанию',
 				description: 'Описание текущего действия',
@@ -58,7 +63,12 @@ const langs = {
 				title: 'Default header',
 				description: 'Description of the current action',
 				reason: 'Alert already open'
-			}
+			},
+			'files': {
+				'is-count': 'Exceeded the limit on the number of files',
+				'is-sizes': 'File size exceeded',
+				'is-types': 'Invalid file type'
+			},
 		},
 		titles: {
 			errors: {
