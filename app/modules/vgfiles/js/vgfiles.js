@@ -244,7 +244,7 @@ class VGFiles extends BaseModule {
 
     _filterFiles(files) {
         this._errors = new Set();
-        const { sizes, total, count, types } = this._params.limits;
+        const { sizes, total, count } = this._params.limits;
         const maxSize = sizes * 1024 * 1024;
         const maxTotalSize = total * 1024 * 1024;
 
