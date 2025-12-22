@@ -44,6 +44,12 @@ class VGFiles extends BaseModule {
             detach: true,
             info: true,
             types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
+            ajax: {
+                enabled: true,
+                route: 'api/upload/file',
+                method: 'POST',
+                queue: true
+            }
         }, params));
 
         const toggleEl = Selectors.find('[data-vg-toggle]', this._element);
@@ -55,6 +61,8 @@ class VGFiles extends BaseModule {
         this._files  = [];
         this._errors = [];
         this._objectUrls = [];
+        this._uploadedKeys = new Set();
+        this.isPreventOriginalSubmit = true;
 
         this._nodes = {
             info: Selectors.find(`.${CLASS_NAME_INFO}`, this._element),
@@ -99,12 +107,56 @@ class VGFiles extends BaseModule {
             const processedFiles = this.append(incomingFiles);
 
             if (processedFiles.length) {
-                this._generateHiddenInputs(processedFiles);
-                this._renderUI(processedFiles);
+                if (this.isPreventOriginalSubmit) {
+                    this._preventOriginalInputFromSubmit();
+                } else {
+                    this._restoreOriginalInputForSubmit();
+                }
+
+                if (this._params.ajax.enabled) {
+                    this.uploadAll(this._files)
+                } else {
+                    this._generateHiddenInputs(processedFiles);
+                    this._renderUI(processedFiles);
+                }
             }
 
             EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: processedFiles });
         }
+    }
+
+    uploadAll(files) {
+        if (!this._params.ajax.enabled || !this._params.ajax.route) return;
+
+        Classes.add(this._nodes.info, 'show');
+        this._files = [];
+
+        const filesToUpload = files.filter(file => {
+            const key = this._getFileKey(file);
+            return !this._uploadedKeys.has(key);
+        });
+
+        if (this._params.ajax.queue) {
+            let timer = 0
+            for (const file of filesToUpload) {
+                setTimeout(() => {
+                    this.uploadFile(file);
+                }, timer)
+
+                timer += 1000;
+            }
+        }
+    }
+
+    uploadFile(file) {
+        const key = this._getFileKey(file);
+        if (this._uploadedKeys.has(key)) return;
+
+
+        this._files.push(file);
+        this._updateCounter();
+
+        console.log(this._files)
     }
 
     _renderUI(files) {
@@ -344,6 +396,37 @@ class VGFiles extends BaseModule {
             e.preventDefault();
             this.clear(true);
         });
+    }
+
+    _getFileKey(file) {
+        return `${file.name}-${file.size}-${file.lastModified}`;
+    }
+
+    /**
+     * Метод, который делает оригинальный инпут НЕучастником отправки
+     * @private
+     */
+    _preventOriginalInputFromSubmit() {
+        const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
+        if (originalInput) {
+            // Сохраняем оригинальное имя, чтобы можно было восстановить
+            if (!originalInput.dataset.originalName) {
+                originalInput.dataset.originalName = originalInput.name;
+                originalInput.removeAttribute('name'); // 🔥 Убираем name → не попадёт в FormData
+            }
+        }
+    }
+
+    /**
+     * Восстановление оригинального поведения (если нужно)
+     * @private
+     */
+    _restoreOriginalInputForSubmit() {
+        const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
+        if (originalInput && originalInput.dataset.originalName) {
+            originalInput.name = originalInput.dataset.originalName;
+            delete originalInput.dataset.originalName;
+        }
     }
 
     dispose() {
