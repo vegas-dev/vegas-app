@@ -37,7 +37,7 @@ class VGFiles extends BaseModule {
 			lang: document.documentElement.lang || 'ru',
 			limits: {
 				count: 0,
-				sizes: 0 // MB
+				sizes: 10 // MB
 			},
 			image: false,
 			detach: true,
@@ -197,11 +197,9 @@ class VGFiles extends BaseModule {
 		}
 
 		files.forEach(file => {
-			if (this._checkType(file.type)) {
-				const src = URL.createObjectURL(file);
-				this._objectUrls.push(src);
-				$container.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
-			}
+			const src = URL.createObjectURL(file);
+			this._objectUrls.push(src);
+			$container.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
 		});
 	}
 
