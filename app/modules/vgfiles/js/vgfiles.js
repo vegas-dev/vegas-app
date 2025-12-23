@@ -23,7 +23,6 @@ const CLASS_NAME_IMAGES    = `${CLASS_NAME_INFO}--images`;
 const CLASS_NAME_LIST      = `${CLASS_NAME_INFO}--list`;
 const CLASS_NAME_DROP      = `${CLASS_NAME_CONTAINER}-drop`;
 const CLASS_NAME_ERRORS    = `${CLASS_NAME_CONTAINER}-errors`;
-const CLASS_NAME_PENDING   = 'pending';
 const CLASS_NAME_LOADING   = 'loading';
 const CLASS_NAME_LOADED    = 'loaded';
 const CLASS_NAME_FAILING   = 'failing';
@@ -49,8 +48,8 @@ class VGFiles extends BaseModule {
             info: true,
             types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
             ajax: {
-                enabled: true,
-                route: 'api/upload/file',
+                enabled: false,
+                route: '',
                 method: 'POST',
                 queue: true
             }
@@ -66,6 +65,7 @@ class VGFiles extends BaseModule {
         this._errors = [];
         this._objectUrls = [];
         this._uploadedKeys = new Set();
+        this._failedKeys   = new Set();
         this.isPreventOriginalSubmit = true;
 
         this._nodes = {
@@ -131,8 +131,17 @@ class VGFiles extends BaseModule {
 
     uploadAll(files) {
         if (!this._params.ajax.enabled || !this._params.ajax.route) return;
+        if (!this._params.info || !this._nodes.info) return;
+
+        let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+
+        if (!$list) {
+            $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
+            this._nodes.info.append($list);
+        }
 
         Classes.add(this._nodes.info, 'show');
+
         this._files = [];
 
         const filesToUpload = files.filter(file => {
@@ -140,13 +149,11 @@ class VGFiles extends BaseModule {
             return !this._uploadedKeys.has(key);
         });
 
-        this._renderUI(filesToUpload, true)
-
         if (this._params.ajax.queue) {
             let timer = 0, i = 1;
             for (const file of filesToUpload) {
                 setTimeout(() => {
-                    this.uploadFile(file);
+                    this.uploadFile(file, i, $list);
                     i++;
                 }, timer)
 
@@ -155,10 +162,33 @@ class VGFiles extends BaseModule {
         }
     }
 
-    uploadFile(file) {
+    uploadFile(file, i, $list) {
         const key = this._getFileKey(file);
         if (this._uploadedKeys.has(key)) return;
+        this._files.push(file);
 
+        this._updateCounter();
+
+        const fragment = document.createDocumentFragment();
+        const $li = this._tpl.li({class: CLASS_NAME_LOADING}, [
+            this._tpl.span({class: 'iteration'}, `${i}.`),
+            this._tpl.span({class: 'name'}, file.name),
+            this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
+        ]);
+
+        fragment.appendChild($li);
+        $list.appendChild(fragment);
+
+        this._route((status, data) => {
+            Classes.remove($li, CLASS_NAME_LOADING);
+
+            if (status === 'success') {
+                this._uploadedKeys.add(key);
+                Classes.add($li, CLASS_NAME_LOADED);
+            } else {
+                Classes.add($li, CLASS_NAME_FAILING);
+            }
+        }, file);
     }
 
     _renderUI(files, isLoad = false) {
@@ -170,7 +200,7 @@ class VGFiles extends BaseModule {
         this._renderInfoList(files, isLoad);
     }
 
-    _updateCounter(isLoad = false) {
+    _updateCounter() {
         if (!this._nodes.info) return;
         const $count = Selectors.find(`.${CLASS_NAME_INFO}--wrapper-count`, this._nodes.info);
         if ($count) {
@@ -179,13 +209,10 @@ class VGFiles extends BaseModule {
         }
     }
 
-    _renderImages(files, isLoad = false) {
+    _renderImages(files) {
         if (!this._params.image || !this._nodes.info) return;
 
-        let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element),
-            containerClass = '';
-
-        if (isLoad) containerClass = CLASS_NAME_PENDING;
+        let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element);
 
         if (!$container) {
             $container = this._tpl.div({ class: CLASS_NAME_IMAGES });
@@ -197,13 +224,13 @@ class VGFiles extends BaseModule {
             if (file.type.startsWith('image/')) {
                 const src = URL.createObjectURL(file);
                 this._objectUrls.push(src);
-                fragment.appendChild(this._tpl.span({class: containerClass}, [this._tpl.img(src, file.name)]));
+                fragment.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
             }
         });
         $container.appendChild(fragment);
     }
 
-    _renderInfoList(files, isLoad = false) {
+    _renderInfoList(files) {
         if (!this._params.info || !this._nodes.info) return;
 
         let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);

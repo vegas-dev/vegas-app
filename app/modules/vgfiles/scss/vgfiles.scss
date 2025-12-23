@@ -23,6 +23,10 @@
 		top: 0;
 	}
 
+	.loading {
+		animation: faded 2s infinite;
+	}
+
 	&-label {
 		cursor: pointer;
 		display: inline-flex;
@@ -236,5 +240,17 @@
 	}
 	100% {
 		background-position: 60px 30px;
+	}
+}
+
+@keyframes faded {
+	0% {
+		opacity: 1;
+	}
+	50% {
+		opacity: .5;
+	}
+	100% {
+		opacity: 1;
 	}
 }
