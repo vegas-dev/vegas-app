@@ -23,6 +23,10 @@ const CLASS_NAME_IMAGES    = `${CLASS_NAME_INFO}--images`;
 const CLASS_NAME_LIST      = `${CLASS_NAME_INFO}--list`;
 const CLASS_NAME_DROP      = `${CLASS_NAME_CONTAINER}-drop`;
 const CLASS_NAME_ERRORS    = `${CLASS_NAME_CONTAINER}-errors`;
+const CLASS_NAME_PENDING   = 'pending';
+const CLASS_NAME_LOADING   = 'loading';
+const CLASS_NAME_LOADED    = 'loaded';
+const CLASS_NAME_FAILING   = 'failing';
 
 const EVENT_KEY_CHANGE              = `${NAME_KEY}.change`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
@@ -136,14 +140,17 @@ class VGFiles extends BaseModule {
             return !this._uploadedKeys.has(key);
         });
 
+        this._renderUI(filesToUpload, true)
+
         if (this._params.ajax.queue) {
-            let timer = 0
+            let timer = 0, i = 1;
             for (const file of filesToUpload) {
                 setTimeout(() => {
                     this.uploadFile(file);
+                    i++;
                 }, timer)
 
-                timer += 1000;
+                timer += 200;
             }
         }
     }
@@ -152,29 +159,80 @@ class VGFiles extends BaseModule {
         const key = this._getFileKey(file);
         if (this._uploadedKeys.has(key)) return;
 
-
-        this._files.push(file);
-        this._updateCounter();
-
-        console.log(this._files)
     }
 
-    _renderUI(files) {
+    _renderUI(files, isLoad = false) {
         if (!this._nodes.info) return;
 
         Classes.add(this._nodes.info, 'show');
-        this._updateCounter();
-        this._renderImages(files);
-        this._renderInfoList(files);
+        this._updateCounter(isLoad);
+        this._renderImages(files, isLoad);
+        this._renderInfoList(files, isLoad);
     }
 
-    _updateCounter() {
+    _updateCounter(isLoad = false) {
         if (!this._nodes.info) return;
         const $count = Selectors.find(`.${CLASS_NAME_INFO}--wrapper-count`, this._nodes.info);
         if ($count) {
             const sizeText = this._files.length ? `<span>[${this._getSizes(this._files, true)}]</span>` : '';
             $count.innerHTML = `${this._files.length}${sizeText}`;
         }
+    }
+
+    _renderImages(files, isLoad = false) {
+        if (!this._params.image || !this._nodes.info) return;
+
+        let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element),
+            containerClass = '';
+
+        if (isLoad) containerClass = CLASS_NAME_PENDING;
+
+        if (!$container) {
+            $container = this._tpl.div({ class: CLASS_NAME_IMAGES });
+            this._nodes.info.prepend($container);
+        }
+
+        const fragment = document.createDocumentFragment();
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const src = URL.createObjectURL(file);
+                this._objectUrls.push(src);
+                fragment.appendChild(this._tpl.span({class: containerClass}, [this._tpl.img(src, file.name)]));
+            }
+        });
+        $container.appendChild(fragment);
+    }
+
+    _renderInfoList(files, isLoad = false) {
+        if (!this._params.info || !this._nodes.info) return;
+
+        let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+
+        if (!$list) {
+            $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
+            this._nodes.info.append($list);
+        }
+
+        const fragment = document.createDocumentFragment();
+        files.forEach((file, i) => {
+            const $li = this._tpl.li({}, [
+                this._tpl.span({class: 'iteration'}, `${i + 1}.`),
+                this._tpl.span({class: 'name'}, file.name),
+                this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
+            ]);
+
+            if (this._params.detach) {
+                $li.append(this._tpl.button('✕', 'button', {
+                    type: 'button',
+                    'data-dismiss': 'file',
+                    'data-name': file.name,
+                    'data-size': file.size,
+                    'data-type': file.type
+                }));
+            }
+            fragment.appendChild($li);
+        });
+        $list.appendChild(fragment);
     }
 
     _generateHiddenInputs(files) {
@@ -239,59 +297,6 @@ class VGFiles extends BaseModule {
     _revokeUrls() {
         this._objectUrls.forEach(url => URL.revokeObjectURL(url));
         this._objectUrls = [];
-    }
-
-    _renderImages(files) {
-        if (!this._params.image || !this._nodes.info) return;
-
-        let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element);
-
-        if (!$container) {
-            $container = this._tpl.div({ class: CLASS_NAME_IMAGES });
-            this._nodes.info.prepend($container);
-        }
-
-        const fragment = document.createDocumentFragment();
-        files.forEach(file => {
-            if (file.type.startsWith('image/')) {
-                const src = URL.createObjectURL(file);
-                this._objectUrls.push(src);
-                fragment.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
-            }
-        });
-        $container.appendChild(fragment);
-    }
-
-    _renderInfoList(files) {
-        if (!this._params.info || !this._nodes.info) return;
-
-        let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
-
-        if (!$list) {
-            $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
-            this._nodes.info.append($list);
-        }
-
-        const fragment = document.createDocumentFragment();
-        files.forEach((file, i) => {
-            const $li = this._tpl.li({}, [
-                this._tpl.span({class: 'iteration'}, `${i + 1}.`),
-                this._tpl.span({class: 'name'}, file.name),
-                this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
-            ]);
-
-            if (this._params.detach) {
-                $li.append(this._tpl.button('✕', 'button', {
-                    type: 'button',
-                    'data-dismiss': 'file',
-                    'data-name': file.name,
-                    'data-size': file.size,
-                    'data-type': file.type
-                }));
-            }
-            fragment.appendChild($li);
-        });
-        $list.appendChild(fragment);
     }
 
     _filterFiles(files) {
