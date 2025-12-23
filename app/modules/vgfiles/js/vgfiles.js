@@ -6,6 +6,7 @@ import Html from "../../../utils/js/components/templater";
 import {Manipulator, Classes} from "../../../utils/js/dom/manipulator";
 import DragDropFiles from "./dragDropFiles";
 import {lang_messages} from "../../../utils/js/components/lang";
+import FileUploader from "./loader";
 
 
 /**
@@ -47,11 +48,20 @@ class VGFiles extends BaseModule {
             detach: true,
             info: true,
             types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
-            ajax: {
-                enabled: false,
-                route: '',
-                method: 'POST',
-                queue: true
+            ajax: false,
+            uploads: {
+                mode: 'sequential', // sequential | parallel
+                route: '', // Ссылка на сервер загрузки файлов
+                maxParallel: 3, // Количество файлов при параллельной загрузке
+                maxConcurrent: 1, // Количество файлов при последовательной загрузке
+                retryAttempts: 3, // Повтор неудачных отправок
+                retryDelay: 1000, // Задержка при повторной отправке
+                callbacks: {
+                    progress: [],
+                    complete: [],
+                    error: [],
+                    allComplete: []
+                }
             }
         }, params));
 
@@ -65,7 +75,6 @@ class VGFiles extends BaseModule {
         this._errors = [];
         this._objectUrls = [];
         this._uploadedKeys = new Set();
-        this._failedKeys   = new Set();
         this.isPreventOriginalSubmit = true;
 
         this._nodes = {
@@ -81,6 +90,12 @@ class VGFiles extends BaseModule {
     static get NAME_KEY() { return NAME_KEY; }
 
     _init() {
+        if (this.isPreventOriginalSubmit) {
+            this._preventOriginalInputFromSubmit();
+        } else {
+            this._restoreOriginalInputForSubmit();
+        }
+
         if (this._nodes.drop) {
             new DragDropFiles(this._nodes.drop, this._params).init();
         }
@@ -111,14 +126,8 @@ class VGFiles extends BaseModule {
             const processedFiles = this.append(incomingFiles);
 
             if (processedFiles.length) {
-                if (this.isPreventOriginalSubmit) {
-                    this._preventOriginalInputFromSubmit();
-                } else {
-                    this._restoreOriginalInputForSubmit();
-                }
-
-                if (this._params.ajax.enabled) {
-                    this.uploadAll(this._files)
+                if (this._params.ajax) {
+                    this.uploadAll(this._files).then(r => {})
                 } else {
                     this._generateHiddenInputs(processedFiles);
                     this._renderUI(processedFiles);
@@ -129,75 +138,57 @@ class VGFiles extends BaseModule {
         }
     }
 
-    uploadAll(files) {
-        if (!this._params.ajax.enabled || !this._params.ajax.route) return;
-        if (!this._params.info || !this._nodes.info) return;
+    async uploadAll(files) {
+        if (!this._params.ajax) return;
 
-        let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+        let params = this._params.uploads;
+        if (!params.route) return;
 
-        if (!$list) {
-            $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
-            this._nodes.info.append($list);
-        }
-
-        Classes.add(this._nodes.info, 'show');
+        let notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
 
         this._files = [];
 
-        const filesToUpload = files.filter(file => {
-            const key = this._getFileKey(file);
-            return !this._uploadedKeys.has(key);
+        const uploader = new FileUploader();
+
+        uploader.onProgress((uploadData) => {
+            this._files.push(uploadData.file)
         });
 
-        if (this._params.ajax.queue) {
-            let timer = 0, i = 1;
-            for (const file of filesToUpload) {
-                setTimeout(() => {
-                    this.uploadFile(file, i, $list);
-                    i++;
-                }, timer)
+        uploader.onComplete((uploadData) => {
+            let uploadedFiles = files.filter(f => this._uploadedKeys.has(this._getFileKey(f)))
+            this._uploadedKeys.add(this._getFileKey(uploadData.file));
 
-                timer += 200;
-            }
+            this._renderUI(this._files, uploadedFiles)
+        });
+
+        uploader.onError((uploadData, error) => {
+            this._uploadedKeys.delete(this._getFileKey(uploadData.file));
+            console.log(error)
+        })
+
+        try {
+            let result = await uploader.uploadFiles(notUploadedFiles, params.route, {
+                additionalData: {
+                    timestamp: new Date().toISOString(),
+                    source: 'web_uploader'
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка при массовой загрузке:', error);
         }
+
     }
 
-    uploadFile(file, i, $list) {
-        const key = this._getFileKey(file);
-        if (this._uploadedKeys.has(key)) return;
-        this._files.push(file);
-
-        this._updateCounter();
-
-        const fragment = document.createDocumentFragment();
-        const $li = this._tpl.li({class: CLASS_NAME_LOADING}, [
-            this._tpl.span({class: 'iteration'}, `${i}.`),
-            this._tpl.span({class: 'name'}, file.name),
-            this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
-        ]);
-
-        fragment.appendChild($li);
-        $list.appendChild(fragment);
-
-        this._route((status, data) => {
-            Classes.remove($li, CLASS_NAME_LOADING);
-
-            if (status === 'success') {
-                this._uploadedKeys.add(key);
-                Classes.add($li, CLASS_NAME_LOADED);
-            } else {
-                Classes.add($li, CLASS_NAME_FAILING);
-            }
-        }, file);
-    }
-
-    _renderUI(files, isLoad = false) {
+    _renderUI(files, except = []) {
         if (!this._nodes.info) return;
 
+        console.log(files)
+        console.log(except)
+
         Classes.add(this._nodes.info, 'show');
-        this._updateCounter(isLoad);
-        this._renderImages(files, isLoad);
-        this._renderInfoList(files, isLoad);
+        this._updateCounter();
+        this._renderImages(files);
+        this._renderInfoList(files);
     }
 
     _updateCounter() {

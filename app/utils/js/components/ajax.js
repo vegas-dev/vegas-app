@@ -22,7 +22,6 @@ class Ajax {
 	/**
 	 * Получение csrf токена из тега meta
 	 * @returns {string}
-	 * @private
 	 */
 	_getCsrfToken() {
 		const meta = document.querySelector('meta[name="csrf-token"]');
