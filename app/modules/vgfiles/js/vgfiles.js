@@ -7,6 +7,7 @@ import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import DragDropFiles from "./dragDropFiles";
 import { lang_messages } from "../../../utils/js/components/lang";
 import FileUploader from "./loader";
+import {getSVG} from "../../module-fn";
 
 /**
  * Constants
@@ -128,7 +129,13 @@ class VGFiles extends BaseModule {
         const notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
         if (!notUploadedFiles.length) return;
 
-        this._uploader = new FileUploader();
+        this._uploader = new FileUploader({
+            mode: this._params.uploads.mode,
+            maxConcurrent: this._params.uploads.maxConcurrent,
+            maxParallel: this._params.uploads.maxParallel,
+            retryAttempts: this._params.uploads.retryAttempts,
+            retryDelay: this._params.uploads.retryDelay
+        });
 
         this._renderUI(this._files);
 
@@ -163,11 +170,7 @@ class VGFiles extends BaseModule {
             additionalData: {
                 timestamp: new Date().toISOString(),
                 source: 'web_uploader'
-            },
-            maxConcurrent: this._params.uploads.maxConcurrent,
-            maxParallel: this._params.uploads.maxParallel,
-            retryAttempts: this._params.uploads.retryAttempts,
-            retryDelay: this._params.uploads.retryDelay
+            }
         };
 
         try {
@@ -191,6 +194,18 @@ class VGFiles extends BaseModule {
         );
     }
 
+    _setButtonElement(file) {
+        return this._tpl.button([
+            this._tpl.i({}, getSVG('cross'), {isHTML: true}),
+        ], 'button', {
+            type: 'button',
+            'data-dismiss': 'file',
+            'data-name': file.name,
+            'data-size': file.size,
+            'data-type': file.type
+        })
+    }
+
     _renderUI(files) {
         if (!this._nodes.info) return;
 
@@ -206,9 +221,9 @@ class VGFiles extends BaseModule {
 
             const key = this._getFileKey(file);
             if (this._uploadedKeys.has(key)) {
-                $item.classList.add(CLASS_NAME_LOADED);
+                Classes.add($item, CLASS_NAME_LOADED);
             } else {
-                $item.classList.add(CLASS_NAME_PENDING);
+                Classes.add($item, CLASS_NAME_PENDING);
             }
         });
     }
@@ -243,13 +258,7 @@ class VGFiles extends BaseModule {
                 $span.dataset.size = file.size;
 
                 if (this._params.detach) {
-                    $span.append(this._tpl.button('✕', 'button', {
-                        type: 'button',
-                        'data-dismiss': 'file',
-                        'data-name': file.name,
-                        'data-size': file.size,
-                        'data-type': file.type
-                    }));
+                    $span.append(this._setButtonElement(file));
                 }
                 fragment.appendChild($span);
             }
@@ -278,13 +287,7 @@ class VGFiles extends BaseModule {
             );
 
             if (this._params.detach) {
-                $li.append(this._tpl.button('✕', 'button', {
-                    type: 'button',
-                    'data-dismiss': 'file',
-                    'data-name': file.name,
-                    'data-size': file.size,
-                    'data-type': file.type
-                }));
+                $li.append(this._setButtonElement(file));
             }
             fragment.appendChild($li);
         });
@@ -338,28 +341,6 @@ class VGFiles extends BaseModule {
 
         this._files = this._files.filter(f => !(f.name === name && f.size === size));
         this._files.length ? this.build() : this.clear(true);
-    }
-
-    clear(all = false) {
-        this._revokeUrls();
-        [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
-            const el = Selectors.find(selector, this._element);
-            if (el) el.innerHTML = '';
-        });
-
-        if (all) {
-            Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
-            this._cleanupFakeInputs();
-            this._cleanupErrors();
-            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
-            this._files = [];
-            this._uploadedKeys.clear();
-        }
-    }
-
-    _revokeUrls() {
-        this._objectUrls.forEach(url => URL.revokeObjectURL(url));
-        this._objectUrls = [];
     }
 
     _filterFiles(files) {
@@ -472,12 +453,16 @@ class VGFiles extends BaseModule {
         return `${file.name}-${file.size}-${file.lastModified}`;
     }
 
-    _preventOriginalInputFromSubmit() {
-        const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
-        if (originalInput && !originalInput.dataset.originalName) {
-            originalInput.dataset.originalName = originalInput.name;
-            originalInput.removeAttribute('name');
-        }
+    _preventOriginalInputFromSubmit(isRestore = false) {
+       if (!isRestore) {
+           const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
+           if (originalInput && !originalInput.dataset.originalName) {
+               originalInput.dataset.originalName = originalInput.name;
+               originalInput.removeAttribute('name');
+           }
+       } else {
+           this._restoreOriginalInputForSubmit();
+       }
     }
 
     _restoreOriginalInputForSubmit() {
@@ -486,6 +471,28 @@ class VGFiles extends BaseModule {
             originalInput.name = originalInput.dataset.originalName;
             delete originalInput.dataset.originalName;
         }
+    }
+
+    clear(all = false) {
+        this._revokeUrls();
+        [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
+            const el = Selectors.find(selector, this._element);
+            if (el) el.innerHTML = '';
+        });
+
+        if (all) {
+            Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
+            this._cleanupFakeInputs();
+            this._cleanupErrors();
+            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+            this._files = [];
+            this._uploadedKeys.clear();
+        }
+    }
+
+    _revokeUrls() {
+        this._objectUrls.forEach(url => URL.revokeObjectURL(url));
+        this._objectUrls = [];
     }
 
     dispose() {
