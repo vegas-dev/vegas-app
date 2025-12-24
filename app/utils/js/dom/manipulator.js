@@ -1,100 +1,163 @@
-import {isElement, normalizeData} from "../functions";
+import { isElement, normalizeData } from "../functions";
 
 /**
- * Манипуляции с атрибутами у элемента:
- * get (элемент, имя, флаг - вырезать data-) - метод выбирает значение атрибута по его имени, если в поле имени передать 'data' -> будут выбраны только дата атрибуты, если 'all' -> метод вернет значение всех атрибутов
- * has (элемент, имя) - есть ли атрибут у элемента
- * set (элемент, имя, значение) - установка у элемента атрибута или его изменение
- * remove (элемент, имя) - удаляет атрибут у элемента
- * hide(элемент) - скрыть элемент
- * show(элемент) - показать элемент
+ * Утилиты для работы с атрибутами и классами DOM-элементов.
  */
 const Manipulator = {
-	get(element, nameAttribute = 'data', isRemoveDataName = true) {
-		if (!element) {
-			return {}
+	/**
+	 * Получает значение атрибута, data-атрибутов или всех атрибутов.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} nameAttribute - Имя атрибута ('data', 'all' или конкретное имя).
+	 * @param {boolean} isRemoveDataName - Убрать префикс 'data-' у data-атрибутов.
+	 * @returns {any|Object} - Значение атрибута или объект атрибутов.
+	 */
+	get(element, nameAttribute = "data", isRemoveDataName = true) {
+		if (!isElement(element)) return {};
+
+		// Все атрибуты
+		if (nameAttribute === "all") {
+			return Array.from(element.attributes).reduce((acc, attr) => {
+				acc[attr.name] = attr.value;
+				return acc;
+			}, {});
 		}
 
-		if (nameAttribute === 'data') {
-			let elmBase = ['data-vg-toggle', 'data-vg-target', 'data-vg-dismiss'],
-				attributes = {};
+		// Data-атрибуты
+		if (nameAttribute === "data") {
+			const baseKeys = new Set(['data-vg-toggle', 'data-vg-target', 'data-vg-dismiss', 'data-vg-loaded']);
+			const dataAttrs = {};
 
-			let arr = [].filter.call(element.attributes, function (at) {
-				return /^data-/.test(at.name);
-			});
-
-			if (arr.length) {
-				arr.forEach(function (v) {
-					let name = v.name;
-
-					if (!elmBase.includes(name)) {
-						if (isRemoveDataName) name = name.slice(5);
-						attributes[name] = normalizeData(v.value)
+			Array.from(element.attributes)
+				.filter(attr => attr.name.startsWith('data-'))
+				.forEach(attr => {
+					if (!baseKeys.has(attr.name)) {
+						const key = isRemoveDataName ? attr.name.slice(5) : attr.name;
+						dataAttrs[key] = normalizeData(attr.value);
 					}
 				});
-			}
 
-			return attributes;
-		} else if (nameAttribute === 'all') {
-			return element.getAttributeNames().reduce((acc, name) => {
-				return {...acc, [name]: element.getAttribute(name)};
-			}, {});
-		} else {
-			return element.getAttribute(nameAttribute);
+			return dataAttrs;
 		}
+
+		// Конкретный атрибут
+		return element.getAttribute(nameAttribute);
 	},
 
+	/**
+	 * Проверяет наличие атрибута у элемента.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} nameAttribute - Имя атрибута.
+	 * @returns {boolean}
+	 */
 	has(element, nameAttribute) {
-		return element.hasAttribute(nameAttribute);
+		return isElement(element) && element.hasAttribute(nameAttribute);
 	},
 
+	/**
+	 * Устанавливает атрибут элементу.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} name - Имя атрибута.
+	 * @param {string} value - Значение атрибута.
+	 */
 	set(element, name, value) {
 		if (isElement(element) && name) {
 			element.setAttribute(name, value);
 		}
 	},
 
+	/**
+	 * Удаляет атрибут у элемента.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} nameAttribute - Имя атрибута.
+	 */
 	remove(element, nameAttribute) {
 		if (isElement(element) && nameAttribute) {
 			element.removeAttribute(nameAttribute);
 		}
 	},
 
-	hide(el) {
-		el.style.display = 'none';
+	/**
+	 * Скрывает элемент.
+	 * @param {Element} element - DOM-элемент.
+	 */
+	hide(element) {
+		if (isElement(element)) {
+			element.style.display = 'none';
+		}
 	},
 
-	show(el, state = 'block') {
-		el.style.display = state;
+	/**
+	 * Отображает элемент.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} state - display-значение (по умолчанию 'block').
+	 */
+	show(element, state = 'block') {
+		if (isElement(element)) {
+			element.style.display = state;
+		}
 	},
-}
+};
 
-let Classes = {
+/**
+ * Утилиты для работы с classList элемента.
+ */
+const Classes = {
+	/**
+	 * Удаляет класс(ы) у элемента.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string|string[]} className - Класс или массив классов.
+	 */
 	remove(element, className) {
-		if (className && element) {
-			if (typeof className === 'string') {
-				className = className.split(' ');
-			}
+		if (!isElement(element) || !className) return;
 
-			element.classList.remove(...className);
+		const classes = Array.isArray(className) ? className : className.split(' ').filter(Boolean);
+		element.classList.remove(...classes);
+	},
+
+	/**
+	 * Добавляет класс(ы) к элементу.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string|string[]} className - Класс или массив классов.
+	 * @param {boolean} isString - Если true — возвращает строку вместо применения.
+	 * @returns {string|undefined} - Строка с классами (если isString=true).
+	 */
+	add(element, className, isString = false) {
+		if (!className) return;
+
+		const classes = Array.isArray(className) ? className : className.split(' ').filter(Boolean);
+
+		if (isString) {
+			return classes.join(' ');
+		}
+
+		if (isElement(element)) {
+			element.classList.add(...classes);
 		}
 	},
 
-	add(element, className, isString = false) {
-		if (className) {
-			if (typeof className === 'string') {
-				className = className.split(' ');
-			}
-
-			if (isString) {
-				return '' + className.join(' ');
-			}
-
-			if (element) {
-				element.classList.add(...className);
-			}
+	/**
+	 * Переключает класс у элемента.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} className - Имя класса.
+	 * @param {boolean} condition - Условие переключения.
+	 */
+	toggle(element, className, condition = true) {
+		if (isElement(element) && className) {
+			element.classList.toggle(className, !!condition);
 		}
-	}
-}
+	},
 
-export {Manipulator, Classes}
+	/**
+	 * Заменяет один класс на другой.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} oldClass - Старый класс.
+	 * @param {string} newClass - Новый класс.
+	 */
+	replace(element, oldClass, newClass) {
+		if (isElement(element) && oldClass && newClass) {
+			element.classList.replace(oldClass, newClass);
+		}
+	},
+};
+
+export { Manipulator, Classes };

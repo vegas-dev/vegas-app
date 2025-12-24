@@ -1,6 +1,6 @@
 import Selectors from "../../../utils/js/dom/selectors";
 
-class DragDropFiles {
+class Droper {
 	constructor(element, params) {
 		if (!element) return
 		this._element = Selectors.find(element);
@@ -73,4 +73,4 @@ class DragDropFiles {
 
 }
 
-export default DragDropFiles;
+export default Droper;

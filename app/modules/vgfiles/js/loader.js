@@ -1,19 +1,20 @@
 import Ajax from "../../../utils/js/components/ajax";
-import {normalizeData} from "../../../utils/js/functions";
+import { normalizeData } from "../../../utils/js/functions";
 
 class FileUploader {
 	constructor(options = {}) {
 		// Настройки
-		this.mode = options.mode || 'sequential'; // 'sequential' или 'parallel'
-		this.maxParallel = options.maxParallel || 3; // Максимум одновременных загрузок для parallel режима
-		this.maxConcurrent = options.maxConcurrent || 1; // Для sequential режима
+		this.mode = options.mode || 'sequential';
+		this.maxParallel = options.maxParallel || 3;
+		this.maxConcurrent = options.maxConcurrent || 1; // для sequential
 		this.retryAttempts = options.retryAttempts || 3;
 		this.retryDelay = options.retryDelay || 1000;
 
-		// Структуры данных
-		this.uploads = new Map(); // Все активные загрузки
-		this.completed = []; // Завершенные загрузки
-		this.queue = []; // Очередь (только для sequential режима)
+		// Состояние загрузок
+		this.uploads = new Map(); // id → uploadData
+		this.completed = [];
+		this.queue = []; // очередь для sequential
+		this.waitingPromises = []; // для parallel: промисы, ожидающие слот
 
 		// Состояние
 		this.activeCount = 0;
@@ -26,9 +27,15 @@ class FileUploader {
 			error: [],
 			allComplete: []
 		};
+
+		this._checkAllCompleteBound = this.checkAllComplete.bind(this);
 	}
 
-	// Основной метод загрузки
+	// === ОСНОВНЫЕ МЕТОДЫ ===
+
+	/**
+	 * Загрузка одного файла
+	 */
 	async uploadFile(file, url, options = {}) {
 		const id = this.generateId();
 		const uploadData = {
@@ -42,152 +49,141 @@ class FileUploader {
 			result: null,
 			error: null,
 			startTime: null,
-			endTime: null
+			endTime: null,
+			controller: new AbortController(), // для отмены
+			signal: null // будет установлен при старте
 		};
 
 		this.uploads.set(id, uploadData);
 
 		if (this.mode === 'sequential') {
-			return this.addToSequentialQueue(uploadData);
+			return this._addToSequentialQueue(uploadData);
 		} else {
-			return this.startParallelUpload(uploadData);
+			return this._startParallelUpload(uploadData);
 		}
 	}
 
-	// Последовательная загрузка (с очередью)
-	async addToSequentialQueue(uploadData) {
-		return new Promise((resolve, reject) => {
-			const task = {
-				...uploadData,
-				resolve,
-				reject
-			};
+	/**
+	 * Массовая загрузка файлов
+	 */
+	async uploadFiles(files, url, options = {}) {
+		const promises = files.map(file => this.uploadFile(file, url, options));
+		const results = await Promise.allSettled(promises);
 
-			this.queue.push(task);
-			this.processSequentialQueue();
-
-			return {
-				id: uploadData.id,
-				cancel: () => this.cancelUpload(uploadData.id)
-			};
+		return results.map(result => {
+			if (result.status === 'fulfilled') {
+				return { file: result.value.file?.name, success: true, result: result.value };
+			} else {
+				return { file: result.reason?.file?.name || 'unknown', success: false, error: result.reason };
+			}
 		});
 	}
 
-	async processSequentialQueue() {
-		if (this.isPaused ||
+	// === РЕЖИМЫ ЗАГРУЗКИ ===
+
+	_addToSequentialQueue(uploadData) {
+		return new Promise((resolve, reject) => {
+			this.queue.push({ uploadData, resolve, reject });
+			this._processSequentialQueue();
+		});
+	}
+
+	async _processSequentialQueue() {
+		if (
+			this.isPaused ||
 			this.activeCount >= this.maxConcurrent ||
-			this.queue.length === 0) {
+			this.queue.length === 0
+		) {
 			return;
 		}
 
-		const task = this.queue.shift();
+		const { uploadData, resolve, reject } = this.queue[0]; // не удаляем, пока не начнём
 		this.activeCount++;
 
 		try {
-			const result = await this.executeUpload(task);
-			task.resolve(result);
+			const result = await this._executeUpload(uploadData);
+			resolve(result);
 		} catch (error) {
-			task.reject(error);
+			reject(error);
 		} finally {
+			this.queue.shift(); // удаляем только после завершения
 			this.activeCount--;
-			await this.processSequentialQueue();
+			await this._processSequentialQueue();
 		}
 	}
 
-	// Параллельная загрузка (без очереди)
-	async startParallelUpload(uploadData) {
-		if (this.activeCount >= this.maxParallel && this.mode === 'parallel') {
-			// Ждем, пока освободится место
-			await this.waitForSlot();
+	async _startParallelUpload(uploadData) {
+		// Ждём свободный слот
+		if (this.activeCount >= this.maxParallel) {
+			await new Promise(resolve => this.waitingPromises.push(resolve));
 		}
 
 		this.activeCount++;
 		uploadData.startTime = Date.now();
 
 		try {
-			return await this.executeUpload(uploadData);
+			return await this._executeUpload(uploadData);
 		} finally {
 			this.activeCount--;
-			// Уведомляем ожидающие загрузки
-			this.notifyParallelWaiters();
+			this._notifyWaiting(); // освободили слот
 		}
 	}
 
-	// Ожидание свободного слота для параллельной загрузки
-	waitForSlot() {
-		return new Promise(resolve => {
-			const checkSlot = () => {
-				if (this.activeCount < this.maxParallel) {
-					resolve();
-				} else {
-					setTimeout(checkSlot, 100);
-				}
-			};
-			checkSlot();
-		});
+	_notifyWaiting() {
+		if (this.waitingPromises.length > 0 && this.activeCount < this.maxParallel) {
+			const resolve = this.waitingPromises.shift();
+			resolve();
+		}
 	}
 
-	notifyParallelWaiters() {
-		// Можно добавить механизм уведомлений для ожидающих промисов
-	}
+	// === ВЫПОЛНЕНИЕ ЗАГРУЗКИ ===
 
-	// Выполнение загрузки файла
-	async executeUpload(uploadData, attempt = 1) {
+	async _executeUpload(uploadData, attempt = 1) {
 		uploadData.status = 'uploading';
 		uploadData.attempts = attempt;
+		uploadData.signal = uploadData.controller.signal;
 
 		try {
-			const result = await this.performUpload(uploadData);
-
-			uploadData.status = 'completed';
-			uploadData.progress = 100;
-			uploadData.result = result;
-			uploadData.endTime = Date.now();
-
-			this.completed.push({ ...uploadData });
-			/*this.notifyProgress(uploadData);*/
-			this.notifyComplete(uploadData);
-
-			this.checkAllComplete();
-
+			const result = await this._performUpload(uploadData);
+			this._completeUpload(uploadData, result);
 			return result;
 		} catch (error) {
+			if (uploadData.status === 'cancelled') return;
+
 			uploadData.error = error;
 
 			if (attempt < this.retryAttempts) {
 				uploadData.status = 'retrying';
 				this.notifyProgress(uploadData);
-
-				await this.delay(this.retryDelay * attempt); // Экспоненциальная задержка
-				return this.executeUpload(uploadData, attempt + 1);
+				await this._delay(this.retryDelay * Math.pow(2, attempt)); // экспоненциальная задержка
+				return this._executeUpload(uploadData, attempt + 1);
 			} else {
 				uploadData.status = 'failed';
 				uploadData.endTime = Date.now();
-
 				this.notifyProgress(uploadData);
 				this.notifyError(uploadData, error);
-				this.checkAllComplete();
-
+				this._checkAllCompleteBound();
 				throw error;
 			}
 		}
 	}
 
-	// Непосредственная загрузка через Fetch API
-	async performUpload(uploadData) {
-		const ajax = new Ajax();
-
-		const formData = new FormData();
-		formData.append('file', uploadData.file);
-		formData.append('_token', ajax._getCsrfToken() || '')
-		if (uploadData.options.additionalData) {
-			Object.entries(uploadData.options.additionalData).forEach(([key, value]) => {
-				formData.append(key, value);
-			});
-		}
-
+	_performUpload(uploadData) {
 		return new Promise((resolve, reject) => {
-			ajax.post(uploadData.url, formData, {
+			const ajax = new Ajax();
+			const formData = new FormData();
+
+			formData.append('file', uploadData.file);
+			formData.append('_token', ajax._getCsrfToken() || '');
+
+			if (uploadData.options.additionalData) {
+				Object.entries(uploadData.options.additionalData).forEach(([key, value]) => {
+					formData.append(key, value);
+				});
+			}
+
+			// Передаём AbortController.signal
+			const config = {
 				onProgress: (percent, event) => {
 					uploadData.progress = percent;
 					this.notifyProgress(uploadData);
@@ -197,61 +193,47 @@ class FileUploader {
 				},
 				onError: (err) => {
 					reject(normalizeData(err));
-				}
-			});
+				},
+				signal: uploadData.signal
+			};
+
+			// Предполагаем, что ajax.post поддерживает signal
+			const xhr = ajax.post(uploadData.url, formData, config);
+			uploadData.xhr = xhr; // для отмены
 		});
 	}
 
-	// Массовая загрузка файлов
-	async uploadFiles(files, url, options = {}) {
-		const results = [];
+	_completeUpload(uploadData, result) {
+		uploadData.status = 'completed';
+		uploadData.progress = 100;
+		uploadData.result = result;
+		uploadData.endTime = Date.now();
 
-		if (this.mode === 'sequential') {
-			// Последовательно
-			for (const file of files) {
-				try {
-					const result = await this.uploadFile(file, url, options);
-					results.push({ file: file.name, success: true, result });
-				} catch (error) {
-					results.push({ file: file.name, success: false, error });
-				}
-			}
-		} else {
-			// Параллельно
-			const uploadPromises = files.map(file =>
-				this.uploadFile(file, url, options)
-					.then(result => ({ file: file.name, success: true, result }))
-					.catch(error => ({ file: file.name, success: false, error }))
-			);
-
-			const allResults = await Promise.allSettled(uploadPromises);
-			results.push(...allResults.map(r => r.value || r.reason));
-		}
-
-		return results;
+		this.completed.push({ ...uploadData });
+		this.notifyComplete(uploadData);
+		this._checkAllCompleteBound();
 	}
 
-	// Отмена загрузки
+	// === УПРАВЛЕНИЕ ===
+
 	cancelUpload(id) {
 		const uploadData = this.uploads.get(id);
-
-		if (!uploadData) return false;
-
-		if (uploadData.xhr) {
-			uploadData.xhr.abort();
+		if (!uploadData || ['completed', 'failed', 'cancelled'].includes(uploadData.status)) {
+			return false;
 		}
 
-		if (uploadData.controller) {
-			uploadData.controller.abort();
+		// Отмена
+		uploadData.controller.abort();
+		if (uploadData.xhr && typeof uploadData.xhr.abort === 'function') {
+			uploadData.xhr.abort();
 		}
 
 		uploadData.status = 'cancelled';
 		uploadData.endTime = Date.now();
-
 		this.notifyProgress(uploadData);
 
-		// Удаляем из очереди, если есть
-		const queueIndex = this.queue.findIndex(task => task.id === id);
+		// Удаление из очереди
+		const queueIndex = this.queue.findIndex(task => task.uploadData.id === id);
 		if (queueIndex > -1) {
 			this.queue.splice(queueIndex, 1);
 		}
@@ -259,18 +241,16 @@ class FileUploader {
 		return true;
 	}
 
-	// Смена режима
 	setMode(mode, maxParallel = 3) {
 		this.mode = mode;
 		this.maxParallel = maxParallel;
 
 		if (mode === 'parallel') {
-			// Очищаем очередь
 			this.queue = [];
+			this._notifyWaiting(); // разблокировать ожидающие промисы
 		}
 	}
 
-	// Пауза/возобновление
 	pause() {
 		this.isPaused = true;
 	}
@@ -278,126 +258,90 @@ class FileUploader {
 	resume() {
 		this.isPaused = false;
 		if (this.mode === 'sequential') {
-			this.processSequentialQueue();
+			this._processSequentialQueue();
+		} else {
+			this._notifyWaiting(); // может быть, кто-то ждёт
 		}
 	}
 
-	// Очистка
 	clear() {
-		// Отменяем все активные загрузки
-		this.uploads.forEach(upload => {
-			if (upload.status === 'uploading' || upload.status === 'pending') {
-				this.cancelUpload(upload.id);
-			}
+		this.uploads.forEach((_, id) => {
+			this.cancelUpload(id);
 		});
 
 		this.uploads.clear();
-		this.queue = [];
 		this.completed = [];
+		this.queue = [];
+		this.waitingPromises = [];
 		this.activeCount = 0;
 	}
 
-	// Получение статистики
-	getStats() {
-		const allUploads = Array.from(this.uploads.values());
+	// === СТАТИСТИКА И ВСПОМОГАТЕЛЬНЫЕ ===
 
+	getStats() {
+		const all = Array.from(this.uploads.values());
 		return {
-			total: allUploads.length,
+			total: all.length,
 			active: this.activeCount,
-			pending: allUploads.filter(u => u.status === 'pending').length,
-			uploading: allUploads.filter(u => u.status === 'uploading').length,
-			completed: allUploads.filter(u => u.status === 'completed').length,
-			failed: allUploads.filter(u => u.status === 'failed').length,
-			cancelled: allUploads.filter(u => u.status === 'cancelled').length,
+			pending: all.filter(u => u.status === 'pending').length,
+			uploading: all.filter(u => u.status === 'uploading').length,
+			completed: all.filter(u => u.status === 'completed').length,
+			failed: all.filter(u => u.status === 'failed').length,
+			cancelled: all.filter(u => u.status === 'cancelled').length,
 			mode: this.mode,
 			isPaused: this.isPaused,
 			queueLength: this.queue.length
 		};
 	}
 
-	// Вспомогательные методы
 	generateId() {
 		return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	}
 
-	delay(ms) {
+	_delay(ms) {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
 	checkAllComplete() {
-		const allUploads = Array.from(this.uploads.values());
-		const allDone = allUploads.every(u =>
+		const allDone = Array.from(this.uploads.values()).every(u =>
 			['completed', 'failed', 'cancelled'].includes(u.status)
 		);
 
-		if (allDone && allUploads.length > 0) {
+		if (allDone && this.uploads.size > 0) {
 			this.notifyAllComplete();
 		}
 	}
 
-	// Коллбэки
-	onProgress(callback) {
-		this.callbacks.progress.push(callback);
-	}
+	// === КОЛЛБЭКИ ===
 
-	onComplete(callback) {
-		this.callbacks.complete.push(callback);
-	}
+	onProgress(callback) { this.callbacks.progress.push(callback); }
+	onComplete(callback) { this.callbacks.complete.push(callback); }
+	onError(callback) { this.callbacks.error.push(callback); }
+	onAllComplete(callback) { this.callbacks.allComplete.push(callback); }
 
-	onError(callback) {
-		this.callbacks.error.push(callback);
-	}
-
-	onAllComplete(callback) {
-		this.callbacks.allComplete.push(callback);
-	}
-
-	// Уведомления
 	notifyProgress(uploadData) {
-		this.callbacks.progress.forEach(callback => {
-			try {
-				callback({
-					...uploadData,
-					stats: this.getStats()
-				});
-			} catch (error) {
-				console.error('Progress callback error:', error);
-			}
-		});
+		this.callbacks.progress.forEach(cb => this._safeCall(cb, { ...uploadData, stats: this.getStats() }));
 	}
 
 	notifyComplete(uploadData) {
-		this.callbacks.complete.forEach(callback => {
-			try {
-				callback(uploadData);
-			} catch (error) {
-				console.error('Complete callback error:', error);
-			}
-		});
+		this.callbacks.complete.forEach(cb => this._safeCall(cb, uploadData));
 	}
 
 	notifyError(uploadData, error) {
-		this.callbacks.error.forEach(callback => {
-			try {
-				callback(uploadData, error);
-			} catch (error) {
-				console.error('Error callback error:', error);
-			}
-		});
+		this.callbacks.error.forEach(cb => this._safeCall(cb, uploadData, error));
 	}
 
 	notifyAllComplete() {
-		this.callbacks.allComplete.forEach(callback => {
-			try {
-				callback({
-					completed: this.completed,
-					stats: this.getStats()
-				});
-			} catch (error) {
-				console.error('All complete callback error:', error);
-			}
-		});
+		this.callbacks.allComplete.forEach(cb => this._safeCall(cb, { completed: this.completed, stats: this.getStats() }));
+	}
+
+	_safeCall(callback, ...args) {
+		try {
+			callback(...args);
+		} catch (error) {
+			console.error('Callback error:', error);
+		}
 	}
 }
 
-export default FileUploader
+export default FileUploader;

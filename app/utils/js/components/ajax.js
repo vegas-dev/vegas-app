@@ -1,4 +1,4 @@
-import {mergeDeepObject, noop, normalizeData} from "../functions";
+import { mergeDeepObject, noop, normalizeData } from "../functions";
 
 class Ajax {
 	/**
@@ -10,24 +10,24 @@ class Ajax {
 	 * @param {string} options._token - Токен (авто-чтение из meta)
 	 */
 	constructor(options = {}) {
-		this.baseUrl = options.baseUrl || '';
+		this.baseUrl = options.baseUrl || "";
 		this.defaultHeaders = {
-			'X-Requested-With': 'XMLHttpRequest',
-			...options.headers
+			"X-Requested-With": "XMLHttpRequest",
+			...options.headers,
 		};
 		this.withCredentials = options.withCredentials || false;
 		this.csrfToken = options._token || this._getCsrfToken();
 	}
 
 	/**
-	 * Получение csrf токена из тега meta
+	 * Получение CSRF-токена из тега meta
 	 * @returns {string}
 	 */
 	_getCsrfToken() {
 		const meta = document.querySelector('meta[name="csrf-token"]');
-		if (meta) return meta.getAttribute('content');
+		if (meta) return meta.getAttribute("content");
 		console.warn('CSRF-токен не найден в <meta name="csrf-token">');
-		return '';
+		return "";
 	}
 
 	/**
@@ -35,201 +35,251 @@ class Ajax {
 	 * @param {string} url
 	 * @param {Object} options
 	 * @param {'GET'|'POST'|'PUT'|'DELETE'|'PATCH'} options.method
-	 * @param {Object|FormData} options.body - Данные (обычный объект или FormData)
-	 * @param {Object} options.headers - Дополнительные заголовки
-	 * @param {Function} options.onProgress - Колбэк прогресса (только для POST/PUT)
+	 * @param {Object|FormData} options.body
+	 * @param {Object} options.headers
+	 * @param {AbortSignal} [options.signal] - Для отмены запроса
+	 * @param {Function} [options.onProgress] - Только для POST/PUT с FormData
 	 * @param {Function} options.onSuccess
 	 * @param {Function} options.onError
-	 * @param {Function} options.onUploadStart
-	 * @param {Function} options.onUploadEnd
+	 * @param {Function} [options.onUploadStart]
+	 * @param {Function} [options.onUploadEnd]
 	 */
 	request(url, {
-		method = 'GET',
+		method = "GET",
 		body = null,
 		headers = {},
+		signal = null,
 		onProgress = null,
-		onSuccess = (data) => noop(),
-		onError = (error) => noop(),
-		onUploadStart = () => {},
-		onUploadEnd = () => {}
+		onSuccess = noop,
+		onError = noop,
+		onUploadStart = noop,
+		onUploadEnd = noop,
 	} = {}) {
 		const fullUrl = this.baseUrl + url;
 		const isFormData = body instanceof FormData;
 		const requestHeaders = { ...this.defaultHeaders, ...headers };
-		const token = {};
+		const isGet = method.toUpperCase() === "GET";
 
-		if (!isFormData && this.csrfToken) {
-			token.body = JSON.stringify({
-				_token: this.csrfToken
-			})
+		// Удаление тела для GET
+		if (isGet) body = null;
+
+		// Установка CSRF токена: в body, если не FormData
+		if (!isGet && !isFormData && this.csrfToken) {
+			if (!body) body = {};
+			if (typeof body === "object" && !Array.isArray(body)) {
+				body._token = this.csrfToken;
+			}
 		}
 
-		// Для JSON устанавливаем заголовок, для FormData — НЕЛЬЗЯ
-		if (!isFormData && !('Content-Type' in headers)) {
-			requestHeaders['Content-Type'] = 'application/json';
+		// Content-Type только для JSON
+		if (!isFormData && !("Content-Type" in headers)) {
+			requestHeaders["Content-Type"] = "application/json";
 		}
 
-		// Если это GET-запрос — тело игнорируется
-		if (method.toUpperCase() === 'GET') {
-			return this._makeFetch(fullUrl, {
-				method,
-				headers: requestHeaders,
-				withCredentials: this.withCredentials
-			}, onSuccess, onError);
-		}
-
-		// Для FormData — используем XMLHttpRequest, чтобы отслеживать прогресс
+		// Если нужно отслеживать прогресс или FormData — используем XHR
 		if (isFormData || onProgress) {
 			return this._makeXHR({
 				method,
 				url: fullUrl,
 				body,
 				headers: requestHeaders,
+				signal,
 				onProgress,
 				onSuccess,
 				onError,
 				onUploadStart,
-				onUploadEnd
+				onUploadEnd,
+			});
+		} else {
+			return this._makeFetch({
+				url: fullUrl,
+				method,
+				body: isGet ? undefined : this._serializeBody(body),
+				headers: requestHeaders,
+				signal,
+				withCredentials: this.withCredentials,
+				onSuccess,
+				onError,
 			});
 		}
-
-		// Остальные случаи — fetch
-		return this._makeFetch(fullUrl, mergeDeepObject({
-			method,
-			headers: requestHeaders,
-			withCredentials: this.withCredentials
-		}, token), onSuccess, onError);
 	}
 
 	/**
-	 * Использование fetch (для JSON)
+	 * fetch-реализация (для JSON)
 	 */
-	_makeFetch(url, config, onSuccess, onError) {
-		return fetch(url, config)
-			.then(response => {
+	_makeFetch({
+		           url,
+		           method,
+		           body,
+		           headers,
+		           signal,
+		           withCredentials,
+		           onSuccess,
+		           onError,
+	           }) {
+		const config = {
+			method,
+			headers,
+			signal,
+			withCredentials,
+			...(body !== undefined && { body }),
+		};
+
+		fetch(url, config)
+			.then((response) => {
+				const contentType = response.headers.get("content-type");
+				const isJson = contentType && contentType.includes("application/json");
+
 				if (!response.ok) {
-					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-				}
-				const contentType = response.headers.get('content-type');
-				if (contentType && contentType.includes('application/json')) {
-					return {
-						code: response.status,
-						response: response.json()
-					};
+					return Promise.reject(
+						normalizeData({
+							code: response.status,
+							response: isJson
+								? response.json().catch(() => response.text())
+								: response.text(),
+						})
+					);
 				}
 
-				return {
-					code: response.status,
-					response: response.text()
-				};
-			})
-			.then(data => {
-				if ('response' in data) {
-					if (data.response instanceof Promise) {
-						data.response.then(text => {
-							onSuccess({
-								code: data.code,
-								response: text
-							})
-						})
-					} else {
-						onSuccess(data)
-					}
+				let data = { code: response.status };
+				if (isJson) {
+					data.response = response.json();
 				} else {
-					onSuccess(data)
+					data.response = response.text();
+				}
+
+				return data;
+			})
+			.then((data) => {
+				if (data && data.response instanceof Promise) {
+					data.response.then(
+						(resolved) => onSuccess({ ...data, response: resolved }),
+						() => {}
+					);
+				} else {
+					onSuccess(data);
 				}
 			})
-			.catch(error => onError(error));
+			.catch((error) => {
+				if (error.name === "AbortError") return; // отмена — не ошибка
+
+				if (error && error.response instanceof Promise) {
+					error.response.then((errData) => {
+						onError({ ...error, response: errData });
+					}, () => {
+						onError({ ...error, response: "Request failed" });
+					});
+				} else {
+					onError(error);
+				}
+			});
 	}
 
 	/**
-	 * Использование XHR (для FormData и прогресса)
+	 * XHR-реализация (с прогрессом и AbortController)
 	 */
 	_makeXHR({
 		         method,
 		         url,
 		         body,
 		         headers,
+		         signal,
 		         onProgress,
 		         onSuccess,
 		         onError,
 		         onUploadStart,
-		         onUploadEnd
+		         onUploadEnd,
 	         }) {
-		return new Promise((resolve, reject) => {
-			const xhr = new XMLHttpRequest();
+		const xhr = new XMLHttpRequest();
 
-			xhr.open(method, url, true);
-			xhr.withCredentials = this.withCredentials;
+		xhr.open(method, url, true);
+		xhr.withCredentials = this.withCredentials;
 
-			// Устанавливаем только пользовательские заголовки (кроме Content-Type для FormData)
-			Object.keys(headers).forEach(key => {
-				if (key.toLowerCase() !== 'content-type' || !(body instanceof FormData)) {
-					xhr.setRequestHeader(key, headers[key]);
+		// Установка заголовков
+		Object.keys(headers).forEach((key) => {
+			if (key.toLowerCase() !== "content-type" || !(body instanceof FormData)) {
+				xhr.setRequestHeader(key, headers[key]);
+			}
+		});
+
+		// Прогресс
+		if (onProgress) {
+			xhr.upload.addEventListener("progress", (e) => {
+				if (e.lengthComputable) {
+					onProgress(Math.round((e.loaded / e.total) * 100), e);
 				}
 			});
+		}
 
-			// Отслеживание прогресса загрузки
-			if (onProgress) {
-				xhr.upload.addEventListener('progress', (e) => {
-					if (e.lengthComputable) {
-						const percent = (e.loaded / e.total) * 100;
-						onProgress(percent, e);
-					}
+		// События
+		xhr.onload = () => {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				const data = {
+					code: xhr.status,
+					response: normalizeData(xhr.responseText),
+				};
+				onSuccess(data);
+			} else {
+				const error = normalizeData({
+					code: xhr.status,
+					response: xhr.responseText || `HTTP ${xhr.status}`,
 				});
-			}
-
-			xhr.onload = () => {
-				if (xhr.status >= 200 && xhr.status < 300) {
-					let data = {
-						code: xhr.status,
-						response: normalizeData(xhr.responseText)
-					};
-					onSuccess(data);
-					resolve(data);
-				} else {
-					const error = new Error(`Ошибка ${xhr.status}: ${xhr.statusText}`);
-					let data = {
-						code: xhr.status,
-						response: error
-					}
-					onError(data);
-					reject(data);
-				}
-				onUploadEnd();
-			};
-
-			xhr.onerror = () => {
-				const error = new Error('Network Error');
 				onError(error);
-				reject(error);
-				onUploadEnd();
-			};
+			}
+			onUploadEnd();
+		};
 
-			onUploadStart();
-			xhr.send(body);
-		});
+		xhr.onerror = () => {
+			onError(normalizeData({ code: 0, response: "Network Error" }));
+			onUploadEnd();
+		};
+
+		xhr.ontimeout = () => {
+			onError(normalizeData({ code: 0, response: "Request Timeout" }));
+			onUploadEnd();
+		};
+
+		// Привязка AbortController
+		if (signal) {
+			signal.addEventListener("abort", () => {
+				xhr.abort();
+			});
+		}
+
+		onUploadStart();
+		xhr.send(body);
+
+		return xhr; // для отмены снаружи
 	}
 
 	// === Сокращённые методы ===
+
 	get(url, options = {}) {
-		return this.request(url, { method: 'GET', ...options });
+		return this.request(url, { method: "GET", ...options });
 	}
 
 	post(url, body, options = {}) {
-		return this.request(url, { method: 'POST', body, ...options });
+		return this.request(url, { method: "POST", body, ...options });
 	}
 
 	put(url, body, options = {}) {
-		return this.request(url, { method: 'PUT', body, ...options });
+		return this.request(url, { method: "PUT", body, ...options });
 	}
 
 	delete(url, options = {}) {
-		return this.request(url, { method: 'DELETE', ...options });
+		return this.request(url, { method: "DELETE", ...options });
 	}
 
 	patch(url, body, options = {}) {
-		return this.request(url, { method: 'PATCH', body, ...options });
+		return this.request(url, { method: "PATCH", body, ...options });
+	}
+
+	/**
+	 * Сериализация тела (если не FormData)
+	 */
+	_serializeBody(body) {
+		if (!body || body instanceof FormData) return undefined;
+		return JSON.stringify(body);
 	}
 }
 

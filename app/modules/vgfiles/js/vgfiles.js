@@ -1,13 +1,14 @@
 import BaseModule from "../../base-module";
-import { mergeDeepObject, normalizeData } from "../../../utils/js/functions";
+import {isElement, isVisible, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import Html from "../../../utils/js/components/templater";
+import { lang_messages } from "../../../utils/js/components/lang";
+import {getSVG} from "../../module-fn";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
-import Html from "../../../utils/js/components/templater";
 import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
-import DragDropFiles from "./dragDropFiles";
-import { lang_messages } from "../../../utils/js/components/lang";
 import FileUploader from "./loader";
-import {getSVG} from "../../module-fn";
+import Droper from "./droper";
+import VGAlert from "../../vgalert";
 
 /**
  * Constants
@@ -15,7 +16,8 @@ import {getSVG} from "../../module-fn";
 const NAME = 'files';
 const NAME_KEY = 'vg.files';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="files"]';
-const SELECTOR_DATA_DISMISS = '[data-dismiss="file"]';
+const SELECTOR_DATA_DISMISS = '[data-vg-dismiss="file"]';
+const SELECTOR_DATA_DISMISS_ALL = '[data-vg-dismiss="vg-files"]';
 const SELECTOR_DATA_FAKE = '[data-vg-files="generated"]';
 
 const CLASS_NAME_CONTAINER = 'vg-files';
@@ -92,7 +94,7 @@ class VGFiles extends BaseModule {
 
     _init() {
         this._preventOriginalInputFromSubmit();
-        if (this._nodes.drop) new DragDropFiles(this._nodes.drop, this._params).init();
+        if (this._nodes.drop) new Droper(this._nodes.drop, this._params).init();
     }
 
     build() {
@@ -142,22 +144,30 @@ class VGFiles extends BaseModule {
         // Прогресс
         this._uploader.onProgress((uploadData) => {
             const $item = this._getItemElement(uploadData.file);
-            $item?.classList.add(CLASS_NAME_LOADING);
+            Classes.add($item, CLASS_NAME_LOADING)
         });
 
         // Успешно
         this._uploader.onComplete((uploadData) => {
             this._uploadedKeys.add(this._getFileKey(uploadData.file));
             const $item = this._getItemElement(uploadData.file);
-            $item?.classList.replace(CLASS_NAME_LOADING, CLASS_NAME_LOADED);
-            $item?.classList.remove(CLASS_NAME_PENDING);
+
+            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED)
+            Classes.remove($item, CLASS_NAME_PENDING);
+
+            let button = this._getButtonElement(uploadData.file),
+                id = normalizeData(uploadData.result.response.id) || uploadData.id || uploadData.file.lastModified;
+
+            if (isElement(button) && id) {
+                Manipulator.set(button, 'data-id', id);
+            }
         });
 
         // Ошибка
         this._uploader.onError((uploadData, error) => {
             this._uploadedKeys.delete(this._getFileKey(uploadData.file));
             const $item = this._getItemElement(uploadData.file);
-            $item?.classList.replace(CLASS_NAME_LOADING, CLASS_NAME_FAILING);
+            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING)
             console.error('Upload error:', error);
         });
 
@@ -180,12 +190,6 @@ class VGFiles extends BaseModule {
         }
     }
 
-    /**
-     * Поиск DOM-элемента по файлу (из списка или превью)
-     * @param {File} file
-     * @returns {HTMLElement|null}
-     * @private
-     */
     _getItemElement(file) {
         return Selectors.find(
             `.${CLASS_NAME_LIST} li[data-name="${file.name}"][data-size="${file.size}"], 
@@ -194,12 +198,20 @@ class VGFiles extends BaseModule {
         );
     }
 
+    _getButtonElement(file) {
+        if (typeof file === 'string') {
+            return Selectors.find(file, this._element);
+        } else {
+            return Selectors.find(`button[data-name="${file.name}"][data-size="${file.size}"]`, this._element);
+        }
+    }
+
     _setButtonElement(file) {
         return this._tpl.button([
             this._tpl.i({}, getSVG('cross'), {isHTML: true}),
         ], 'button', {
             type: 'button',
-            'data-dismiss': 'file',
+            'data-vg-dismiss': 'file',
             'data-name': file.name,
             'data-size': file.size,
             'data-type': file.type
@@ -441,12 +453,6 @@ class VGFiles extends BaseModule {
         Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element).forEach(el => {
             el.addEventListener('change', () => this.change(el));
         });
-
-        const $dismiss = Selectors.find('[data-dismiss="vg-files"]', this._element);
-        $dismiss?.addEventListener('click', e => {
-            e.preventDefault();
-            this.clear(true);
-        });
     }
 
     _getFileKey(file) {
@@ -510,7 +516,17 @@ EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS, fun
     const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (!target) return;
     e.preventDefault();
-    VGFiles.getOrCreateInstance(target).removeFile(e.target);
+
+    let button = e.target.closest(SELECTOR_DATA_DISMISS) || e.target;
+    VGFiles.getOrCreateInstance(target).removeFile(button);
+});
+
+EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS_ALL, function (e) {
+    const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
+    if (!target) return;
+    e.preventDefault();
+
+    VGFiles.getOrCreateInstance(target).clear(true);
 });
 
 export default VGFiles;
