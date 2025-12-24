@@ -8,6 +8,7 @@ import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import Html from "../../../utils/js/components/templater";
+import {resolve} from "@babel/core/lib/vendor/import-meta-resolve";
 
 /**
  * @typedef {Object} AjaxParams
@@ -134,6 +135,7 @@ class VGAlert {
 			buttons: {},
 			message: {},
 		};
+
 		this._elementsDefault = {
 			buttons: {
 				agree: {
@@ -143,7 +145,7 @@ class VGAlert {
 					attr: {},
 					toggle: DATA_AGREE,
 					class: ["btn"],
-					text: lang_buttons(this.lang, NAME).agree,
+					text: lang_buttons(this.lang, NAME)['agree'],
 				},
 				cancel: {
 					element: "",
@@ -152,12 +154,12 @@ class VGAlert {
 					attr: {},
 					toggle: DATA_CANCEL,
 					class: ["btn"],
-					text: lang_buttons(this.lang, NAME).cancel,
+					text: lang_buttons(this.lang, NAME)['cancel'],
 				},
 			},
 			message: {
-				title: lang_messages(this.lang, NAME).title,
-				description: lang_messages(this.lang, NAME).description
+				title: lang_messages(this.lang, NAME)['title'],
+				description: lang_messages(this.lang, NAME)['description']
 			},
 			icons: {
 				danger: getSVG("danger"),

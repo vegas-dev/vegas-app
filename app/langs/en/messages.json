@@ -1,0 +1,28 @@
+{
+  "errors": {
+    "went_wrong": "Something went wrong, please repeat later",
+    "400": "Bad Request",
+    "401": "Unauthorized",
+    "403": "Forbidden",
+    "404": "Not Found",
+    "413": "Payload Too Large",
+    "419": "Problems with the CSRF token",
+    "422": "Unprocessable Entity",
+    "500": "Internal Server Error",
+    "504": "Gateway Timeout"
+  },
+  "form-sender": {
+    "bootstrap_not_found": "VGApp could not find bootstrap, the modals will not be closed, try to do this through the afterSend callback."
+  },
+  "files": {
+    "is-count": "Exceeded the limit on the number of files",
+    "is-sizes": "File size exceeded",
+    "is-types": "Invalid file type",
+    "is-total-size": "The maximum allowed size for the selected files has been exceeded"
+  },
+  "alert": {
+    "title": "Default header",
+    "description": "Description of the current action",
+    "reason": "Alert already open"
+  }
+}

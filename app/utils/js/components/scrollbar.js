@@ -1,114 +1,157 @@
 /**
  * --------------------------------------------------------------------------
- * Bootstrap util/scrollBar.js
+ * Bootstrap util/scrollBar.js (рефакторинг)
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
  * --------------------------------------------------------------------------
+ *
+ * Улучшена читаемость, вынесены дублирующиеся операции,
+ * добавлены JSDoc-комментарии, упрощена логика.
  */
 
-import {Manipulator} from "../dom/manipulator";
-import {isElement} from "../functions";
+import { Manipulator } from "../dom/manipulator";
+import { isElement } from "../functions";
 import Selectors from "../dom/selectors";
 
 /**
- * Constants
+ * Константы
  */
-
-const SELECTOR_FIXED_CONTENT = '.fixed-top, .fixed-bottom, .is-fixed, .sticky-top'
-const SELECTOR_STICKY_CONTENT = '.sticky-top'
-const PROPERTY_PADDING = 'padding-right'
-const PROPERTY_MARGIN = 'margin-right'
+const SELECTOR_FIXED_CONTENT = '.fixed-top, .fixed-bottom, .is-fixed, .sticky-top';
+const SELECTOR_STICKY_CONTENT = '.sticky-top';
+const PROPERTY_PADDING = 'padding-right';
+const PROPERTY_MARGIN = 'margin-right';
 
 /**
- * Class definition
+ * Вспомогательный класс для управления скроллбаром
+ * Корректирует отступы при скрытии скролла, сохраняет исходные стили
  */
-
 class ScrollBarHelper {
 	constructor() {
-		this._element = document.body
+		this._element = document.body;
 	}
 
-	// Public
+	/**
+	 * Возвращает ширину вертикального скроллбара
+	 * @returns {number}
+	 */
 	getWidth() {
-		// https://developer.mozilla.org/en-US/docs/Web/API/Window/innerWidth#usage_notes
-		const documentWidth = document.documentElement.clientWidth
-		return Math.abs(window.innerWidth - documentWidth)
+		const documentWidth = document.documentElement.clientWidth;
+		return Math.abs(window.innerWidth - documentWidth);
 	}
 
-	hide() {
-		const width = this.getWidth()
-		this._disableOverFlow()
-		// give padding to element to balance the hidden scrollbar width
-		this._setElementAttributes(this._element, PROPERTY_PADDING, calculatedValue => calculatedValue + width)
-		// trick: We adjust positive paddingRight and negative marginRight to sticky-top elements to keep showing fullwidth
-		this._setElementAttributes(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING, calculatedValue => calculatedValue + width)
-		this._setElementAttributes(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN, calculatedValue => calculatedValue - width)
-	}
-
-	reset() {
-		this._resetElementAttributes(this._element, 'overflow')
-		this._resetElementAttributes(this._element, PROPERTY_PADDING)
-		this._resetElementAttributes(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING)
-		this._resetElementAttributes(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN)
-	}
-
+	/**
+	 * Проверяет, есть ли скроллбар (ширина > 0)
+	 * @returns {boolean}
+	 */
 	isOverflowing() {
-		return this.getWidth() > 0
+		return this.getWidth() > 0;
 	}
 
-	// Private
-	_disableOverFlow() {
-		this._saveInitialAttribute(this._element, 'overflow')
-		this._element.style.overflow = 'hidden'
+	/**
+	 * Скрывает скроллбар и корректирует макет
+	 */
+	hide() {
+		const width = this.getWidth();
+		if (width === 0) return;
+
+		this._disableOverflow();
+		this._setStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING, value => value + width);
+		this._setStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN, value => value - width);
+		this._setStyle(this._element, PROPERTY_PADDING, value => value + width);
 	}
 
-	_setElementAttributes(selector, styleProperty, callback) {
-		const scrollbarWidth = this.getWidth()
-		const manipulationCallBack = element => {
-			if (element !== this._element && window.innerWidth > element.clientWidth + scrollbarWidth) {
-				return
+	/**
+	 * Сбрасывает стили до исходных значений
+	 */
+	reset() {
+		this._resetStyle(this._element, 'overflow');
+		this._resetStyle(this._element, PROPERTY_PADDING);
+		this._resetStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING);
+		this._resetStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN);
+	}
+
+	// === Приватные методы ===
+
+	/**
+	 * Блокирует overflow у body
+	 * @private
+	 */
+	_disableOverflow() {
+		this._saveInitialStyle(this._element, 'overflow');
+		this._element.style.overflow = 'hidden';
+	}
+
+	/**
+	 * Устанавливает стили с сохранением начальных значений
+	 * @param {string|HTMLElement} selector
+	 * @param {string} property
+	 * @param {(value: number) => number} callback
+	 * @private
+	 */
+	_setStyle(selector, property, callback) {
+		const width = this.getWidth();
+		const apply = (element) => {
+			// Исключаем элементы, у которых и так нет места под скролл
+			if (element !== this._element && window.innerWidth > element.clientWidth + width) {
+				return;
 			}
 
-			this._saveInitialAttribute(element, styleProperty)
-			const calculatedValue = window.getComputedStyle(element).getPropertyValue(styleProperty)
-			element.style.setProperty(styleProperty, `${callback(Number.parseFloat(calculatedValue))}px`)
-		}
+			this._saveInitialStyle(element, property);
+			const current = getComputedStyle(element).getPropertyValue(property);
+			const value = Number.parseFloat(current) || 0;
+			element.style.setProperty(property, `${callback(value)}px`);
+		};
 
-		this._applyManipulationCallback(selector, manipulationCallBack)
+		this._applyToElements(selector, apply);
 	}
 
-	_saveInitialAttribute(element, styleProperty) {
-		const actualValue = element.style.getPropertyValue(styleProperty)
-		if (actualValue) {
-			Manipulator.get(element, styleProperty, actualValue)
-		}
-	}
+	/**
+	 * Сбрасывает стили до сохранённых значений
+	 * @param {string|HTMLElement} selector
+	 * @param {string} property
+	 * @private
+	 */
+	_resetStyle(selector, property) {
+		const apply = (element) => {
+			const value = Manipulator.get(element, property);
 
-	_resetElementAttributes(selector, styleProperty) {
-		const manipulationCallBack = element => {
-			const value = Manipulator.get(element, styleProperty)
-			// We only want to remove the property if the value is `null`; the value can also be zero
 			if (value === null) {
-				element.style.removeProperty(styleProperty)
-				return
+				element.style.removeProperty(property);
+			} else {
+				Manipulator.remove(element, property);
+				element.style.setProperty(property, value);
 			}
+		};
 
-			Manipulator.remove(element, styleProperty)
-			element.style.setProperty(styleProperty, value)
-		}
-
-		this._applyManipulationCallback(selector, manipulationCallBack)
+		this._applyToElements(selector, apply);
 	}
 
-	_applyManipulationCallback(selector, callBack) {
+	/**
+	 * Сохраняет текущее значение стиля через Manipulator
+	 * @param {HTMLElement} element
+	 * @param {string} property
+	 * @private
+	 */
+	_saveInitialStyle(element, property) {
+		const value = element.style.getPropertyValue(property);
+		if (value) {
+			Manipulator.set(element, property, value);
+		}
+	}
+
+	/**
+	 * Применяет callback к элементу или списку элементов
+	 * @param {string|HTMLElement} selector
+	 * @param {(element: HTMLElement) => void} callback
+	 * @private
+	 */
+	_applyToElements(selector, callback) {
 		if (isElement(selector)) {
-			callBack(selector)
-			return
+			callback(selector);
+			return;
 		}
 
-		for (const sel of Selectors.findAll(selector, this._element)) {
-			callBack(sel)
-		}
+		Selectors.findAll(selector, this._element).forEach(callback);
 	}
 }
 
-export default ScrollBarHelper
+export default ScrollBarHelper;

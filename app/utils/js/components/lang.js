@@ -1,120 +1,89 @@
-import {normalizeData} from "../functions";
+import { normalizeData } from "../functions";
 
-const langs = {
-	ru: {
-		messages: {
-			errors: {
-				went_wrong: 'Что-то пошло не так, повторите позже',
-				"400": 'Неверный запрос',
-				"401": 'Не авторизован',
-				"403": 'Запрещено',
-				"404": 'Не найдено',
-				"413": 'Слишком большой запрос',
-				"419": 'Проблемы с токеном CSRF',
-				"422": 'Неверный запрос',
-				"500": 'Внутренняя ошибка сервера',
-				"504": 'Превышено время ожидания'
-			},
-			'form-sender': {
-				'bootstrap_not_found': 'VGApp не удалось найти bootstrap, модалки не будут закрыты, попробуйте сделать это через коллбек afterSend.'
-			},
-			'files': {
-				'is-count': 'Превышен лимит по количеству файлов',
-				'is-sizes': 'Превышен размер файл',
-				'is-types': 'Недопустимый тип файла',
-				'is-total-size': 'Превышен максимально разрешённый размер для выбранных файлов'
-			},
-			alert: {
-				title: 'Заголовок по умолчанию',
-				description: 'Описание текущего действия',
-				reason: 'Алерт уже открыт'
-			}
-		},
-		titles: {
-			errors: {
-				title: 'Ошибка',
-				titles: 'Ошибки'
-			}
-		},
-		buttons: {
-			alert: {
-				agree: 'Да, согласен',
-				cancel: 'Отмена'
-			}
-		}
-	},
-	en: {
-		messages: {
-			errors: {
-				went_wrong: 'Something went wrong, please repeat later',
-				"400": 'Bad Request',
-				"401": 'Unauthorized',
-				"403": 'Forbidden',
-				"404": 'Not Found',
-				"413": 'Payload Too Large',
-				"419": 'Problems with the CSRF token',
-				"422": 'Unprocessable Entity',
-				"500": 'Internal Server Error',
-				"504": 'Gateway Timeout'
-			},
-			'form-sender': {
-				'bootstrap_not_found': 'VGApp could not find bootstrap, the modals will not be closed, try to do this through the afterSend callback.'
-			},
-			alert: {
-				title: 'Default header',
-				description: 'Description of the current action',
-				reason: 'Alert already open'
-			},
-			'files': {
-				'is-count': 'Exceeded the limit on the number of files',
-				'is-sizes': 'File size exceeded',
-				'is-types': 'Invalid file type',
-				'is-total-size': 'The maximum allowed size for the selected files has been exceeded'
-			},
-		},
-		titles: {
-			errors: {
-				title: 'Error',
-				titles: 'Errors'
-			}
-		},
-		buttons: {
-			alert: {
-				agree: 'Yeah, I agree',
-				cancel: 'Cancel'
-			}
-		}
-	},
+// Синхронный импорт JSON-файлов (включаются в бандл Webpack/Vite)
+import messagesRu from '../../../langs/ru/messages.json';
+import titlesRu from '../../../langs/ru/titles.json';
+import buttonsRu from '../../../langs/ru/buttons.json';
+
+import messagesEn from '../../../langs/en/messages.json';
+import titlesEn from '../../../langs/en/titles.json';
+import buttonsEn from '../../../langs/en/buttons.json';
+
+// Синхронные данные, загруженные при сборке
+const langData = {
+	ru: normalizeData({
+		messages: messagesRu,
+		titles: titlesRu,
+		buttons: buttonsRu
+	}),
+	en: normalizeData({
+		messages: messagesEn,
+		titles: titlesEn,
+		buttons: buttonsEn
+	})
 };
 
+/**
+ * Класс для управления языком (синхронный)
+ */
 class Lang {
+	/**
+	 * @param {string} lang - Язык (ru, en и т.д.)
+	 */
 	constructor(lang = 'en') {
 		this.lang = lang;
 	}
 
+	/**
+	 * Получение языкового пакета
+	 * @returns {Object}
+	 */
 	get() {
-		let data = langs[this.lang];
-
-		if (!data) data = langs['en'];
-
-		return normalizeData(data);
+		return langData[this.lang] || langData['en'];
 	}
 }
 
-function lang(lg, mode, module) {
-	return new Lang(lg).get()[mode][module];
+/**
+ * Получение языкового раздела
+ * @param {string} language - Язык
+ * @param {string} mode - messages, titles, buttons
+ * @param {string} module - Модуль (files, alert и т.д.)
+ * @returns {Object}
+ */
+function getLangData(language = 'en', mode, module) {
+	const langInstance = new Lang(language);
+	const data = langInstance.get();
+	return data[mode]?.[module] || {};
 }
 
-function lang_titles(lg, module) {
-	return lang(lg, 'titles', module) || {};
+/**
+ * Получение заголовков
+ * @param {string} language
+ * @param {string} module
+ * @returns {Object}
+ */
+function lang_titles(language, module) {
+	return getLangData(language, 'titles', module);
 }
 
-function lang_messages(lg, module) {
-	return lang(lg, 'messages', module) || {};
+/**
+ * Получение сообщений
+ * @param {string} language
+ * @param {string} module
+ * @returns {Object}
+ */
+function lang_messages(language, module) {
+	return getLangData(language, 'messages', module);
 }
 
-function lang_buttons(lg, module) {
-	return lang(lg, 'buttons', module) || {};
+/**
+ * Получение текстов кнопок
+ * @param {string} language
+ * @param {string} module
+ * @returns {Object}
+ */
+function lang_buttons(language, module) {
+	return getLangData(language, 'buttons', module);
 }
 
-export {lang, lang_messages, lang_titles, lang_buttons};
+export { lang_messages, lang_titles, lang_buttons };

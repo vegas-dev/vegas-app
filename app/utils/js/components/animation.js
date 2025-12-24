@@ -1,61 +1,146 @@
-import {isElement, mergeDeepObject} from "../functions";
+import { isElement, mergeDeepObject } from "../functions";
 import EventHandler from "../dom/event";
 
 /**
- * Классы для анимаций смотрим здесь
- * https://animate.style/
+ * Анимация на основе Animate.css
+ * Поддерживает модули с событиях: show, shown, hide, hidden
  *
- * Работает с модулями у которых есть события show, hide, hidden
+ * @see https://animate.style/
  */
 class Animation {
-	constructor(element, key, params = {}) {
-		this._params = mergeDeepObject({
+	static get DEFAULTS() {
+		return {
 			enable: false,
-			in: 'animate__backInUp',
-			out: 'animate__backOutUp',
-			delay: 0,
-			duration: 800,
-		}, params);
-
-		this.classes = {
-			animated: 'animate__animated',
-			duration: 'animate__duration-' + this._params.duration
-		}
-
-		if (!this._params.enable) return;
-		if (!isElement(element)) return;
-
-		this._element = element;
-		this._name_key = key;
-
-		this._element.classList.add(this.classes.duration);
-
-		if (this._element.classList.contains('fade')) this._element.classList.remove('fade');
-
-		this._triggers();
+			in: 'animate__fadeIn',     // Анимация при появлении
+			out: 'animate__fadeOut',   // Анимация при скрытии
+			duration: 500,             // Длительность анимации (мс)
+		};
 	}
 
-	_triggers() {
-		EventHandler.on(this._element, this._name_key + '.show', () => {
-			this._element.classList.remove(this._params.out);
-			this._element.classList.add(this._params.in);
-		});
-		EventHandler.on(this._element, this._name_key + '.shown', () => {
-			this._element.classList.add(this.classes.animated);
-		});
+	constructor(element, key, userParams = {}) {
+		this._element = element;
+		this._nameKey = key;
 
-		EventHandler.on(this._element, this._name_key + '.hide', () => {
-			this._element.classList.remove(this._params.in);
-			this._element.classList.add(this._params.out);
-		});
+		// Объединение параметров
+		this._params = mergeDeepObject(Animation.DEFAULTS, userParams);
 
-		EventHandler.on(this._element, this._name_key + '.hidden', () => {
-			[... this._element.classList].forEach((cl) => {
-				if (cl.indexOf('animate__') !== -1) {
-					this._element.classList.remove(cl);
-				}
-			})
-		});
+		// Ранний выход, если анимация отключена или элемент не валиден
+		if (!this._params.enable || !isElement(element)) {
+			return;
+		}
+
+		this._classes = {
+			animated: 'animate__animated',
+			duration: 'animate__fast' // Используем классы animate.css
+		};
+
+		this._init();
+	}
+
+	/**
+	 * Инициализация анимации
+	 * @private
+	 */
+	_init() {
+		const { classList } = this._element;
+
+		// Добавляем общие классы
+		classList.add(this._classes.animated, this._classes.duration);
+
+		// Удаляем стандартный класс 'fade', если используется animate.css
+		if (classList.contains('fade')) {
+			classList.remove('fade');
+		}
+
+		// Назначаем обработчики событий
+		this._setupEventListeners();
+	}
+
+	/**
+	 * Назначение обработчиков событий
+	 * @private
+	 */
+	_setupEventListeners() {
+		EventHandler.on(this._element, `${this._nameKey}.show`, this._handleShow.bind(this), null);
+		EventHandler.on(this._element, `${this._nameKey}.shown`, this._handleShown.bind(this), null);
+		EventHandler.on(this._element, `${this._nameKey}.hide`, this._handleHide.bind(this), null);
+		EventHandler.on(this._element, `${this._nameKey}.hidden`, this._handleHidden.bind(this), null);
+	}
+
+	/**
+	 * Обработка события "show" — запуск анимации входа
+	 * @private
+	 */
+	_handleShow() {
+		const { classList } = this._element;
+		const { in: inClass, out: outClass } = this._params;
+
+		// Убираем выходную анимацию, если была
+		if (classList.contains(outClass)) {
+			classList.remove(outClass);
+		}
+
+		// Добавляем входную анимацию
+		classList.add(inClass);
+	}
+
+	/**
+	 * Обработка события "shown" — завершение анимации входа
+	 * @private
+	 */
+	_handleShown() {
+		this._element.classList.add(this._classes.animated);
+	}
+
+	/**
+	 * Обработка события "hide" — запуск анимации выхода
+	 * @private
+	 */
+	_handleHide() {
+		const { classList } = this._element;
+		const { in: inClass, out: outClass } = this._params;
+
+		// Убираем входную анимацию
+		if (classList.contains(inClass)) {
+			classList.remove(inClass);
+		}
+
+		// Добавляем выходную анимацию
+		classList.add(outClass);
+	}
+
+	/**
+	 * Обработка события "hidden" — очистка анимационных классов
+	 * @private
+	 */
+	_handleHidden() {
+		const { classList } = this._element;
+		const { in: inClass, out: outClass } = this._params;
+
+		// Удаляем все анимационные классы animate.css
+		[...classList]
+			.filter(cls => cls.startsWith('animate__'))
+			.forEach(cls => classList.remove(cls));
+
+		// Восстанавливаем базовые классы для будущих анимаций
+		classList.add(this._classes.animated, this._classes.duration);
+	}
+
+	/**
+	 * Уничтожение экземпляра (очистка событий)
+	 */
+	dispose() {
+		EventHandler.off(this._element, `${this._nameKey}.show`, null, null);
+		EventHandler.off(this._element, `${this._nameKey}.shown`, null, null);
+		EventHandler.off(this._element, `${this._nameKey}.hide`, null, null);
+		EventHandler.off(this._element, `${this._nameKey}.hidden`, null, null);
+
+		// Очищаем анимационные классы
+		[...this._element.classList]
+			.filter(cls => cls.startsWith('animate__'))
+			.forEach(cls => this._element.classList.remove(cls));
+
+		this._element = null;
 	}
 }
 

@@ -1,54 +1,57 @@
-import {isElement, mergeDeepObject, normalizeData} from "../functions";
-import {Manipulator} from "../dom/manipulator";
+import { isElement, mergeDeepObject } from "../functions";
+import { Manipulator } from "../dom/manipulator";
 
+/**
+ * Класс Params
+ * Объединяет параметры из объекта и атрибутов элемента, поддерживает вложенные параметры через дефисы
+ */
 class Params {
 	constructor(params, element = null) {
 		this._params = this.merge(params, element);
 	}
 
+	/**
+	 * Возвращает итоговые параметры
+	 */
 	get() {
 		return this._params;
 	}
 
+	/**
+	 * Извлекает параметры из data-атрибутов элемента
+	 */
 	fromElement(element) {
 		return isElement(element) ? Manipulator.get(element) : {};
 	}
 
+	/**
+	 * Преобразует строку вида 'foo-bar-baz' в вложенный объект { foo: { bar: { baz: value } } }
+	 */
+	static stringToNestedObject(str, value) {
+		return str.split('-').reduceRight((acc, key) => ({ [key]: acc }), value);
+	}
+
+	/**
+	 * Слияние параметров: объект + data-атрибуты + обработка вложенности и ключа 'params'
+	 */
 	merge(params, element) {
-		let mParams = mergeDeepObject(params, this.fromElement(element));
+		let merged = mergeDeepObject(params, this.fromElement(element));
 
-		function stringToNestedObjectWithValue(str, value, params) {
-			const keys = str.split('-');
-			let result = {};
-			let currentLevel = result;
-
-			for (let i = 0; i < keys.length; i++) {
-				const key = keys[i];
-
-				if (i < keys.length - 1) {
-					currentLevel[key] = {};
-					currentLevel = currentLevel[key];
-				} else {
-					currentLevel[key] = value;
-				}
+		// Обработка вложенных ключей через дефисы и ключа 'params'
+		Object.keys(merged).forEach(key => {
+			if (key === 'params') {
+				merged = mergeDeepObject(merged, merged.params);
+				delete merged.params;
 			}
 
-			return mergeDeepObject(params, result);
-		}
-
-		for (let key in mParams) {
-			if ('params' in mParams) {
-				mParams = mergeDeepObject(mParams, mParams.params);
-				delete mParams.params;
+			if (key.includes('-')) {
+				const nestedObj = Params.stringToNestedObject(key, merged[key]);
+				merged = mergeDeepObject(merged, nestedObj);
+				delete merged[key];
 			}
+		});
 
-			if (key.indexOf('-') !== -1) {
-				mParams = stringToNestedObjectWithValue(key, mParams[key], mParams);
-				delete mParams[key];
-			}
-		}
-
-		return mParams;
+		return merged;
 	}
 }
 

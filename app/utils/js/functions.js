@@ -1,481 +1,315 @@
 /**
- * Набор скриптов для широкого применения
- * Включает утилиты для работы с DOM, типами данных, анимациями и массивами.
- * Все функции экспортируются для использования в других модулях.
+ * Утилиты: DOM, типы, массивы, анимации, объекты
+ * Экспортируются все функции.
  */
 
 /**
- * Экранирование селекторов для корректной работы идентификаторов,
- * содержащих специальные символы (например, `#my-id:with-colon`).
- * Использует `CSS.escape()` при наличии поддержки в браузере.
- *
- * @param {string} selector - CSS-селектор, который необходимо экранировать
- * @returns {string} Экранированный селектор, пригодный для `document.querySelector`
- * @example
- * parseSelector('#user:input') → '#user\\:input'
+ * Проверяет, является ли объект DOM-элементом.
+ * @param {*} obj
+ * @returns {boolean}
  */
-const parseSelector = (selector) => {
-	if (selector && window.CSS && window.CSS.escape) {
-		// document.querySelector needs escaping to handle IDs (html5+) containing for instance /
-		selector = selector.replace(/#([^\s"#']+)/g, (match, id) => `#${CSS.escape(id)}`);
-	}
+const isElement = (obj) => obj?.nodeType === Node.ELEMENT_NODE;
 
-	return selector;
+/**
+ * Проверяет, является ли значение объектом (не null, включая массивы).
+ * @param {*} obj
+ * @returns {boolean}
+ */
+const isObject = (obj) => obj && typeof obj === 'object';
+
+/**
+ * Проверяет, пуст ли объект (нет собственных перечисляемых ключей).
+ * @param {Object} obj
+ * @returns {boolean}
+ */
+const isEmptyObj = (obj) => {
+	if (!isObject(obj)) return true;
+	for (const key in obj) {
+		if (Object.prototype.hasOwnProperty.call(obj, key)) return false;
+	}
+	return true;
 };
 
 /**
- * Проверяет, является ли объект пустым.
- * Объект считается пустым, если не содержит собственных перечисляемых свойств.
- *
- * @param {Object} obj - Объект для проверки
- * @returns {boolean} `true`, если объект пуст или не является объектом, иначе `false`
- * @example
- * isEmptyObj({}) → true
- * isEmptyObj({ a: 1 }) → false
+ * Возвращает DOM-элемент по селектору, элементу или jQuery-объекту.
+ * @param {string|Element|jQuery} selector
+ * @returns {Element|null}
  */
-function isEmptyObj(obj) {
-	for (let prop in obj) {
-		if (Object.prototype.hasOwnProperty.call(obj, prop)) {
-			return false;
+const getElement = (selector) => {
+	if (isElement(selector)) return selector;
+	if (selector?.jquery) return selector[0] || null;
+	if (typeof selector === 'string' && selector.trim() !== '') {
+		try {
+			return document.querySelector(selector);
+		} catch (e) {
+			console.warn('Invalid selector:', selector);
+			return null;
 		}
 	}
-
-	return true;
-}
-
-/**
- * Получает DOM-элемент по селектору или возвращает сам элемент, если передан.
- * Поддерживает jQuery-объекты (через `.jquery` и `[0]`).
- *
- * @param {string|Element|jQuery} object - Селектор строки, DOM-элемент или jQuery-объект
- * @returns {Element|null} Найденный DOM-элемент или `null`, если не найден
- * @example
- * getElement('#myId') → <div id="myId">...</div>
- * getElement(element) → element
- */
-const getElement = (object) => {
-	// it's a jQuery object or a node element
-	if (isElement(object)) {
-		return object.jquery ? object[0] : object;
-	}
-
-	if (typeof object === 'string' && object.length > 0) {
-		return document.querySelector(parseSelector(object));
-	}
-
 	return null;
 };
 
 /**
- * Проверяет, является ли переданный объект DOM-элементом.
- *
- * @param {*} object - Объект для проверки
- * @returns {boolean} `true`, если объект является DOM-элементом, иначе `false`
- * @example
- * isElement(document.body) → true
- * isElement({}) → false
+ * Проверяет, отключён ли элемент (по классу .disabled, атрибуту или свойству).
+ * @param {Element} el
+ * @returns {boolean}
  */
-const isElement = (object) => {
-	if (!isObject(object)) {
-		return false;
-	}
-
-	return typeof object.nodeType !== 'undefined';
+const isDisabled = (el) => {
+	if (!isElement(el)) return true;
+	if (el.classList.contains('disabled')) return true;
+	if (typeof el.disabled !== 'undefined') return !!el.disabled;
+	return el.hasAttribute('disabled') && el.getAttribute('disabled') !== 'false';
 };
 
 /**
- * Проверяет, отключён ли DOM-элемент.
- * Учитывает класс `.disabled`, атрибут `disabled`, а также свойство `disabled`.
- *
- * @param {Element} element - DOM-элемент для проверки
- * @returns {boolean} `true`, если элемент отключён, иначе `false`
- * @example
- * isDisabled(document.querySelector('[disabled]')) → true
+ * Проверяет видимость элемента (размер, visibility, details).
+ * @param {Element} el
+ * @returns {boolean}
  */
-const isDisabled = (element) => {
-	if (!element || element.nodeType !== Node.ELEMENT_NODE) {
-		return true;
-	}
+const isVisible = (el) => {
+	if (!isElement(el) || el.getClientRects().length === 0) return false;
 
-	if (element.classList.contains('disabled')) {
-		return true;
-	}
+	const style = getComputedStyle(el);
+	if (style.visibility === 'hidden') return false;
 
-	if (typeof element.disabled !== 'undefined') {
-		return element.disabled;
-	}
+	const parentDetails = el.closest('details:not([open])');
+	if (!parentDetails) return true;
 
-	return element.hasAttribute('disabled') && element.getAttribute('disabled') !== 'false';
+	const summary = el.closest('summary');
+	if (summary && summary.parentNode === parentDetails) return true;
+
+	return false;
 };
 
 /**
- * Проверяет, видим ли DOM-элемент.
- * Учитывает размеры (getClientRects), `visibility: hidden`, `details:not([open])` и `summary`.
- *
- * @param {Element} element - DOM-элемент для проверки видимости
- * @returns {boolean} `true`, если элемент видим, иначе `false`
- * @example
- * isVisible(button) → true
+ * Преобразует строку в соответствующий тип: boolean, number, null, объект.
+ * @param {*} value
+ * @returns {*}
  */
-function isVisible(element) {
-	if (!isElement(element) || element.getClientRects().length === 0) {
-		return false;
-	}
-
-	const elementIsVisible = getComputedStyle(element).getPropertyValue('visibility') === 'visible';
-	const closedDetails = element.closest('details:not([open])');
-
-	if (!closedDetails) {
-		return elementIsVisible;
-	}
-
-	if (closedDetails !== element) {
-		const summary = element.closest('summary');
-		if (summary && summary.parentNode !== closedDetails) {
-			return false;
-		}
-
-		if (summary === null) {
-			return false;
-		}
-	}
-
-	return elementIsVisible;
-}
-
-/**
- * Проверяет, является ли значение объектом (включая массивы и null).
- *
- * @param {*} obj - Значение для проверки
- * @returns {boolean} `true`, если значение — объект, иначе `false`
- * @example
- * isObject({}) → true
- * isObject([]) → true
- * isObject(null) → false
- */
-function isObject(obj) {
-	return obj && typeof obj === 'object';
-}
-
-/**
- * Нормализует строку в соответствующий тип данных.
- * Преобразует строки в `true`, `false`, `null`, числа, JSON и т.д.
- *
- * @param {string|*} value - Значение для нормализации
- * @returns {*} Нормализованное значение: boolean, number, null, object, string и т.д.
- * @example
- * normalizeData('true') → true
- * normalizeData('{"a":1}') → { a: 1 }
- */
-function normalizeData(value) {
-	if (value === 'true') {
-		return true;
-	}
-
-	if (value === 'false') {
-		return false;
-	}
-
-	if (value === Number(value).toString()) {
-		return Number(value);
-	}
-
-	if (value === '' || value === 'null') {
-		return null;
-	}
-
-	if (typeof value !== 'string') {
-		return value;
-	}
+const normalizeData = (value) => {
+	if (value === 'true') return true;
+	if (value === 'false') return false;
+	if (value === 'null') return null;
+	if (value === '') return null;
+	if (typeof value === 'number' || value === Number(value)) return Number(value);
+	if (typeof value !== 'string') return value;
 
 	try {
 		return JSON.parse(decodeURIComponent(value));
 	} catch {
 		return value;
 	}
-}
+};
 
 /**
- * Удаляет указанные элементы из массива.
- *
- * @param {Array} arr - Исходный массив
- * @param {Array} el - Массив элементов, которые нужно удалить
- * @returns {Array} Новый массив без указанных элементов
- * @example
- * removeElementArray([1, 2, 3], [2]) → [1, 3]
+ * Удаляет элементы из массива.
+ * @param {Array} arr
+ * @param {Array} toRemove
+ * @returns {Array}
  */
-function removeElementArray(arr, el) {
-	return arr.filter((item) => !el.includes(item));
-}
+const removeElementArray = (arr, toRemove) => arr.filter((item) => !toRemove.includes(item));
 
 /**
- * Глубокое объединение нескольких объектов.
- * Поддерживает вложенные объекты и массивы (конкатенация).
- *
- * @param {...Object} objects - Объекты для объединения
- * @returns {Object} Новый объект с объединёнными данными
- * @example
- * mergeDeepObject({ a: [1] }, { a: [2] }) → { a: [1, 2] }
- * mergeDeepObject({ a: { b: 1 } }, { a: { c: 2 } }) → { a: { b: 1, c: 2 } }
+ * Глубокое слияние объектов с конкатенацией массивов.
+ * @param {...Object} sources
+ * @returns {Object}
  */
-function mergeDeepObject(...objects) {
-	const isObject = (obj) => obj && typeof obj === 'object';
+const mergeDeepObject = (...sources) => {
+	const isObj = (o) => o && typeof o === 'object';
 
-	if (!isObject) return;
+	return sources.reduce((acc, obj) => {
+		if (!isObj(obj)) return acc;
 
-	return objects.reduce((prev, obj) => {
 		Object.keys(obj).forEach((key) => {
-			const pVal = prev[key];
-			const oVal = obj[key];
+			const src = acc[key];
+			const val = obj[key];
 
-			if (Array.isArray(pVal) && Array.isArray(oVal)) {
-				prev[key] = pVal.concat(...oVal);
-			} else if (isObject(pVal) && isObject(oVal)) {
-				prev[key] = mergeDeepObject(pVal, oVal);
+			if (Array.isArray(src) && Array.isArray(val)) {
+				acc[key] = src.concat(val);
+			} else if (isObj(src) && isObj(val)) {
+				acc[key] = mergeDeepObject(src, val);
 			} else {
-				prev[key] = oVal;
+				acc[key] = val;
 			}
 		});
 
-		return prev;
+		return acc;
 	}, {});
-}
+};
 
 /**
- * Выполняет функцию, если передан колбэк; иначе возвращает значение по умолчанию.
- *
- * @param {Function|*} possibleCallback - Функция или любое значение
- * @param {Array} [args=[]] - Аргументы для вызова функции
- * @param {*} [defaultValue=possibleCallback] - Значение по умолчанию, если колбэк не функция
- * @returns {*} Результат выполнения колбэка или `defaultValue`
- * @example
- * execute(() => 'hi') → 'hi'
- * execute('notFunc', [], 'fallback') → 'fallback'
+ * Выполняет функцию с аргументами или возвращает значение по умолчанию.
+ * @param {Function|*} fn
+ * @param {Array} args
+ * @param {*} defaultValue
+ * @returns {*}
  */
-function execute(possibleCallback, args = [], defaultValue = possibleCallback) {
-	return typeof possibleCallback === 'function' ? possibleCallback(...args) : defaultValue;
-}
+const execute = (fn, args = [], defaultValue = fn) => {
+	return typeof fn === 'function' ? fn(...args) : defaultValue;
+};
 
 /**
- * Событие окончания CSS-перехода.
+ * Событие завершения CSS-перехода.
  * @type {string}
  */
 const TRANSITION_END = 'transitionend';
 
 /**
- * Множитель для перевода секунд в миллисекунды.
+ * Множитель для мс.
  * @type {number}
  */
 const MILLISECONDS_MULTIPLIER = 1000;
 
 /**
- * Выполняет колбэк после завершения CSS-перехода.
- * Использует `transitionend`, с fallback на `setTimeout`.
- *
- * @param {Function} callback - Функция, вызываемая после перехода
- * @param {Element} transitionElement - Элемент, за переходом которого нужно следить
- * @param {boolean} [waitForTransition=true] - Ожидать ли переход
- * @param {number} [timeOutMs] - Фиксированная задержка (вместо авто-определения)
- * @example
- * executeAfterTransition(() => console.log('done'), button)
+ * Выполняет колбэк после CSS-перехода с fallback на setTimeout.
+ * @param {Function} callback
+ * @param {Element} element
+ * @param {boolean} waitForTransition
+ * @param {number} [timeoutMs]
  */
-function executeAfterTransition(callback, transitionElement, waitForTransition = true, timeOutMs) {
+const executeAfterTransition = (callback, element, waitForTransition = true, timeoutMs) => {
 	if (!waitForTransition) {
 		execute(callback);
 		return;
 	}
 
-	const durationPadding = 5;
-	const emulatedDuration = timeOutMs ? timeOutMs : getTransitionDurationFromElement(transitionElement) + durationPadding;
-
+	const duration = timeoutMs ?? getTransitionDurationFromElement(element) + 5;
 	let called = false;
 
-	const handler = ({ target }) => {
-		if (target !== transitionElement) {
-			return;
+	const handler = (e) => {
+		if (e.target === element) {
+			called = true;
+			element.removeEventListener(TRANSITION_END, handler);
+			execute(callback);
 		}
-
-		called = true;
-		transitionElement.removeEventListener(TRANSITION_END, handler);
-		execute(callback);
 	};
 
-	transitionElement.addEventListener(TRANSITION_END, handler);
+	element.addEventListener(TRANSITION_END, handler);
 	setTimeout(() => {
-		if (!called) {
-			triggerTransitionEnd(transitionElement);
-		}
-	}, emulatedDuration);
-}
-
-/**
- * Получает длительность CSS-перехода элемента в миллисекундах.
- * Учитывает `transition-duration` и `transition-delay`.
- *
- * @param {Element} element - DOM-элемент
- * @returns {number} Длительность перехода в миллисекундах
- * @example
- * getTransitionDurationFromElement(div) → 300
- */
-const getTransitionDurationFromElement = (element) => {
-	if (!element) {
-		return 0;
-	}
-
-	// Get transition-duration of the element
-	let { transitionDuration, transitionDelay } = window.getComputedStyle(element);
-
-	const floatTransitionDuration = Number.parseFloat(transitionDuration);
-	const floatTransitionDelay = Number.parseFloat(transitionDelay);
-
-	// Return 0 if element or transition duration is not found
-	if (!floatTransitionDuration && !floatTransitionDelay) {
-		return 0;
-	}
-
-	// If multiple durations are defined, take the first
-	transitionDuration = transitionDuration.split(',')[0];
-	transitionDelay = transitionDelay.split(',')[0];
-
-	return (Number.parseFloat(transitionDuration) + Number.parseFloat(transitionDelay)) * MILLISECONDS_MULTIPLIER;
+		if (!called) triggerTransitionEnd(element);
+	}, duration);
 };
 
 /**
- * Принудительно генерирует событие окончания перехода на элементе.
- *
- * @param {Element} element - Элемент, на котором нужно вызвать событие
- * @example
- * triggerTransitionEnd(button)
+ * Получает длительность CSS-перехода элемента в мс.
+ * @param {Element} element
+ * @returns {number}
+ */
+const getTransitionDurationFromElement = (element) => {
+	if (!element) return 0;
+	const { transitionDuration, transitionDelay } = getComputedStyle(element);
+
+	const durations = transitionDuration.split(', ');
+	const delays = transitionDelay.split(', ');
+
+	const duration = Number.parseFloat(durations[0]) || 0;
+	const delay = Number.parseFloat(delays[0]) || 0;
+
+	return (duration + delay) * MILLISECONDS_MULTIPLIER;
+};
+
+/**
+ * Принудительно вызывает событие перехода.
+ * @param {Element} element
  */
 const triggerTransitionEnd = (element) => {
 	element.dispatchEvent(new Event(TRANSITION_END));
 };
 
 /**
- * Принудительный рефлоу (пересчёт макета) для перезапуска CSS-анимаций.
- *
- * @param {HTMLElement} element - DOM-элемент
- * @returns {void}
- * @see https://www.charistheo.io/blog/2021/02/restart-a-css-animation-with-javascript/#restarting-a-css-animation
- * @example
- * reflow(myElement);
+ * Принудительный рефлоу (для перезапуска анимаций).
+ * @param {HTMLElement} element
  */
 const reflow = (element) => {
-	element.offsetHeight; // eslint-disable-line no-unused-expressions
+	/* eslint-disable no-unused-expressions */
+	element.offsetHeight;
+	/* eslint-enable no-unused-expressions */
 };
 
 /**
- * Пустая функция, используемая как заглушка.
- *
- * @returns {void}
- * @example
- * someFunc || noop
+ * Пустая функция-заглушка.
  */
 const noop = () => {};
 
 /**
- * Генерирует случайную строку заданной длины.
- *
- * @param {number} [length=7] - Длина строки
- * @returns {string} Случайная строка из латинских букв и цифр
- * @example
- * makeRandomString(5) → 'aB3xY'
+ * Генерирует случайную строку.
+ * @param {number} length
+ * @returns {string}
  */
-function makeRandomString(length = 7) {
+const makeRandomString = (length = 7) => {
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 	let result = '';
-	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	const charactersLength = characters.length;
-	let counter = 0;
-	while (counter < length) {
-		result += characters.charAt(Math.floor(Math.random() * charactersLength));
-		counter += 1;
+	for (let i = 0; i < length; i++) {
+		result += chars.charAt(Math.floor(Math.random() * chars.length));
 	}
 	return result;
-}
-
-/**
- * Транслитерация символов между кириллицей и латиницей.
- *
- * @param {string} text - Текст для транслитерации
- * @param {boolean} [enToRu=true] - Направление: `true` — en→ru, `false` — ru→en
- * @returns {string} Транслитерированный текст
- * @example
- * transliterate('privet', true) → 'привет'
- * transliterate('привет', false) → 'privet'
- */
-function transliterate(text, enToRu) {
-	let ru = 'й ц у к е н г ш щ з х ъ ф ы в а п р о л д ж э я ч с м и т ь б ю'.split(/ +/g);
-	let en = 'q w e r t y u i o p [ ] a s d f g h j k l ; \' z x c v b n m , .'.split(/ +/g);
-	let x;
-
-	for (x = 0; x < ru.length; x++) {
-		text = text.split(enToRu ? en[x] : ru[x]).join(enToRu ? ru[x] : en[x]);
-		text = text
-			.split(enToRu ? en[x].toUpperCase() : ru[x].toUpperCase())
-			.join(enToRu ? ru[x].toUpperCase() : en[x].toUpperCase());
-	}
-
-	return text;
-}
-
-/**
- * Возвращает следующий или предыдущий элемент в списке.
- * Поддерживает циклическое переключение.
- *
- * @param {Array<Element>} list - Массив DOM-элементов
- * @param {Element} activeElement - Текущий активный элемент
- * @param {boolean} shouldGetNext - `true` — следующий, `false` — предыдущий
- * @param {boolean} isCycleAllowed - Разрешить цикл (с конца к началу и наоборот)
- * @returns {Element} Следующий/предыдущий элемент
- * @example
- * getNextActiveElement(items, current, true, true) → следующий элемент (с циклом)
- */
-const getNextActiveElement = (list, activeElement, shouldGetNext, isCycleAllowed) => {
-	const listLength = list.length;
-	let index = list.indexOf(activeElement);
-
-	// if the element does not exist in the list return an element
-	// depending on the direction and if cycle is allowed
-	if (index === -1) {
-		return !shouldGetNext && isCycleAllowed ? list[listLength - 1] : list[0];
-	}
-
-	index += shouldGetNext ? 1 : -1;
-
-	if (isCycleAllowed) {
-		index = (index + listLength) % listLength;
-	}
-
-	return list[Math.max(0, Math.min(index, listLength - 1))];
 };
 
 /**
- * Рекурсивно возвращает самый глубокий последний дочерний элемент.
- *
- * @param {Element} element - Родительский элемент
- * @returns {Element} Самый вложенный `lastElementChild`
- * @example
- * getDeepestLastChild(div) → <span>...</span>
+ * Транслитерация: en ⇄ ru.
+ * @param {string} text
+ * @param {boolean} [enToRu=true] - true: en→ru, false: ru→en
+ * @returns {string}
  */
-function getDeepestLastChild(element) {
-	let current = element;
+const transliterate = (text, enToRu = true) => {
+	const from = 'q w e r t y u i o p [ ] a s d f g h j k l ; \' z x c v b n m , .'.split(' ');
+	const to = 'й ц у к е н г ш щ з х ъ ф ы в а п р о л д ж э я ч с м и т ь б ю'.split(' ');
 
-	while (current.lastElementChild) {
-		current = current.lastElementChild;
+	const src = enToRu ? from : to;
+	const dst = enToRu ? to : from;
+
+	let result = text;
+
+	for (let i = 0; i < src.length; i++) {
+		const srcLower = src[i];
+		const dstLower = dst[i];
+		const srcUpper = src[i].toUpperCase();
+		const dstUpper = dst[i].toUpperCase();
+
+		result = result.split(srcLower).join(dstLower).split(srcUpper).join(dstUpper);
 	}
 
-	return current;
-}
+	return result;
+};
 
 /**
- * Проверяет, используется ли направление текста справа налево (RTL).
- *
- * @returns {boolean} `true`, если `dir="rtl"`, иначе `false`
- * @example
- * isRTL() → true (если <html dir="rtl">)
+ * Получает следующий/предыдущий элемент с циклом.
+ * @param {Array<Element>} list
+ * @param {Element} active
+ * @param {boolean} getNext
+ * @param {boolean} cycle
+ * @returns {Element}
+ */
+const getNextActiveElement = (list, active, getNext, cycle) => {
+	const len = list.length;
+	let idx = list.indexOf(active);
+
+	if (idx === -1) return getNext || !cycle ? list[0] : list[len - 1];
+
+	idx += getNext ? 1 : -1;
+	if (cycle) idx = ((idx % len) + len) % len;
+
+	return list[Math.max(0, Math.min(idx, len - 1))];
+};
+
+/**
+ * Возвращает самый глубокий последний дочерний элемент.
+ * @param {Element} el
+ * @returns {Element}
+ */
+const getDeepestLastChild = (el) => {
+	let node = el;
+	while (node.lastElementChild) node = node.lastElementChild;
+	return node;
+};
+
+/**
+ * Проверяет, включён ли RTL.
+ * @returns {boolean}
  */
 const isRTL = () => document.documentElement.dir === 'rtl';
 
+// экспорт
 export {
 	getDeepestLastChild,
 	isElement,
