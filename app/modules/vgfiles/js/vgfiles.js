@@ -1,36 +1,36 @@
 import BaseModule from "../../base-module";
-import {mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import { mergeDeepObject, normalizeData } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import Html from "../../../utils/js/components/templater";
-import {Manipulator, Classes} from "../../../utils/js/dom/manipulator";
+import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import DragDropFiles from "./dragDropFiles";
-import {lang_messages} from "../../../utils/js/components/lang";
+import { lang_messages } from "../../../utils/js/components/lang";
 import FileUploader from "./loader";
-
 
 /**
  * Constants
  */
-const NAME                  = 'files';
-const NAME_KEY              = 'vg.files';
-const SELECTOR_DATA_TOGGLE  = '[data-vg-toggle="files"]';
+const NAME = 'files';
+const NAME_KEY = 'vg.files';
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="files"]';
 const SELECTOR_DATA_DISMISS = '[data-dismiss="file"]';
-const SELECTOR_DATA_FAKE    = '[data-vg-files="generated"]';
+const SELECTOR_DATA_FAKE = '[data-vg-files="generated"]';
 
 const CLASS_NAME_CONTAINER = 'vg-files';
-const CLASS_NAME_INFO      = `${CLASS_NAME_CONTAINER}-info`;
-const CLASS_NAME_IMAGES    = `${CLASS_NAME_INFO}--images`;
-const CLASS_NAME_LIST      = `${CLASS_NAME_INFO}--list`;
-const CLASS_NAME_DROP      = `${CLASS_NAME_CONTAINER}-drop`;
-const CLASS_NAME_ERRORS    = `${CLASS_NAME_CONTAINER}-errors`;
-const CLASS_NAME_LOADING   = 'loading';
-const CLASS_NAME_LOADED    = 'loaded';
-const CLASS_NAME_FAILING   = 'failing';
+const CLASS_NAME_INFO = `${CLASS_NAME_CONTAINER}-info`;
+const CLASS_NAME_IMAGES = `${CLASS_NAME_INFO}--images`;
+const CLASS_NAME_LIST = `${CLASS_NAME_INFO}--list`;
+const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
+const CLASS_NAME_ERRORS = `${CLASS_NAME_CONTAINER}-errors`;
+const CLASS_NAME_PENDING  = 'pending';
+const CLASS_NAME_LOADING = 'loading';
+const CLASS_NAME_LOADED = 'loaded';
+const CLASS_NAME_FAILING = 'failing';
 
-const EVENT_KEY_CHANGE              = `${NAME_KEY}.change`;
+const EVENT_KEY_CHANGE = `${NAME_KEY}.change`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
-const EVENT_KEY_DISMISS_DATA_API    = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_DISMISS_DATA_API = `click.${NAME_KEY}.data.api`;
 
 class VGFiles extends BaseModule {
     constructor(element, params = {}) {
@@ -41,13 +41,13 @@ class VGFiles extends BaseModule {
             lang: document.documentElement.lang || 'ru',
             limits: {
                 count: 0,
-                sizes: 10, // MB per file
-                total: 0   // MB for all files (0 - no limit)
+                sizes: 10,
+                total: 0
             },
             image: false,
             detach: true,
             info: true,
-            types: [], // 'image/png', "image/jpeg", "image/bmp", "image/ico", "image/gif", "image/jfif", "image/tiff", "image/webp"
+            types: [],
             ajax: false,
             uploads: {
                 mode: 'sequential', // sequential | parallel
@@ -66,16 +66,16 @@ class VGFiles extends BaseModule {
         }, params));
 
         const toggleEl = Selectors.find('[data-vg-toggle]', this._element);
-        this.id     = toggleEl?.id || undefined;
-        this.name   = toggleEl?.name || 'files[]';
-        this.accept = toggleEl?.getAttribute('accept') || undefined;
+        this.id = toggleEl?.id || undefined;
+        this.name = toggleEl?.name || 'files[]';
+        this.accept = toggleEl?.accept || undefined;
 
-        this._tpl    = Html('dom');
-        this._files  = [];
-        this._errors = [];
+        this._tpl = Html('dom');
+        this._files = [];
+        this._errors = new Set();
         this._objectUrls = [];
         this._uploadedKeys = new Set();
-        this.isPreventOriginalSubmit = true;
+        this._uploader = null;
 
         this._nodes = {
             info: Selectors.find(`.${CLASS_NAME_INFO}`, this._element),
@@ -90,121 +90,144 @@ class VGFiles extends BaseModule {
     static get NAME_KEY() { return NAME_KEY; }
 
     _init() {
-        if (this.isPreventOriginalSubmit) {
-            this._preventOriginalInputFromSubmit();
-        } else {
-            this._restoreOriginalInputForSubmit();
-        }
-
-        if (this._nodes.drop) {
-            new DragDropFiles(this._nodes.drop, this._params).init();
-        }
+        this._preventOriginalInputFromSubmit();
+        if (this._nodes.drop) new DragDropFiles(this._nodes.drop, this._params).init();
     }
 
     build() {
         if (!this._nodes.info) return;
-
         this._updateCounter();
         this.change();
     }
 
     change(input = null) {
         const incomingFiles = input?.files || this._files;
+        if (!incomingFiles.length || input?.files?.length === 0) return;
 
-        if (input && !input.files.length) {
-            return;
-        }
+        if (!this._params.ajax) this.clear();
+        if (!this._params.allowed) return;
 
-        this.clear();
-        if (!this._params.allowed) {
-            this._files = [];
-            return;
-        }
+        this._cleanupErrors();
+        const processedFiles = this.append(incomingFiles);
 
-        if (incomingFiles.length) {
-            this._cleanupErrors();
-            const processedFiles = this.append(incomingFiles);
-
-            if (processedFiles.length) {
-                if (this._params.ajax) {
-                    this.uploadAll(this._files).then(r => {})
-                } else {
-                    this._generateHiddenInputs(processedFiles);
-                    this._renderUI(processedFiles);
-                }
+        if (processedFiles.length) {
+            if (this._params.ajax) {
+                this.uploadAll(processedFiles);
+            } else {
+                this._generateHiddenInputs(processedFiles);
+                this._renderUI(processedFiles);
             }
-
-            EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: processedFiles });
         }
+
+        EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: processedFiles });
     }
 
     async uploadAll(files) {
-        if (!this._params.ajax) return;
+        if (!this._params.ajax || !this._params.uploads.route) return;
 
-        let params = this._params.uploads;
-        if (!params.route) return;
+        const notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
+        if (!notUploadedFiles.length) return;
 
-        let notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
+        this._uploader = new FileUploader();
 
-        this._files = [];
+        this._renderUI(this._files);
 
-        const uploader = new FileUploader();
-
-        uploader.onProgress((uploadData) => {
-            this._files.push(uploadData.file)
+        // Прогресс
+        this._uploader.onProgress((uploadData) => {
+            const $item = this._getItemElement(uploadData.file);
+            $item?.classList.add(CLASS_NAME_LOADING);
         });
 
-        uploader.onComplete((uploadData) => {
-            let uploadedFiles = files.filter(f => this._uploadedKeys.has(this._getFileKey(f)))
+        // Успешно
+        this._uploader.onComplete((uploadData) => {
             this._uploadedKeys.add(this._getFileKey(uploadData.file));
-
-            this._renderUI(this._files, uploadedFiles)
+            const $item = this._getItemElement(uploadData.file);
+            $item?.classList.replace(CLASS_NAME_LOADING, CLASS_NAME_LOADED);
+            $item?.classList.remove(CLASS_NAME_PENDING);
         });
 
-        uploader.onError((uploadData, error) => {
+        // Ошибка
+        this._uploader.onError((uploadData, error) => {
             this._uploadedKeys.delete(this._getFileKey(uploadData.file));
-            console.log(error)
-        })
+            const $item = this._getItemElement(uploadData.file);
+            $item?.classList.replace(CLASS_NAME_LOADING, CLASS_NAME_FAILING);
+            console.error('Upload error:', error);
+        });
+
+        // Все завершены
+        this._uploader.onAllComplete(() => {
+            EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
+        });
+
+        const uploadParams = {
+            additionalData: {
+                timestamp: new Date().toISOString(),
+                source: 'web_uploader'
+            },
+            maxConcurrent: this._params.uploads.maxConcurrent,
+            maxParallel: this._params.uploads.maxParallel,
+            retryAttempts: this._params.uploads.retryAttempts,
+            retryDelay: this._params.uploads.retryDelay
+        };
 
         try {
-            let result = await uploader.uploadFiles(notUploadedFiles, params.route, {
-                additionalData: {
-                    timestamp: new Date().toISOString(),
-                    source: 'web_uploader'
-                }
-            });
+            await this._uploader.uploadFiles(notUploadedFiles, this._params.uploads.route, uploadParams);
         } catch (error) {
-            console.error('Ошибка при массовой загрузке:', error);
+            console.error('Bulk upload failed:', error);
         }
-
     }
 
-    _renderUI(files, except = []) {
-        if (!this._nodes.info) return;
+    /**
+     * Поиск DOM-элемента по файлу (из списка или превью)
+     * @param {File} file
+     * @returns {HTMLElement|null}
+     * @private
+     */
+    _getItemElement(file) {
+        return Selectors.find(
+            `.${CLASS_NAME_LIST} li[data-name="${file.name}"][data-size="${file.size}"], 
+             .${CLASS_NAME_IMAGES} span[data-name="${file.name}"][data-size="${file.size}"]`,
+            this._element
+        );
+    }
 
-        console.log(files)
-        console.log(except)
+    _renderUI(files) {
+        if (!this._nodes.info) return;
 
         Classes.add(this._nodes.info, 'show');
         this._updateCounter();
         this._renderImages(files);
         this._renderInfoList(files);
+
+        // Визуальное обновление состояния загрузки
+        files.forEach(file => {
+            const $item = this._getItemElement(file);
+            if (!$item) return;
+
+            const key = this._getFileKey(file);
+            if (this._uploadedKeys.has(key)) {
+                $item.classList.add(CLASS_NAME_LOADED);
+            } else {
+                $item.classList.add(CLASS_NAME_PENDING);
+            }
+        });
     }
 
     _updateCounter() {
         if (!this._nodes.info) return;
         const $count = Selectors.find(`.${CLASS_NAME_INFO}--wrapper-count`, this._nodes.info);
-        if ($count) {
-            const sizeText = this._files.length ? `<span>[${this._getSizes(this._files, true)}]</span>` : '';
-            $count.innerHTML = `${this._files.length}${sizeText}`;
-        }
+        if (!$count) return;
+
+        const totalSize = this._getSizes(this._files, true);
+        $count.innerHTML = this._files.length
+            ? `${this._files.length}<span>[${totalSize}]</span>`
+            : '';
     }
 
     _renderImages(files) {
         if (!this._params.image || !this._nodes.info) return;
 
         let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element);
-
         if (!$container) {
             $container = this._tpl.div({ class: CLASS_NAME_IMAGES });
             this._nodes.info.prepend($container);
@@ -215,7 +238,20 @@ class VGFiles extends BaseModule {
             if (file.type.startsWith('image/')) {
                 const src = URL.createObjectURL(file);
                 this._objectUrls.push(src);
-                fragment.appendChild(this._tpl.span({}, [this._tpl.img(src, file.name)]));
+                const $span = this._tpl.span({}, [this._tpl.img(src, file.name)]);
+                $span.dataset.name = file.name;
+                $span.dataset.size = file.size;
+
+                if (this._params.detach) {
+                    $span.append(this._tpl.button('✕', 'button', {
+                        type: 'button',
+                        'data-dismiss': 'file',
+                        'data-name': file.name,
+                        'data-size': file.size,
+                        'data-type': file.type
+                    }));
+                }
+                fragment.appendChild($span);
             }
         });
         $container.appendChild(fragment);
@@ -225,7 +261,6 @@ class VGFiles extends BaseModule {
         if (!this._params.info || !this._nodes.info) return;
 
         let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
-
         if (!$list) {
             $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
             this._nodes.info.append($list);
@@ -233,11 +268,14 @@ class VGFiles extends BaseModule {
 
         const fragment = document.createDocumentFragment();
         files.forEach((file, i) => {
-            const $li = this._tpl.li({}, [
-                this._tpl.span({class: 'iteration'}, `${i + 1}.`),
-                this._tpl.span({class: 'name'}, file.name),
-                this._tpl.span({class: 'size'}, `[${this._getSizes(file.size)}]`)
-            ]);
+            const $li = this._tpl.li(
+                { 'data-name': file.name, 'data-size': file.size },
+                [
+                    this._tpl.span({ class: 'iteration' }, `${i + 1}.`),
+                    this._tpl.span({ class: 'name' }, file.name),
+                    this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
+                ]
+            );
 
             if (this._params.detach) {
                 $li.append(this._tpl.button('✕', 'button', {
@@ -250,6 +288,8 @@ class VGFiles extends BaseModule {
             }
             fragment.appendChild($li);
         });
+
+        $list.innerHTML = '';
         $list.appendChild(fragment);
     }
 
@@ -274,10 +314,10 @@ class VGFiles extends BaseModule {
     }
 
     append(values) {
-        const fileMap = new Map(this._files.map(f => [`${f.name}-${f.size}-${f.lastModified}`, f]));
+        const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
 
         Array.from(values).forEach(file => {
-            fileMap.set(`${file.name}-${file.size}-${file.lastModified}`, file);
+            fileMap.set(this._getFileKey(file), file);
         });
 
         this._files = this._filterFiles(Array.from(fileMap.values()));
@@ -290,13 +330,18 @@ class VGFiles extends BaseModule {
         const name = normalizeData(Manipulator.get(button, 'data-name'));
         const size = normalizeData(Manipulator.get(button, 'data-size'));
 
+        const fileToRemove = this._files.find(f => f.name === name && f.size === size);
+        if (fileToRemove) {
+            const key = this._getFileKey(fileToRemove);
+            this._uploadedKeys.delete(key);
+        }
+
         this._files = this._files.filter(f => !(f.name === name && f.size === size));
         this._files.length ? this.build() : this.clear(true);
     }
 
     clear(all = false) {
         this._revokeUrls();
-
         [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
             const el = Selectors.find(selector, this._element);
             if (el) el.innerHTML = '';
@@ -306,9 +351,9 @@ class VGFiles extends BaseModule {
             Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
             this._cleanupFakeInputs();
             this._cleanupErrors();
-
             if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
             this._files = [];
+            this._uploadedKeys.clear();
         }
     }
 
@@ -318,8 +363,8 @@ class VGFiles extends BaseModule {
     }
 
     _filterFiles(files) {
-        this._errors = new Set();
-        const { sizes, total, count } = this._params.limits;
+        this._errors.clear();
+        const { count, sizes, total } = this._params.limits;
         const maxSize = sizes * 1024 * 1024;
         const maxTotalSize = total * 1024 * 1024;
 
@@ -334,7 +379,7 @@ class VGFiles extends BaseModule {
 
             let isValid = true;
 
-            if (this._params.types?.length && !this._params.types.includes(file.type)) {
+            if (this._params.types.length && !this._params.types.includes(file.type)) {
                 this._errors.add('is-types');
                 isValid = false;
             }
@@ -353,25 +398,24 @@ class VGFiles extends BaseModule {
                 }
             }
 
-            if (isValid) {
-                filtered.push(file);
-            }
+            if (isValid) filtered.push(file);
         }
 
         return filtered;
     }
 
     _getSizes(size, isArray = false) {
-        const totalSize = isArray ? size.reduce((acc, f) => acc + f.size, 0) : size;
+        const totalSize = isArray ? this._files.reduce((acc, f) => acc + f.size, 0) : size;
         const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'];
         const index = totalSize > 0 ? Math.min(Math.floor(Math.log(totalSize) / Math.log(1024)), units.length - 1) : 0;
+        const value = totalSize / Math.pow(1024, index);
 
         return new Intl.NumberFormat(this._params.lang, {
             style: 'unit',
             unit: units[index],
             unitDisplay: 'short',
             maximumFractionDigits: 2
-        }).format(totalSize / Math.pow(1024, index));
+        }).format(value);
     }
 
     _cleanupFakeInputs() {
@@ -379,32 +423,35 @@ class VGFiles extends BaseModule {
     }
 
     _cleanupErrors() {
-        this._errors = new Set();
-        Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element)?.remove();
+        this._errors.clear();
+        const $errorCont = Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element);
+        if ($errorCont) $errorCont.remove();
     }
 
     _renderErrors() {
         if (!this._errors.size) return;
 
         const messages = lang_messages(this._params.lang, NAME) || this._getFallbackErrors();
-
         let $errorCont = Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element);
+
         if (!$errorCont) {
             $errorCont = this._tpl.div({ class: CLASS_NAME_ERRORS });
-            Selectors.find(`.${CLASS_NAME_INFO}`, this._element)?.before($errorCont);
+            const $info = Selectors.find(`.${CLASS_NAME_INFO}`, this._element);
+            if ($info) $info.before($errorCont);
         }
 
         this._errors.forEach(errKey => {
             const msg = messages[errKey] || errKey;
-            $errorCont.append(this._tpl.span({ class: 'error-item' }, [this._tpl.span({}, msg)]));
+            $errorCont.append(this._tpl.span({ class: 'error-item' }, msg));
         });
     }
 
     _getFallbackErrors() {
+        const { count, sizes, total } = this._params.limits;
         return {
-            'is-count': `Limit: ${this._params.limits.count}`,
-            'is-sizes': `Max size: ${this._params.limits.sizes}MB`,
-            'is-total-size': `Total max size: ${this._params.limits.total}MB`,
+            'is-count': `Limit: ${count}`,
+            'is-sizes': `Max size: ${sizes}MB`,
+            'is-total-size': `Total max size: ${total}MB`,
             'is-types': `Allowed: ${this._params.types.join(', ')}`
         };
     }
@@ -415,7 +462,7 @@ class VGFiles extends BaseModule {
         });
 
         const $dismiss = Selectors.find('[data-dismiss="vg-files"]', this._element);
-        $dismiss?.addEventListener('click', (e) => {
+        $dismiss?.addEventListener('click', e => {
             e.preventDefault();
             this.clear(true);
         });
@@ -425,25 +472,14 @@ class VGFiles extends BaseModule {
         return `${file.name}-${file.size}-${file.lastModified}`;
     }
 
-    /**
-     * Метод, который делает оригинальный инпут НЕучастником отправки
-     * @private
-     */
     _preventOriginalInputFromSubmit() {
         const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
-        if (originalInput) {
-            // Сохраняем оригинальное имя, чтобы можно было восстановить
-            if (!originalInput.dataset.originalName) {
-                originalInput.dataset.originalName = originalInput.name;
-                originalInput.removeAttribute('name'); // 🔥 Убираем name → не попадёт в FormData
-            }
+        if (originalInput && !originalInput.dataset.originalName) {
+            originalInput.dataset.originalName = originalInput.name;
+            originalInput.removeAttribute('name');
         }
     }
 
-    /**
-     * Восстановление оригинального поведения (если нужно)
-     * @private
-     */
     _restoreOriginalInputForSubmit() {
         const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
         if (originalInput && originalInput.dataset.originalName) {
@@ -454,22 +490,20 @@ class VGFiles extends BaseModule {
 
     dispose() {
         this.clear(true);
+        if (this._uploader) this._uploader.destroy();
         super.dispose();
     }
 }
 
-/**
- * Data API
- */
 EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, () => {
     Selectors.findAll(`.${CLASS_NAME_CONTAINER}`).forEach(el => VGFiles.getOrCreateInstance(el));
 });
 
-EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS, function (event) {
-    const target = event.target.closest(`.${CLASS_NAME_CONTAINER}`);
+EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS, function (e) {
+    const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (!target) return;
-    event.preventDefault();
-    VGFiles.getOrCreateInstance(target).removeFile(this);
+    e.preventDefault();
+    VGFiles.getOrCreateInstance(target).removeFile(e.target);
 });
 
 export default VGFiles;
