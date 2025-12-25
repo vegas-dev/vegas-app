@@ -1,105 +1,180 @@
 /**
- * Работа с DOM
- * @param selector
- * @returns {*}
+ * Утилиты для работы с DOM-селекторами
+ * Поддержка data-атрибутов, href и CSS-экранирование
  */
-import {isElement} from "../functions";
 
-const parseSelector = selector => {
-	if (selector && window.CSS && window.CSS.escape) {
-		selector = selector.replace(/#([^\s"#']+)/g, (match, id) => `#${CSS.escape(id)}`)
+import { isElement } from '../functions';
+
+/**
+ * Экранирует ID в CSS-селекторах, если поддерживается браузером
+ * @param {string} id
+ * @returns {string}
+ */
+const escapeId = (id) => {
+	if (id && window.CSS?.escape) {
+		return CSS.escape(id);
+	}
+	// Резервное экранирование для старых браузеров
+	return id.replace(/([:.#[]])/g, '\\$1');
+};
+
+/**
+ * Извлекает селектор из элемента через data-атрибут или href
+ * @param {Element} element
+ * @returns {string|null}
+ */
+const getSelector = (element) => {
+	const dataTarget = element.getAttribute('data-vg-target');
+	if (dataTarget && dataTarget !== '#') {
+		return dataTarget.trim();
 	}
 
-	return selector
-}
-
-const getSelector = element => {
-	let selector = element.getAttribute('data-vg-target');
-
-	if (!selector || selector === '#') {
-		let hrefAttribute = element.getAttribute('href');
-		if (!hrefAttribute || (!hrefAttribute.includes('#') && !hrefAttribute.startsWith('.'))) {
-			return null;
-		}
-
-		if (hrefAttribute.includes('#') && !hrefAttribute.startsWith('#')) {
-			hrefAttribute = `#${hrefAttribute.split('#')[1]}`;
-		}
-
-		selector = hrefAttribute && hrefAttribute !== '#' ? hrefAttribute.trim() : null;
+	const href = element.getAttribute('href');
+	if (!href || (!href.includes('#') && !href.startsWith('.'))) {
+		return null;
 	}
 
-	return selector ? selector.split(',').map(sel => parseSelector(sel)).join(',') : null;
-}
+	const selector = href.includes('#') && !href.startsWith('#')
+		? `#${href.split('#')[1]}`
+		: href;
 
+	return selector !== '#' ? selector.trim() : null;
+};
+
+/**
+ * Основной объект для работы с селекторами
+ */
 const Selectors = {
-	find(selector, element = document.documentElement) {
+	/**
+	 * Находит один элемент по селектору или возвращает сам элемент
+	 * @param {string|Element} selector
+	 * @param {Element} [container=document.documentElement]
+	 * @returns {Element|null}
+	 */
+	find(selector, container = document.documentElement) {
 		if (isElement(selector)) {
 			return selector;
-		} else {
-			return Element.prototype.querySelector.call(element, selector);
+		}
+		try {
+			return container.querySelector(selector);
+		} catch (e) {
+			console.warn('Invalid selector:', selector, e);
+			return null;
 		}
 	},
 
-	findAll(selector, container = document.documentElement) {
-		return [].concat(...Element.prototype.querySelectorAll.call(container, selector));
+	/**
+	 * Находит элемент по ID с экранированием
+	 * @param {string} id
+	 * @param {Element} [container=document]
+	 * @returns {Element|null}
+	 */
+	findID(id, container = document) {
+		try {
+			const escaped = escapeId(id);
+			return container.getElementById(escaped) || container.querySelector(`#${escaped}`);
+		} catch (e) {
+			console.warn('Invalid ID in findID:', id, e);
+			return null;
+		}
 	},
 
+	/**
+	 * Находит все элементы по селектору
+	 * @param {string} selector
+	 * @param {Element} [container=document.documentElement]
+	 * @returns {Element[]}
+	 */
+	findAll(selector, container = document.documentElement) {
+		try {
+			return Array.from(container.querySelectorAll(selector));
+		} catch (e) {
+			console.warn('Invalid selector in findAll:', selector, e);
+			return [];
+		}
+	},
+
+	/**
+	 * Получает валидный селектор из элемента
+	 * @param {Element} element
+	 * @returns {string|null}
+	 */
 	getSelectorFromElement(element) {
 		const selector = getSelector(element);
-		if (selector) return Selectors.find(selector) ? selector : null
-		return null
+		return selector && this.find(selector) ? selector : null;
 	},
 
+	/**
+	 * Получает целевой элемент по селектору из элемента
+	 * @param {Element} element
+	 * @returns {Element|null}
+	 */
 	getElementFromSelector(element) {
 		const selector = getSelector(element);
-		return selector ? Selectors.find(selector) : null
+		return selector ? this.find(selector) : null;
 	},
 
+	/**
+	 * Получает все целевые элементы (для множественного выбора)
+	 * @param {Element} element
+	 * @returns {Element[]}
+	 */
 	getMultipleElementsFromSelector(element) {
 		const selector = getSelector(element);
-		return selector ? Selectors.findAll(selector) : []
+		return selector ? this.findAll(selector) : [];
 	},
 
+	/**
+	 * Находит всех родителей, соответствующих селектору
+	 * @param {Element} element
+	 * @param {string} selector
+	 * @returns {Element[]}
+	 */
 	parents(element, selector) {
-		const parents = []
-		let ancestor = element.parentNode.closest(selector)
+		const parents = [];
+		let parent = element.parentElement?.closest(selector);
 
-		while (ancestor) {
-			parents.push(ancestor)
-			ancestor = ancestor.parentNode.closest(selector)
+		while (parent) {
+			parents.push(parent);
+			parent = parent.parentElement?.closest(selector);
 		}
 
-		return parents
+		return parents;
 	},
 
+	/**
+	 * Находит следующий соседний элемент, соответствующий селектору
+	 * @param {Element} element
+	 * @param {string} selector
+	 * @returns {Element[]}
+	 */
 	next(element, selector) {
-		let next = element.nextElementSibling
-
-		while (next) {
-			if (next.matches(selector)) {
-				return [next]
+		let sibling = element.nextElementSibling;
+		while (sibling) {
+			if (sibling.matches(selector)) {
+				return [sibling];
 			}
-
-			next = next.nextElementSibling;
+			sibling = sibling.nextElementSibling;
 		}
-
-		return []
+		return [];
 	},
 
+	/**
+	 * Находит предыдущий соседний элемент, соответствующий селектору
+	 * @param {Element} element
+	 * @param {string} selector
+	 * @returns {Element[]}
+	 */
 	prev(element, selector) {
-		let previous = element.previousElementSibling
-
-		while (previous) {
-			if (previous.matches(selector)) {
-				return [previous]
+		let sibling = element.previousElementSibling;
+		while (sibling) {
+			if (sibling.matches(selector)) {
+				return [sibling];
 			}
-
-			previous = previous.previousElementSibling
+			sibling = sibling.previousElementSibling;
 		}
-
-		return []
-	}
-}
+		return [];
+	},
+};
 
 export default Selectors;

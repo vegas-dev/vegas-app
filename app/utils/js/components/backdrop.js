@@ -1,5 +1,4 @@
 import { execute } from "../functions";
-import Selectors from "../dom/selectors";
 import EventHandler from "../dom/event";
 import Html from "../components/templater";
 import { Classes } from "../dom/manipulator";
@@ -23,9 +22,10 @@ class Backdrop {
 	 * @param {Function} callback - вызывается после отображения
 	 */
 	static show(callback) {
-		if (this._backdrop) return;
+		if (!this._backdrop) {
+			this._append();
+		}
 
-		this._append();
 		execute(callback);
 	}
 
