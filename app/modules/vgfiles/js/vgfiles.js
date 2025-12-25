@@ -65,6 +65,14 @@ class VGFiles extends BaseModule {
                     error: [],
                     allComplete: []
                 }
+            },
+            removes: {
+               all: {
+                   route: ''
+               },
+               single: {
+                   route: ''
+               }
             }
         }, params));
 
@@ -480,19 +488,38 @@ class VGFiles extends BaseModule {
     }
 
     clear(all = false) {
-        this._revokeUrls();
-        [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
-            const el = Selectors.find(selector, this._element);
-            if (el) el.innerHTML = '';
-        });
-
-        if (all) {
-            Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
-            this._cleanupFakeInputs();
+        if (this._params.ajax && this._uploadedKeys.size) {
             this._cleanupErrors();
-            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
-            this._files = [];
-            this._uploadedKeys.clear();
+
+            let getFilesLoaded = () => {
+                const files = [];
+                Selectors.findAll(`.${CLASS_NAME_LIST} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
+                return files;
+            }
+
+            if (getFilesLoaded().length) {
+                let ids = getFilesLoaded().map(li => {
+                    let button = Selectors.find('button', li);
+                    if (isElement(button)) return normalizeData(Manipulator.get(button, 'data-id'));
+                });
+
+                console.log('ids', ids);
+            }
+        } else {
+            this._revokeUrls();
+            [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
+                const el = Selectors.find(selector, this._element);
+                if (el) el.innerHTML = '';
+            });
+
+            if (all) {
+                Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
+                this._cleanupFakeInputs();
+                this._cleanupErrors();
+                if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+                this._files = [];
+                this._uploadedKeys.clear();
+            }
         }
     }
 
