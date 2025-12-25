@@ -1,332 +1,365 @@
 /**
  * --------------------------------------------------------------------------
- * Bootstrap event.js
+ * Bootstrap event.js (рефакторинг)
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
  * --------------------------------------------------------------------------
- * Скрипт для прослушивания события
+ * Утилита для гибкого управления DOM-событиями с поддержкой делегирования, пространств имён и one-off обработчиков.
  */
 
 /**
- * Константы
+ * ==================================
+ * КОНСТАНТЫ
+ * ==================================
  */
 
-const namespaceRegex = /[^.]*(?=\..*)\.|.*/
-const stripNameRegex = /\..*/
-const stripUidRegex = /::\d+$/
-const eventRegistry = {} // Events storage
-let uidEvent = 1
+const NAMESPACE_REGEX = /[^.]*(?=\..*)\.|.*/
+const STRIP_NAME_REGEX = /\..*/
+const STRIP_UID_REGEX = /::\d+$/
 const customEvents = {
 	mouseenter: 'mouseover',
 	mouseleave: 'mouseout'
-}
+};
 
+// Список нативных событий для валидации
 const nativeEvents = new Set([
-	'click',
-	'dblclick',
-	'mouseup',
-	'mousedown',
-	'contextmenu',
-	'mousewheel',
-	'DOMMouseScroll',
-	'mouseover',
-	'mouseout',
-	'mousemove',
-	'selectstart',
-	'selectend',
-	'submit',
-	'keydown',
-	'keypress',
-	'keyup',
-	'orientationchange',
-	'touchstart',
-	'touchmove',
-	'touchend',
-	'touchcancel',
-	'pointerdown',
-	'pointermove',
-	'pointerup',
-	'pointerleave',
-	'pointercancel',
-	'popstate',
-	'gesturestart',
-	'gesturechange',
-	'gestureend',
-	'focus',
-	'blur',
-	'change',
-	'reset',
-	'select',
-	'submit',
-	'focusin',
-	'focusout',
-	'load',
-	'unload',
-	'beforeunload',
-	'resize',
-	'move',
-	'DOMContentLoaded',
-	'readystatechange',
-	'error',
-	'abort',
-	'scroll'
-])
+	'click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
+	'mousewheel', 'DOMMouseScroll', 'mouseover', 'mouseout', 'mousemove',
+	'selectstart', 'selectend', 'submit', 'keydown', 'keypress', 'keyup',
+	'orientationchange', 'touchstart', 'touchmove', 'touchend', 'touchcancel',
+	'pointerdown', 'pointermove', 'pointerup', 'pointerleave', 'pointercancel',
+	'popstate', 'gesturestart', 'gesturechange', 'gestureend',
+	'focus', 'blur', 'change', 'reset', 'select', 'focusin', 'focusout',
+	'load', 'unload', 'beforeunload', 'resize', 'move',
+	'DOMContentLoaded', 'readystatechange', 'error', 'abort', 'scroll'
+]);
 
 /**
- * Приватные методы
+ * ==================================
+ * ПРИВАТНЫЕ ПОЛЯ
+ * ==================================
  */
 
-function makeEventUid(element, uid) {
-	return (uid && `${uid}::${uidEvent++}`) || element.uidEvent || uidEvent++
-}
+const eventRegistry = {}; // Хранилище событий
+let uidEvent = 1;         // Глобальный идентификатор
 
-function getElementEvents(element) {
-	const uid = makeEventUid(element)
+/**
+ * ==================================
+ * ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+ * ==================================
+ */
 
-	element.uidEvent = uid
-	eventRegistry[uid] = eventRegistry[uid] || {}
+/**
+ * Генерирует уникальный ID для события.
+ * @param {Element} element
+ * @param {string|null} uid
+ * @returns {string|number}
+ */
+const makeEventUid = (element, uid = null) => {
+	if (!element.uidEvent) {
+		element.uidEvent = uid ? `${uid}::${uidEvent++}` : uidEvent++;
+	}
+	return element.uidEvent;
+};
 
-	return eventRegistry[uid]
-}
+/**
+ * Получает или создаёт хранилище событий для элемента.
+ * @param {Element} element
+ * @returns {Object}
+ */
+const getElementEvents = (element) => {
+	const uid = makeEventUid(element);
+	eventRegistry[uid] = eventRegistry[uid] || {};
+	return eventRegistry[uid];
+};
 
-function bootstrapHandler(element, fn) {
-	return function handler(event) {
-		hydrateObj(event, { delegateTarget: element })
+/**
+ * Создаёт обёртку для вызова обработчика.
+ * @param {Element} element
+ * @param {Function} fn
+ * @param {boolean} isOneOff
+ * @returns {Function}
+ */
+const createHandler = (element, fn, isOneOff) => {
+	const handler = function (event) {
+		hydrateObj(event, { delegateTarget: element });
 
-		if (handler.oneOff) {
-			EventHandler.off(element, event.type, fn)
+		if (isOneOff) {
+			EventHandler.off(element, event.type, fn);
 		}
 
-		return fn.apply(element, [event])
-	}
-}
+		return fn.apply(element, [event]);
+	};
 
-function bootstrapDelegationHandler(element, selector, fn) {
-	return function handler(event) {
-		const domElements = element.querySelectorAll(selector)
+	handler.delegationSelector = null;
+	handler.callable = fn;
+	handler.oneOff = isOneOff;
+	handler.uidEvent = null;
 
-		for (let { target } = event; target && target !== this; target = target.parentNode) {
-			for (const domElement of domElements) {
-				if (domElement !== target) {
-					continue
-				}
+	return handler;
+};
 
-				hydrateObj(event, { delegateTarget: target })
+/**
+ * Создаёт делегированный обработчик.
+ * @param {Element} element
+ * @param {string} selector
+ * @param {Function} fn
+ * @param {boolean} isOneOff
+ * @returns {Function}
+ */
+const createDelegatedHandler = (element, selector, fn, isOneOff) => {
+	const handler = function (event) {
+		const candidates = Array.from(element.querySelectorAll(selector));
+		for (let target = event.target; target && target !== element; target = target.parentNode) {
+			if (!candidates.includes(target)) continue;
 
-				if (handler.oneOff) {
-					EventHandler.off(element, event.type, selector, fn)
-				}
+			hydrateObj(event, { delegateTarget: target });
 
-				return fn.apply(target, [event])
+			if (isOneOff) {
+				EventHandler.off(element, event.type, selector, fn);
 			}
+
+			return fn.apply(target, [event]);
 		}
+	};
+
+	handler.delegationSelector = selector;
+	handler.callable = fn;
+	handler.oneOff = isOneOff;
+	handler.uidEvent = null;
+
+	return handler;
+};
+
+/**
+ * Обёртка для mouseenter/mouseleave.
+ * @param {Function} fn
+ * @returns {Function}
+ */
+const withRelatedTargetCheck = (fn) => {
+	return function (event) {
+		if (
+			!event.relatedTarget ||
+			(event.relatedTarget !== event.delegateTarget && !event.delegateTarget.contains(event.relatedTarget))
+		) {
+			return fn.call(this, event);
+		}
+	};
+};
+
+/**
+ * Нормализует параметры события.
+ * @param {string} originalTypeEvent
+ * @param {Function|string} handler
+ * @param {Function} delegationFunction
+ * @returns {[boolean, Function, string]}
+ */
+const normalizeParameters = (originalTypeEvent, handler, delegationFunction) => {
+	const isDelegated = typeof handler === 'string';
+	const callable = isDelegated ? delegationFunction : (handler || delegationFunction);
+	let typeEvent = originalTypeEvent.replace(STRIP_NAME_REGEX, '');
+
+	// Замена кастомных событий
+	if (customEvents[typeEvent]) {
+		typeEvent = customEvents[typeEvent];
 	}
-}
 
-function findHandler(events, callable, delegationSelector = null) {
-	return Object.values(events)
-		.find(event => event.callable === callable && event.delegationSelector === delegationSelector)
-}
-
-function normalizeParameters(originalTypeEvent, handler, delegationFunction) {
-	const isDelegated = typeof handler === 'string'
-	// TODO: выдает "false" вместо селектора, поэтому нужно проверить. boot
-	const callable = isDelegated ? delegationFunction : (handler || delegationFunction)
-	let typeEvent = getTypeEvent(originalTypeEvent)
-
+	// Если не нативное событие — оставляем как есть
 	if (!nativeEvents.has(typeEvent)) {
-		typeEvent = originalTypeEvent
+		typeEvent = originalTypeEvent;
 	}
 
-	return [isDelegated, callable, typeEvent]
-}
+	return [isDelegated, callable, typeEvent];
+};
 
-function addHandler(element, originalTypeEvent, handler, delegationFunction, oneOff) {
-	if (typeof originalTypeEvent !== 'string' || !element) {
-		return
+/**
+ * Добавляет обработчик.
+ * @param {Element} element
+ * @param {string} originalTypeEvent
+ * @param {Function|string} handler
+ * @param {Function} delegationFunction
+ * @param {boolean} oneOff
+ */
+const addHandler = (element, originalTypeEvent, handler, delegationFunction, oneOff) => {
+	if (typeof originalTypeEvent !== 'string' || !element) return;
+
+	const [isDelegated, callable, typeEvent] = normalizeParameters(originalTypeEvent, handler, delegationFunction);
+	const events = getElementEvents(element);
+	const handlers = events[typeEvent] ||= {};
+	const key = isDelegated ? handler : null;
+	const existing = findHandler(handlers, callable, key);
+
+	if (existing) {
+		existing.oneOff = existing.oneOff && oneOff;
+		return;
 	}
 
-	let [isDelegated, callable, typeEvent] = normalizeParameters(originalTypeEvent, handler, delegationFunction)
+	let fn = isDelegated
+		? createDelegatedHandler(element, handler, callable, oneOff)
+		: createHandler(element, callable, oneOff);
 
-	// in case of mouseenter or mouseleave wrap the handler within a function that checks for its DOM position
-	// this prevents the handler from being dispatched the same way as mouseover or mouseout does
-	if (originalTypeEvent in customEvents) {
-		const wrapFunction = fn => {
-			return function (event) {
-				if (!event.relatedTarget || (event.relatedTarget !== event.delegateTarget && !event.delegateTarget.contains(event.relatedTarget))) {
-					return fn.call(this, event)
-				}
-			}
+	const uid = makeEventUid(fn, originalTypeEvent.replace(NAMESPACE_REGEX, ''));
+	fn.uidEvent = uid;
+	handlers[uid] = fn;
+
+	element.addEventListener(typeEvent, fn, isDelegated);
+};
+
+/**
+ * Находит обработчик в хранилище.
+ * @param {Object} handlers
+ * @param {Function} callable
+ * @param {string|null} delegationSelector
+ * @returns {Object|undefined}
+ */
+const findHandler = (handlers, callable, delegationSelector) => {
+	return Object.values(handlers).find(
+		h => h.callable === callable && h.delegationSelector === delegationSelector
+	);
+};
+
+/**
+ * Удаляет обработчик.
+ * @param {Element} element
+ * @param {Object} events
+ * @param {string} typeEvent
+ * @param {Function} callable
+ * @param {string|null} delegationSelector
+ */
+const removeHandler = (element, events, typeEvent, callable, delegationSelector) => {
+	const handler = findHandler(events[typeEvent], callable, delegationSelector);
+	if (!handler) return;
+
+	element.removeEventListener(typeEvent, handler, Boolean(delegationSelector));
+	delete events[typeEvent][handler.uidEvent];
+};
+
+/**
+ * Удаляет обработчики по пространству имён.
+ * @param {Element} element
+ * @param {Object} events
+ * @param {string} typeEvent
+ * @param {string} namespace
+ */
+const removeNamespacedHandlers = (element, events, typeEvent, namespace) => {
+	const handlers = events[typeEvent] || {};
+	for (const [key, handler] of Object.entries(handlers)) {
+		if (key.includes(namespace)) {
+			removeHandler(element, events, typeEvent, handler.callable, handler.delegationSelector);
 		}
-
-		callable = wrapFunction(callable)
 	}
+};
 
-	const events = getElementEvents(element)
-	const handlers = events[typeEvent] || (events[typeEvent] = {})
-	const previousFunction = findHandler(handlers, callable, isDelegated ? handler : null)
-
-	if (previousFunction) {
-		previousFunction.oneOff = previousFunction.oneOff && oneOff
-
-		return
-	}
-
-	const uid = makeEventUid(callable, originalTypeEvent.replace(namespaceRegex, ''))
-	const fn = isDelegated ?
-		bootstrapDelegationHandler(element, handler, callable) :
-		bootstrapHandler(element, callable)
-
-	fn.delegationSelector = isDelegated ? handler : null
-	fn.callable = callable
-	fn.oneOff = oneOff
-	fn.uidEvent = uid
-	handlers[uid] = fn
-
-	element.addEventListener(typeEvent, fn, isDelegated)
-}
-
-function removeHandler(element, events, typeEvent, handler, delegationSelector) {
-	const fn = findHandler(events[typeEvent], handler, delegationSelector)
-
-	if (!fn) {
-		return
-	}
-
-	element.removeEventListener(typeEvent, fn, Boolean(delegationSelector))
-	delete events[typeEvent][fn.uidEvent]
-}
-
-function removeNamespacedHandlers(element, events, typeEvent, namespace) {
-	const storeElementEvent = events[typeEvent] || {}
-
-	for (const [handlerKey, event] of Object.entries(storeElementEvent)) {
-		if (handlerKey.includes(namespace)) {
-			removeHandler(element, events, typeEvent, event.callable, event.delegationSelector)
-		}
-	}
-}
-
-function getTypeEvent(event) {
-	// allow to get the native events from namespaced events ('click.bs.button' --> 'click')
-	event = event.replace(stripNameRegex, '')
-	return customEvents[event] || event
-}
-
-function hydrateObj(obj, meta = {}) {
+/**
+ * Добавляет свойства в объект события, безопасно.
+ * @param {Object} obj
+ * @param {Object} meta
+ * @returns {Object}
+ */
+const hydrateObj = (obj, meta = {}) => {
 	for (const [key, value] of Object.entries(meta)) {
 		try {
-			obj[key] = value
+			obj[key] = value;
 		} catch {
 			Object.defineProperty(obj, key, {
 				configurable: true,
-				get() {
-					return value
-				}
-			})
+				get() { return value; }
+			});
 		}
 	}
-
-	return obj
-}
+	return obj;
+};
 
 /**
- * События
- * @type {{one(*, *, *, *): void, trigger(*, *, *): (null|*), off(*, *, *, *): void, on(*, *, *, *): void}}
+ * ==================================
+ * ОСНОВНОЙ МОДУЛЬ: EventHandler
+ * ==================================
  */
+
 const EventHandler = {
 	/**
-	 * Прослушиватель событий (элемент, событие (полный список смотри в константе nativeEvents, источник события или хендлер, функция обратного вызова))
-	 * @param element
-	 * @param event
-	 * @param handler
-	 * @param delegationFunction
+	 * Добавляет прослушиватель события.
+	 * @param {Element} element
+	 * @param {string} event — тип события (с опциональным пространством имён)
+	 * @param {Function|string} handler — селектор (если делегирование) или функция
+	 * @param {Function} [delegationFunction] — функция, вызываемая при делегировании
 	 */
 	on(element, event, handler, delegationFunction) {
-		addHandler(element, event, handler, delegationFunction, false)
+		addHandler(element, event, handler, delegationFunction, false);
 	},
 
 	/**
-	 * Прослушиватель событий, но замыкается и больше не повторяется на элементе
-	 * @param element
-	 * @param event
-	 * @param handler
-	 * @param delegationFunction
+	 * Добавляет одноразовый обработчик.
+	 * @param {Element} element
+	 * @param {string} event
+	 * @param {Function|string} handler
+	 * @param {Function} [delegationFunction]
 	 */
 	one(element, event, handler, delegationFunction) {
-		addHandler(element, event, handler, delegationFunction, true)
+		addHandler(element, event, handler, delegationFunction, true);
 	},
 
 	/**
-	 * Удаление обработчика
-	 * @param element
-	 * @param originalTypeEvent
-	 * @param handler
-	 * @param delegationFunction
+	 * Удаляет обработчик(и).
+	 * @param {Element} element
+	 * @param {string} originalTypeEvent
+	 * @param {Function|string} [handler]
+	 * @param {Function} [delegationFunction]
 	 */
 	off(element, originalTypeEvent, handler, delegationFunction) {
-		if (typeof originalTypeEvent !== 'string' || !element) {
-			return
-		}
+		if (typeof originalTypeEvent !== 'string' || !element) return;
 
-		const [isDelegated, callable, typeEvent] = normalizeParameters(originalTypeEvent, handler, delegationFunction)
-		const inNamespace = typeEvent !== originalTypeEvent
-		const events = getElementEvents(element)
-		const storeElementEvent = events[typeEvent] || {}
-		const isNamespace = originalTypeEvent.startsWith('.')
+		const [isDelegated, callable, typeEvent] = normalizeParameters(originalTypeEvent, handler, delegationFunction);
+		const events = getElementEvents(element);
+		const isNamespace = originalTypeEvent.startsWith('.');
+		const inNamespace = typeEvent !== originalTypeEvent;
 
-		if (typeof callable !== 'undefined') {
-			// Simplest case: handler is passed, remove that listener ONLY.
-			if (!Object.keys(storeElementEvent).length) {
-				return
-			}
-
-			removeHandler(element, events, typeEvent, callable, isDelegated ? handler : null)
-			return
-		}
-
+		// Удаление по пространству имён
 		if (isNamespace) {
-			for (const elementEvent of Object.keys(events)) {
-				removeNamespacedHandlers(element, events, elementEvent, originalTypeEvent.slice(1))
+			for (const eventType of Object.keys(events)) {
+				removeNamespacedHandlers(element, events, eventType, originalTypeEvent.slice(1));
 			}
+			return;
 		}
 
-		for (const [keyHandlers, event] of Object.entries(storeElementEvent)) {
-			const handlerKey = keyHandlers.replace(stripUidRegex, '')
+		const storeElementEvent = events[typeEvent] || {};
 
+		// Удаление конкретного обработчика
+		if (typeof callable !== 'undefined') {
+			removeHandler(element, events, typeEvent, callable, isDelegated ? handler : null);
+			return;
+		}
+
+		// Удаление всех обработчиков события
+		for (const [key, eventObj] of Object.entries(storeElementEvent)) {
+			const handlerKey = key.replace(STRIP_UID_REGEX, '');
 			if (!inNamespace || originalTypeEvent.includes(handlerKey)) {
-				removeHandler(element, events, typeEvent, event.callable, event.delegationSelector)
+				removeHandler(element, events, typeEvent, eventObj.callable, eventObj.delegationSelector);
 			}
 		}
 	},
 
 	/**
-	 * Пользовательские события. Подробнее тут https://learn.javascript.ru/dispatch-events
-	 * @param element
-	 * @param event
-	 * @param args
-	 * @returns {*|null}
+	 * Генерирует пользовательское событие.
+	 * @param {Element} element
+	 * @param {string} event — имя события
+	 * @param {Object} [args] — дополнительные данные
+	 * @returns {Event|null}
 	 */
 	trigger(element, event, args) {
-		if (typeof event !== 'string' || !element) {
-			return null
-		}
+		if (typeof event !== 'string' || !element) return null;
 
-		let bubbles = true;
-		let nativeDispatch = true;
-		let defaultPrevented = false;
+		const evt = hydrateObj(
+			new CustomEvent(event, {
+				bubbles: true,
+				cancelable: true,
+				detail: args
+			}),
+			args
+		);
 
-		const evt = hydrateObj(new Event(event, { bubbles, cancelable: true }), args)
-
-		if (defaultPrevented) {
-			evt.preventDefault()
-		}
-
-		if (nativeDispatch) {
-			element.dispatchEvent(evt)
-		}
-
-		return evt
+		element.dispatchEvent(evt);
+		return evt;
 	}
-}
+};
 
-export default EventHandler
+export default EventHandler;
