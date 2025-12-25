@@ -59,12 +59,6 @@ class VGFiles extends BaseModule {
                 maxConcurrent: 1, // Количество файлов при последовательной загрузке
                 retryAttempts: 3, // Повтор неудачных отправок
                 retryDelay: 1000, // Задержка при повторной отправке
-                callbacks: {
-                    progress: [],
-                    complete: [],
-                    error: [],
-                    allComplete: []
-                }
             },
             removes: {
                all: {
