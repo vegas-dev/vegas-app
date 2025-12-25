@@ -1,4 +1,11 @@
-import {execute, executeAfterTransition, isEmptyObj, isObject, normalizeData} from "../utils/js/functions";
+import {
+	execute,
+	executeAfterTransition,
+	isEmptyObj,
+	isObject,
+	mergeDeepObject,
+	normalizeData
+} from "../utils/js/functions";
 import Selectors from "../utils/js/dom/selectors";
 import Data from "../utils/js/dom/data";
 import Params from "../utils/js/components/params";
@@ -121,6 +128,10 @@ class BaseModule {
 
 			if (this._params.ajax.method.toLowerCase() === 'post') {
 				ajax.post(this._params.ajax.route, this._params.ajax.data, ajaxData);
+			}
+
+			if (this._params.ajax.method.toLowerCase() === 'delete') {
+				ajax.delete(this._params.ajax.route, this._params.ajax.data, ajaxData);
 			}
 		}, timeout);
 	}

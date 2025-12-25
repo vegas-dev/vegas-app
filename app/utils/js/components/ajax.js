@@ -266,8 +266,8 @@ class Ajax {
 		return this.request(url, { method: "PUT", body, ...options });
 	}
 
-	delete(url, options = {}) {
-		return this.request(url, { method: "DELETE", ...options });
+	delete(url, body, options = {}) {
+		return this.request(url, { method: "DELETE", body, ...options });
 	}
 
 	patch(url, body, options = {}) {

@@ -1,7 +1,7 @@
 import BaseModule from "../../base-module";
-import {isElement, isVisible, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import {isElement, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import Html from "../../../utils/js/components/templater";
-import { lang_messages } from "../../../utils/js/components/lang";
+import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import {getSVG} from "../../module-fn";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -9,6 +9,7 @@ import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import FileUploader from "./loader";
 import Droper from "./droper";
 import VGAlert from "../../vgalert";
+import VGToast from "../../vgtoast";
 
 /**
  * Constants
@@ -62,7 +63,9 @@ class VGFiles extends BaseModule {
             },
             removes: {
                all: {
-                   route: ''
+                   route: '/api/file/all/delete',
+                   alert: true,
+                   toast: true
                },
                single: {
                    route: ''
@@ -475,38 +478,101 @@ class VGFiles extends BaseModule {
 
     _restoreOriginalInputForSubmit() {
         const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
-        if (originalInput && originalInput.dataset.originalName) {
+        if (originalInput && originalInput?.dataset.originalName) {
             originalInput.name = originalInput.dataset.originalName;
             delete originalInput.dataset.originalName;
         }
     }
 
     clear(all = false) {
-        if (this._params.ajax && this._uploadedKeys.size) {
-            this._cleanupErrors();
-
-            let getFilesLoaded = () => {
-                const files = [];
-                Selectors.findAll(`.${CLASS_NAME_LIST} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
-                return files;
-            }
-
-            if (getFilesLoaded().length) {
-                let ids = getFilesLoaded().map(li => {
-                    let button = Selectors.find('button', li);
-                    if (isElement(button)) return normalizeData(Manipulator.get(button, 'data-id'));
-                });
-
-                console.log('ids', ids);
-            }
-        } else {
-            this._revokeUrls();
+        const clearUI = () => {
             [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
                 const el = Selectors.find(selector, this._element);
                 if (el) el.innerHTML = '';
             });
+        }
 
-            if (all) {
+        if (!this._params.ajax && !this._uploadedKeys.size) {
+            this._revokeUrls();
+            clearUI();
+        }
+
+        if (all) {
+            if (this._params.ajax && this._uploadedKeys.size) {
+                let getFilesLoaded = () => {
+                    const files = [];
+                    Selectors.findAll(`.${CLASS_NAME_LIST} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
+                    return files;
+                }
+
+                if (getFilesLoaded().length) {
+                    let ids = getFilesLoaded().map(li => {
+                        let button = Selectors.find('button', li);
+                        if (isElement(button)) return normalizeData(Manipulator.get(button, 'data-id'));
+                    });
+
+                    if (!ids.length && !this._params.removes.all.route) return;
+
+                    let btnDelete = Selectors.find(`${SELECTOR_DATA_DISMISS_ALL}`, this._element);
+
+                    if (this._params.removes.all.alert) {
+                        VGAlert.confirm(btnDelete, {
+                            lang: this._params.lang,
+                            ajax: {
+                                route: this._params.removes.all.route,
+                                data: {
+                                    ids: ids.join(',')
+                                },
+                                method: 'delete'
+                            },
+                            buttons: {
+                                agree: {
+                                    text: lang_buttons(this._params.lang, NAME)['agree'],
+                                    class: ["btn-danger"],
+                                },
+                                cancel: {
+                                    text: lang_buttons(this._params.lang, NAME)['cancel'],
+                                    class: ["btn-outline-danger"],
+                                },
+                            },
+                            message: {
+                                title: lang_messages(this._params.lang, NAME)['titles'],
+                                description: lang_messages(this._params.lang, NAME)['description']
+                            }
+                        })
+
+                        EventHandler.on(btnDelete, 'vg.alert.accept', (event) => {
+                            clearUI();
+                            this._cleanupErrors();
+                            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+                            this._files = [];
+                            this._uploadedKeys.clear();
+
+                            if (this._params.removes.all.toast) {
+                                VGToast.run(event.vgalert?.data.response?.message)
+                            }
+                        })
+                    } else {
+                        this._params.ajax = {
+                            route: this._params.removes.all.route,
+                            method: 'delete',
+                            data: {ids: ids.join(',')}
+                        };
+
+                        this._route((status, data) => {
+                            clearUI();
+                            this._cleanupErrors();
+                            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+                            this._files = [];
+                            this._uploadedKeys.clear();
+
+                            if (this._params.removes.all.toast) {
+                                VGToast.run(data.response?.message)
+                            }
+                        });
+                    }
+                }
+            } else {
                 Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
                 this._cleanupFakeInputs();
                 this._cleanupErrors();

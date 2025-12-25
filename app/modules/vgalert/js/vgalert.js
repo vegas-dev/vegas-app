@@ -3,12 +3,11 @@ import VGModal from "../../vgmodal";
 
 import { isElement, isVisible, makeRandomString, mergeDeepObject } from "../../../utils/js/functions";
 import { getSVG } from "../../module-fn";
-import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
+import { Classes} from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import Html from "../../../utils/js/components/templater";
-import {resolve} from "@babel/core/lib/vendor/import-meta-resolve";
 
 /**
  * @typedef {Object} AjaxParams
@@ -135,7 +134,6 @@ class VGAlert {
 			buttons: {},
 			message: {},
 		};
-
 		this._elementsDefault = {
 			buttons: {
 				agree: {
@@ -258,7 +256,13 @@ class VGAlert {
 	 * @returns {void}
 	 */
 	static confirm(elem, options = {}) {
-		const context = new VGAlert(options);
+		let lang = 'ru';
+
+		if ('lang' in options) {
+			lang = options.lang || 'ru';
+			delete options.lang;
+		}
+		const context = new VGAlert(options, lang);
 		if (context._params.mode !== "confirm") return;
 
 		const instance = VGAlertConfirm.getOrCreateInstance(elem, context._params);

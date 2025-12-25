@@ -2,5 +2,9 @@
   "alert": {
     "agree": "Да, согласен",
     "cancel": "Отмена"
+  },
+  "files": {
+    "agree": "Да",
+    "cancel": "Нет"
   }
 }
