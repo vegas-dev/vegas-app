@@ -1,9 +1,9 @@
 import {execute} from "../functions";
 import Selectors from "../dom/selectors";
 import EventHandler from "../dom/event";
-import Overflow from "./overflow";
 import Html from "../components/templater";
 import {Classes} from "../dom/manipulator";
+import ScrollBarHelper from "./scrollbar";
 
 const NAME = 'backdrop';
 const CLASS_NAME = 'vg-backdrop';
@@ -15,6 +15,7 @@ let backdrop_delay = 300;
 
 class Backdrop {
 	static _rootEl = document.body;
+	static _scrollbar = new ScrollBarHelper();
 
 	static show(callback) {
 		Backdrop._append()
@@ -41,7 +42,7 @@ class Backdrop {
 
 		EventHandler.on(backdrop, EVENT_MOUSEDOWN, () => {
 			Backdrop.hide()
-			Overflow.destroy();
+			Backdrop._scrollbar.reset();
 		});
 	}
 

@@ -4,7 +4,8 @@ import EventHandler from "../../../utils/js/dom/event";
 import {dismissTrigger} from "../../module-fn";
 import Selectors from "../../../utils/js/dom/selectors";
 import Backdrop from "../../../utils/js/components/backdrop";
-import Overflow from "../../../utils/js/components/overflow";
+import ScrollBarHelper from "../../../utils/js/components/scrollbar";
+
 
 /**
  * Constants
@@ -56,6 +57,7 @@ class VGSidebar extends BaseModule {
 		this._addEventListeners();
 		this._dismissElement();
 
+		this._scrollBar = new ScrollBarHelper();
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGSidebar.NAME_KEY, this._params.animation);
 	}
@@ -90,7 +92,7 @@ class VGSidebar extends BaseModule {
 		}
 
 		if (_this._params.overflow) {
-			Overflow.append();
+			this._scrollBar.hide();
 		}
 
 		if (this._params.hash) {
@@ -131,13 +133,13 @@ class VGSidebar extends BaseModule {
 					if (this._params.backdrop) {
 						Backdrop.hide(() => {
 							if (this._params.overflow) {
-								Overflow.destroy();
+								this._scrollBar.reset();
 							}
 						});
 					}
 
 					if (this._params.overflow) {
-						Overflow.destroy();
+						this._scrollBar.reset();
 					}
 
 					if (this._params.hash) {

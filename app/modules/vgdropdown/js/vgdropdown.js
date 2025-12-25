@@ -3,9 +3,6 @@ import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {isDisabled, mergeDeepObject, noop} from "../../../utils/js/functions";
 import Placement from "../../../utils/js/components/placement";
-import Overflow from "../../../utils/js/components/overflow";
-import Backdrop from "../../../utils/js/components/backdrop";
-import {dismissTrigger} from "../../module-fn";
 
 /**
  * Константы, используемые в модуле выпадающего списка.
