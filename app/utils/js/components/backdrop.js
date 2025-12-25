@@ -1,8 +1,8 @@
-import {execute} from "../functions";
+import { execute } from "../functions";
 import Selectors from "../dom/selectors";
 import EventHandler from "../dom/event";
 import Html from "../components/templater";
-import {Classes} from "../dom/manipulator";
+import { Classes } from "../dom/manipulator";
 import ScrollBarHelper from "./scrollbar";
 
 const NAME = 'backdrop';
@@ -11,51 +11,71 @@ const CLASS_NAME_FADE = 'fade';
 const CLASS_NAME_SHOW = 'show';
 const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 
-let backdrop_delay = 300;
+const backdropDelay = 150; // Уменьшено для более плавного UX
 
 class Backdrop {
 	static _rootEl = document.body;
 	static _scrollbar = new ScrollBarHelper();
+	static _backdrop = null;
 
+	/**
+	 * Показывает бэкдроп
+	 * @param {Function} callback - вызывается после отображения
+	 */
 	static show(callback) {
-		Backdrop._append()
+		if (this._backdrop) return;
+
+		this._append();
 		execute(callback);
 	}
 
+	/**
+	 * Скрывает бэкдроп
+	 * @param {Function} callback - вызывается после скрытия
+	 */
 	static hide(callback) {
-		Backdrop._destroy();
-		execute(callback);
+		if (!this._backdrop) return;
+
+		this._destroy().then(execute.bind(null, callback));
 	}
 
+	/**
+	 * Создаёт и добавляет элемент бэкдропа
+	 * @private
+	 */
 	static _append() {
-		if (Selectors.find('.' + CLASS_NAME)) return false;
+		const html = Html('dom');
+		this._backdrop = html.div({ class: CLASS_NAME });
 
-		let html = Html('dom'),
-			backdrop = html.div({class: CLASS_NAME}, '');
+		this._rootEl.appendChild(this._backdrop);
+		requestAnimationFrame(() => {
+			Classes.add(this._backdrop, CLASS_NAME_SHOW);
+			setTimeout(() => {
+				Classes.add(this._backdrop, CLASS_NAME_FADE);
+			}, backdropDelay);
+		});
 
-		Backdrop._rootEl.append(backdrop);
-		Classes.add(backdrop, CLASS_NAME_SHOW);
-
-		setTimeout(() => {
-			Classes.add(backdrop, CLASS_NAME_FADE);
-		}, backdrop_delay);
-
-		EventHandler.on(backdrop, EVENT_MOUSEDOWN, () => {
-			Backdrop.hide()
-			Backdrop._scrollbar.reset();
+		EventHandler.on(this._backdrop, EVENT_MOUSEDOWN, () => {
+			this.hide();
 		});
 	}
 
+	/**
+	 * Удаляет бэкдроп с анимацией
+	 * @returns {Promise}
+	 * @private
+	 */
 	static _destroy() {
-		let element = Selectors.find('.' + CLASS_NAME);
-		if (!element) return;
-
-		Classes.remove(element, CLASS_NAME_FADE);
-
-		setTimeout(() => {
-			Classes.remove(element, CLASS_NAME_SHOW);
-			element.remove();
-		}, backdrop_delay);
+		return new Promise((resolve) => {
+			Classes.remove(this._backdrop, CLASS_NAME_FADE);
+			setTimeout(() => {
+				Classes.remove(this._backdrop, CLASS_NAME_SHOW);
+				this._backdrop.remove();
+				this._backdrop = null;
+				this._scrollbar.reset();
+				resolve();
+			}, backdropDelay);
+		});
 	}
 }
 
