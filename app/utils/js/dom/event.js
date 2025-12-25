@@ -343,7 +343,7 @@ const EventHandler = {
 	 * @param {Element} element
 	 * @param {string} event — имя события
 	 * @param {Object} [args] — дополнительные данные
-	 * @returns {Event|null}
+	 * @returns {Object}
 	 */
 	trigger(element, event, args) {
 		if (typeof event !== 'string' || !element) return null;
