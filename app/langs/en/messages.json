@@ -21,7 +21,8 @@
     "is-total-size": "The maximum allowed size for the selected files has been exceeded",
     "titles": "Deleting files",
     "title": "Deleting file",
-    "description": "It will not be possible to return them."
+    "descriptions": "It will not be possible to return them",
+    "description": "It will not be possible to return it"
   },
   "alert": {
     "title": "Default header",

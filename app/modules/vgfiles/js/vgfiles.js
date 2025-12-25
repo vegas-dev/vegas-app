@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import {isElement, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import {isElement, isVisible, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import Html from "../../../utils/js/components/templater";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import {getSVG} from "../../module-fn";
@@ -23,6 +23,7 @@ const SELECTOR_DATA_FAKE = '[data-vg-files="generated"]';
 
 const CLASS_NAME_CONTAINER = 'vg-files';
 const CLASS_NAME_INFO = `${CLASS_NAME_CONTAINER}-info`;
+const CLASS_NAME_INFO_WRAPPER = `${CLASS_NAME_CONTAINER}-info--wrapper`;
 const CLASS_NAME_IMAGES = `${CLASS_NAME_INFO}--images`;
 const CLASS_NAME_LIST = `${CLASS_NAME_INFO}--list`;
 const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
@@ -63,12 +64,14 @@ class VGFiles extends BaseModule {
             },
             removes: {
                all: {
-                   route: '/api/file/all/delete',
+                   route: '',
                    alert: true,
                    toast: true
                },
                single: {
-                   route: ''
+                   route: '',
+                   alert: true,
+                   toast: true
                }
             }
         }, params));
@@ -87,7 +90,8 @@ class VGFiles extends BaseModule {
 
         this._nodes = {
             info: Selectors.find(`.${CLASS_NAME_INFO}`, this._element),
-            drop: Selectors.find(`.${CLASS_NAME_DROP}`, this._element)
+            drop: Selectors.find(`.${CLASS_NAME_DROP}`, this._element),
+            wrapper: Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}`, this._element)
         };
 
         this._init();
@@ -97,20 +101,33 @@ class VGFiles extends BaseModule {
     static get NAME() { return NAME; }
     static get NAME_KEY() { return NAME_KEY; }
 
+    /**
+     * Инициализация компонента
+     */
     _init() {
+        if (this._params.ajax) {
+            this._params.allowed = true;
+        }
+
         this._preventOriginalInputFromSubmit();
         if (this._nodes.drop) new Droper(this._nodes.drop, this._params).init();
     }
 
+    /**
+     * Полная перестройка интерфейса
+     */
     build() {
         if (!this._nodes.info) return;
         this._updateCounter();
         this.change();
     }
 
+    /**
+     * Обработка изменения файлов (через input или DnD)
+     */
     change(input = null) {
         const incomingFiles = input?.files || this._files;
-        if (!incomingFiles.length || input?.files?.length === 0) return;
+        if (!incomingFiles.length || (input?.files && input.files.length === 0)) return;
 
         if (!this._params.ajax) this.clear();
         if (!this._params.allowed) return;
@@ -130,6 +147,9 @@ class VGFiles extends BaseModule {
         EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: processedFiles });
     }
 
+    /**
+     * Асинхронная загрузка всех файлов
+     */
     async uploadAll(files) {
         if (!this._params.ajax || !this._params.uploads.route) return;
 
@@ -146,37 +166,35 @@ class VGFiles extends BaseModule {
 
         this._renderUI(this._files);
 
-        // Прогресс
         this._uploader.onProgress((uploadData) => {
             const $item = this._getItemElement(uploadData.file);
-            Classes.add($item, CLASS_NAME_LOADING)
+            Classes.add($item, CLASS_NAME_LOADING);
         });
 
-        // Успешно
         this._uploader.onComplete((uploadData) => {
             this._uploadedKeys.add(this._getFileKey(uploadData.file));
             const $item = this._getItemElement(uploadData.file);
-
-            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED)
+            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED);
             Classes.remove($item, CLASS_NAME_PENDING);
 
-            let button = this._getButtonElement(uploadData.file),
-                id = normalizeData(uploadData.result.response.id) || uploadData.id || uploadData.file.lastModified;
+            const button = this._getButtonElement(uploadData.file);
+            const id = normalizeData(uploadData.result.response.id) || uploadData.id || uploadData.file.lastModified;
 
             if (isElement(button) && id) {
+                let li = button.closest(`li`);
+
+                if (li) Manipulator.set(li, 'data-id', id);
                 Manipulator.set(button, 'data-id', id);
             }
         });
 
-        // Ошибка
         this._uploader.onError((uploadData, error) => {
             this._uploadedKeys.delete(this._getFileKey(uploadData.file));
             const $item = this._getItemElement(uploadData.file);
-            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING)
+            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING);
             console.error('Upload error:', error);
         });
 
-        // Все завершены
         this._uploader.onAllComplete(() => {
             EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
         });
@@ -195,59 +213,85 @@ class VGFiles extends BaseModule {
         }
     }
 
-    _getItemElement(file) {
-        return Selectors.find(
-            `.${CLASS_NAME_LIST} li[data-name="${file.name}"][data-size="${file.size}"], 
-             .${CLASS_NAME_IMAGES} span[data-name="${file.name}"][data-size="${file.size}"]`,
-            this._element
-        );
-    }
-
-    _getButtonElement(file) {
-        if (typeof file === 'string') {
-            return Selectors.find(file, this._element);
+    /**
+     * Получение элемента файла по данным
+     */
+    _getItemElement(file = null) {
+        if (!file) {
+            return Selectors.findAll(
+                `.${CLASS_NAME_LIST} li.loaded, .${CLASS_NAME_IMAGES} span.loaded`,
+                this._element
+            )
         } else {
-            return Selectors.find(`button[data-name="${file.name}"][data-size="${file.size}"]`, this._element);
+            return Selectors.find(
+             `.${CLASS_NAME_LIST} li[data-name="${file.name}"][data-size="${file.size}"], 
+                     .${CLASS_NAME_IMAGES} span[data-name="${file.name}"][data-size="${file.size}"]`,
+                this._element
+            );
         }
     }
 
+    /**
+     * Получение кнопки файла
+     */
+    _getButtonElement(file) {
+        if (typeof file === 'string') {
+            return Selectors.find(file, this._element);
+        }
+        return Selectors.find(`button[data-name="${file.name}"][data-size="${file.size}"]`, this._element);
+    }
+
+    /**
+     * Создание кнопки удаления
+     */
     _setButtonElement(file) {
+        let icon = getSVG('trash');
+        if (!this._params.info) icon = getSVG('cross');
+
         return this._tpl.button([
-            this._tpl.i({}, getSVG('cross'), {isHTML: true}),
+            this._tpl.i({}, icon, { isHTML: true }),
         ], 'button', {
             type: 'button',
             'data-vg-dismiss': 'file',
             'data-name': file.name,
             'data-size': file.size,
-            'data-type': file.type
-        })
+            'data-type': file.type,
+            'data-id': file.id || ''
+        });
     }
 
+    /**
+     * Обновление UI: отображение файлов
+     */
     _renderUI(files) {
         if (!this._nodes.info) return;
 
         Classes.add(this._nodes.info, 'show');
         this._updateCounter();
-        this._renderImages(files);
         this._renderInfoList(files);
 
-        // Визуальное обновление состояния загрузки
-        files.forEach(file => {
-            const $item = this._getItemElement(file);
-            if (!$item) return;
+        if (this._params.ajax) {
+            files.forEach(file => {
+                const $item = this._getItemElement(file);
+                if (!$item) return;
 
-            const key = this._getFileKey(file);
-            if (this._uploadedKeys.has(key)) {
-                Classes.add($item, CLASS_NAME_LOADED);
-            } else {
-                Classes.add($item, CLASS_NAME_PENDING);
-            }
-        });
+                const key = this._getFileKey(file);
+                if (this._uploadedKeys.has(key)) {
+                    Classes.add($item, CLASS_NAME_LOADED);
+                } else {
+                    Classes.add($item, CLASS_NAME_PENDING);
+                }
+            });
+        }
     }
 
+    /**
+     * Обновление счётчика файлов и общего размера
+     */
     _updateCounter() {
-        if (!this._nodes.info) return;
-        const $count = Selectors.find(`.${CLASS_NAME_INFO}--wrapper-count`, this._nodes.info);
+        if (!this._nodes.wrapper) return;
+
+        const $count = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-count`, this._nodes.info);
         if (!$count) return;
 
         const totalSize = this._getSizes(this._files, true);
@@ -256,35 +300,11 @@ class VGFiles extends BaseModule {
             : '';
     }
 
-    _renderImages(files) {
-        if (!this._params.image || !this._nodes.info) return;
-
-        let $container = Selectors.find(`.${CLASS_NAME_IMAGES}`, this._element);
-        if (!$container) {
-            $container = this._tpl.div({ class: CLASS_NAME_IMAGES });
-            this._nodes.info.prepend($container);
-        }
-
-        const fragment = document.createDocumentFragment();
-        files.forEach(file => {
-            if (file.type.startsWith('image/')) {
-                const src = URL.createObjectURL(file);
-                this._objectUrls.push(src);
-                const $span = this._tpl.span({}, [this._tpl.img(src, file.name)]);
-                $span.dataset.name = file.name;
-                $span.dataset.size = file.size;
-
-                if (this._params.detach) {
-                    $span.append(this._setButtonElement(file));
-                }
-                fragment.appendChild($span);
-            }
-        });
-        $container.appendChild(fragment);
-    }
-
+    /**
+     * Отображение списка файлов
+     */
     _renderInfoList(files) {
-        if (!this._params.info || !this._nodes.info) return;
+        if (!this._nodes.info) return;
 
         let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
         if (!$list) {
@@ -292,20 +312,54 @@ class VGFiles extends BaseModule {
             this._nodes.info.append($list);
         }
 
+        if (!this._params.info) Classes.add($list, 'list-row')
+
         const fragment = document.createDocumentFragment();
         files.forEach((file, i) => {
+            let classes = [];
+
+            if (this._params.image) {
+                classes.push('with-image');
+            }
+            if (this._params.info) {
+                classes.push('with-info');
+            }
+            if (this._params.detach) {
+                classes.push('with-remove')
+            }
+
             const $li = this._tpl.li(
-                { 'data-name': file.name, 'data-size': file.size },
-                [
+                { 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') },
+                []
+            );
+
+            // Добавляем превью изображения, если включено и файл — картинка
+            if (this._params.image && file.type.startsWith('image/')) {
+                const src = URL.createObjectURL(file);
+                this._objectUrls.push(src);
+                const $imgPreview = this._tpl.img(src, file.name, { class: 'file-preview' });
+                const $imgContainer = this._tpl.div({ class: 'file-image' }, $imgPreview);
+                $li.appendChild($imgContainer);
+            }
+
+            // Добавляем информационную часть (имя, размер), если включено
+            if (this._params.info) {
+                const $infoContainer = this._tpl.div({ class: 'file-info' }, [
                     this._tpl.span({ class: 'iteration' }, `${i + 1}.`),
                     this._tpl.span({ class: 'name' }, file.name),
                     this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
-                ]
-            );
-
-            if (this._params.detach) {
-                $li.append(this._setButtonElement(file));
+                ]);
+                $li.appendChild($infoContainer);
             }
+
+            // Добавляем кнопку удаления, если разрешено
+            if (this._params.detach) {
+                const $fileRemove = this._tpl.div({ class: 'file-remove' }, [
+                    this._setButtonElement(file)
+                ])
+                $li.appendChild($fileRemove);
+            }
+
             fragment.appendChild($li);
         });
 
@@ -313,6 +367,9 @@ class VGFiles extends BaseModule {
         $list.appendChild(fragment);
     }
 
+    /**
+     * Генерация скрытых input'ов для отправки формы
+     */
     _generateHiddenInputs(files) {
         this._cleanupFakeInputs();
         const fragment = document.createDocumentFragment();
@@ -333,6 +390,9 @@ class VGFiles extends BaseModule {
         this._element.appendChild(fragment);
     }
 
+    /**
+     * Добавление новых файлов с фильтрацией
+     */
     append(values) {
         const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
 
@@ -346,9 +406,13 @@ class VGFiles extends BaseModule {
         return this._files;
     }
 
+    /**
+     * Удаление файла по кнопке
+     */
     removeFile(button) {
         const name = normalizeData(Manipulator.get(button, 'data-name'));
         const size = normalizeData(Manipulator.get(button, 'data-size'));
+        let id   = normalizeData(Manipulator.get(button, 'data-id'));
 
         const fileToRemove = this._files.find(f => f.name === name && f.size === size);
         if (fileToRemove) {
@@ -356,10 +420,89 @@ class VGFiles extends BaseModule {
             this._uploadedKeys.delete(key);
         }
 
-        this._files = this._files.filter(f => !(f.name === name && f.size === size));
-        this._files.length ? this.build() : this.clear(true);
+        if (!id) {
+            id = this._getItemElement().map(el => {
+                let button = Selectors.find('button', el), id = '', size = '', name = '';
+                if (button) {
+                    id = normalizeData(Manipulator.get(button, 'data-id'));
+                    name = normalizeData(Manipulator.get(button, 'data-name'));
+                    size = normalizeData(Manipulator.get(button, 'data-size'));
+                }
+
+                this._files.map(file => {
+                    if (file.name === name && file.size === size) {
+                        file.id = id;
+                    }
+                });
+
+                if (fileToRemove?.name === name && fileToRemove?.size === size) {
+                    fileToRemove.id = id;
+                    return id;
+                }
+
+                return '';
+            });
+        }
+
+        if (this._params.ajax && id && this._params.removes.single.route) {
+            const paramsAjax = {
+                route: this._params.removes.single.route,
+                data: { id: id },
+                method: 'delete'
+            }
+
+            const _completeRemoveFile = (data) => {
+                this._files = this._files.filter(f => !(f.name === name && f.size === size));
+                if (this._files.length) {
+                    this._updateCounter();
+                    this._renderUI(this._files);
+                } else {
+                    this.clear(true, false);
+                }
+
+                if (this._params.removes.single.toast) {
+                    VGToast.run(data.response?.message);
+                }
+            }
+
+            if (this._params.removes.single.alert) {
+                VGAlert.confirm(button, {
+                    lang: this._params.lang,
+                    ajax: paramsAjax,
+                    buttons: {
+                        agree: {
+                            text: lang_buttons(this._params.lang, NAME)['agree'],
+                            class: ["btn-danger"],
+                        },
+                        cancel: {
+                            text: lang_buttons(this._params.lang, NAME)['cancel'],
+                            class: ["btn-outline-danger"],
+                        },
+                    },
+                    message: {
+                        title: lang_messages(this._params.lang, NAME)['title'],
+                        description: lang_messages(this._params.lang, NAME)['description']
+                    }
+                });
+
+                EventHandler.on(button, 'vg.alert.accept', (event) => {
+                    _completeRemoveFile(event.vgalert.data)
+                });
+            } else {
+                this._params.ajax = paramsAjax;
+                this._route((status, data) => {
+                    _completeRemoveFile(data)
+                });
+            }
+        } else {
+            this._files = this._files.filter(f => !(f.name === name && f.size === size));
+            this._files.length ? this.build() : this.clear(true);
+        }
     }
 
+    /**
+     * Фильтрация файлов по ограничениям
+     */
     _filterFiles(files) {
         this._errors.clear();
         const { count, sizes, total } = this._params.limits;
@@ -402,6 +545,9 @@ class VGFiles extends BaseModule {
         return filtered;
     }
 
+    /**
+     * Форматирование размера файла
+     */
     _getSizes(size, isArray = false) {
         const totalSize = isArray ? this._files.reduce((acc, f) => acc + f.size, 0) : size;
         const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'];
@@ -416,16 +562,25 @@ class VGFiles extends BaseModule {
         }).format(value);
     }
 
+    /**
+     * Очистка сгенерированных input'ов
+     */
     _cleanupFakeInputs() {
         Selectors.findAll(SELECTOR_DATA_FAKE, this._element).forEach(el => el.remove());
     }
 
+    /**
+     * Очистка блока ошибок
+     */
     _cleanupErrors() {
         this._errors.clear();
         const $errorCont = Selectors.find(`.${CLASS_NAME_ERRORS}`, this._element);
         if ($errorCont) $errorCont.remove();
     }
 
+    /**
+     * Отображение ошибок в UI
+     */
     _renderErrors() {
         if (!this._errors.size) return;
 
@@ -444,6 +599,9 @@ class VGFiles extends BaseModule {
         });
     }
 
+    /**
+     * Резервные сообщения об ошибках
+     */
     _getFallbackErrors() {
         const { count, sizes, total } = this._params.limits;
         return {
@@ -454,43 +612,58 @@ class VGFiles extends BaseModule {
         };
     }
 
+    /**
+     * Подписка на события
+     */
     _addEventListener() {
         Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element).forEach(el => {
             el.addEventListener('change', () => this.change(el));
         });
     }
 
+    /**
+     * Уникальный ключ файла
+     */
     _getFileKey(file) {
         return `${file.name}-${file.size}-${file.lastModified}`;
     }
 
+    /**
+     * Блокировка оригинального input от отправки
+     */
     _preventOriginalInputFromSubmit(isRestore = false) {
-       if (!isRestore) {
-           const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
-           if (originalInput && !originalInput.dataset.originalName) {
-               originalInput.dataset.originalName = originalInput.name;
-               originalInput.removeAttribute('name');
-           }
-       } else {
-           this._restoreOriginalInputForSubmit();
-       }
+        if (!isRestore) {
+            const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
+            if (originalInput && !originalInput.dataset.originalName) {
+                originalInput.dataset.originalName = originalInput.name;
+                originalInput.removeAttribute('name');
+            }
+        } else {
+            this._restoreOriginalInputForSubmit();
+        }
     }
 
+    /**
+     * Восстановление оригинального input перед отправкой формы
+     */
     _restoreOriginalInputForSubmit() {
         const originalInput = Selectors.find(SELECTOR_DATA_TOGGLE, this._element);
-        if (originalInput && originalInput?.dataset.originalName) {
+        if (originalInput?.dataset.originalName) {
             originalInput.name = originalInput.dataset.originalName;
             delete originalInput.dataset.originalName;
         }
     }
 
-    clear(all = false) {
+    /**
+     * Полная очистка компонента
+     */
+    clear(all = false, isAjax = false) {
         const clearUI = () => {
             [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
                 const el = Selectors.find(selector, this._element);
                 if (el) el.innerHTML = '';
             });
-        }
+        };
 
         if (!this._params.ajax && !this._uploadedKeys.size) {
             this._revokeUrls();
@@ -498,33 +671,45 @@ class VGFiles extends BaseModule {
         }
 
         if (all) {
-            if (this._params.ajax && this._uploadedKeys.size) {
-                let getFilesLoaded = () => {
+            if (this._params.ajax && this._uploadedKeys.size && this._params.removes.all.route && isAjax) {
+                const getFilesLoaded = () => {
                     const files = [];
                     Selectors.findAll(`.${CLASS_NAME_LIST} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
                     return files;
-                }
+                };
 
-                if (getFilesLoaded().length) {
-                    let ids = getFilesLoaded().map(li => {
-                        let button = Selectors.find('button', li);
-                        if (isElement(button)) return normalizeData(Manipulator.get(button, 'data-id'));
-                    });
+                const filesLoaded = getFilesLoaded();
+                if (filesLoaded.length) {
+                    const ids = filesLoaded.map(li => {
+                        const button = Selectors.find('button', li);
+                        return isElement(button) ? normalizeData(Manipulator.get(button, 'data-id')) : null;
+                    }).filter(Boolean);
 
-                    if (!ids.length && !this._params.removes.all.route) return;
+                    if (!ids.length) return;
 
-                    let btnDelete = Selectors.find(`${SELECTOR_DATA_DISMISS_ALL}`, this._element);
+                    const btnDelete = Selectors.find(SELECTOR_DATA_DISMISS_ALL, this._element);
+                    const _completeClearRoute = (data) => {
+                        clearUI();
+                        this._cleanupErrors();
+                        if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+                        this._files = [];
+                        this._uploadedKeys.clear();
+
+                        if (this._params.removes.all.toast) {
+                            VGToast.run(data.response?.message);
+                        }
+                    }
+
+                    const paramsAjax = {
+                        route: this._params.removes.all.route,
+                        data: { ids: ids.join(',') },
+                        method: 'delete'
+                    }
 
                     if (this._params.removes.all.alert) {
                         VGAlert.confirm(btnDelete, {
                             lang: this._params.lang,
-                            ajax: {
-                                route: this._params.removes.all.route,
-                                data: {
-                                    ids: ids.join(',')
-                                },
-                                method: 'delete'
-                            },
+                            ajax: paramsAjax,
                             buttons: {
                                 agree: {
                                     text: lang_buttons(this._params.lang, NAME)['agree'],
@@ -537,38 +722,17 @@ class VGFiles extends BaseModule {
                             },
                             message: {
                                 title: lang_messages(this._params.lang, NAME)['titles'],
-                                description: lang_messages(this._params.lang, NAME)['description']
+                                description: lang_messages(this._params.lang, NAME)['descriptions']
                             }
-                        })
+                        });
 
                         EventHandler.on(btnDelete, 'vg.alert.accept', (event) => {
-                            clearUI();
-                            this._cleanupErrors();
-                            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
-                            this._files = [];
-                            this._uploadedKeys.clear();
-
-                            if (this._params.removes.all.toast) {
-                                VGToast.run(event.vgalert?.data.response?.message)
-                            }
-                        })
+                            _completeClearRoute(event.vgalert.data)
+                        });
                     } else {
-                        this._params.ajax = {
-                            route: this._params.removes.all.route,
-                            method: 'delete',
-                            data: {ids: ids.join(',')}
-                        };
-
+                        this._params.ajax = paramsAjax;
                         this._route((status, data) => {
-                            clearUI();
-                            this._cleanupErrors();
-                            if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
-                            this._files = [];
-                            this._uploadedKeys.clear();
-
-                            if (this._params.removes.all.toast) {
-                                VGToast.run(data.response?.message)
-                            }
+                            _completeClearRoute(data)
                         });
                     }
                 }
@@ -583,11 +747,17 @@ class VGFiles extends BaseModule {
         }
     }
 
+    /**
+     * Очистка ObjectURL
+     */
     _revokeUrls() {
         this._objectUrls.forEach(url => URL.revokeObjectURL(url));
         this._objectUrls = [];
     }
 
+    /**
+     * Очистка ресурсов
+     */
     dispose() {
         this.clear(true);
         if (this._uploader) this._uploader.destroy();
@@ -595,25 +765,28 @@ class VGFiles extends BaseModule {
     }
 }
 
+// Автоинициализация
 EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, () => {
     Selectors.findAll(`.${CLASS_NAME_CONTAINER}`).forEach(el => VGFiles.getOrCreateInstance(el));
 });
 
+// Обработка удаления одного файла
 EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS, function (e) {
     const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (!target) return;
     e.preventDefault();
 
-    let button = e.target.closest(SELECTOR_DATA_DISMISS) || e.target;
+    const button = e.target.closest(SELECTOR_DATA_DISMISS) || e.target;
     VGFiles.getOrCreateInstance(target).removeFile(button);
 });
 
+// Обработка удаления всех файлов
 EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS_ALL, function (e) {
     const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (!target) return;
     e.preventDefault();
 
-    VGFiles.getOrCreateInstance(target).clear(true);
+    VGFiles.getOrCreateInstance(target).clear(true, true);
 });
 
 export default VGFiles;
