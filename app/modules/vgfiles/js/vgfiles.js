@@ -156,6 +156,8 @@ class VGFiles extends BaseModule {
     async uploadAll(files) {
         if (!this._params.ajax || !this._params.uploads.route) return;
 
+        if (!this._uploadedKeys.size) this._failingUploadedKeys.clear();
+
         const notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
         if (!notUploadedFiles.length) return;
 
