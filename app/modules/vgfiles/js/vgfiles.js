@@ -32,6 +32,7 @@ const CLASS_NAME_PENDING  = 'pending';
 const CLASS_NAME_LOADING = 'loading';
 const CLASS_NAME_LOADED = 'loaded';
 const CLASS_NAME_FAILING = 'failing';
+const CLASS_NAME_COMPLETED = 'completed';
 
 const EVENT_KEY_CHANGE = `${NAME_KEY}.change`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
@@ -86,6 +87,8 @@ class VGFiles extends BaseModule {
         this._errors = new Set();
         this._objectUrls = [];
         this._uploadedKeys = new Set();
+        this._failingUploadedKeys = new Set();
+        this._pendingUploadedKeys = new Set();
         this._uploader = null;
 
         this._nodes = {
@@ -164,38 +167,89 @@ class VGFiles extends BaseModule {
             retryDelay: this._params.uploads.retryDelay
         });
 
+
         this._renderUI(this._files);
+        this._updateCounter(true);
+
+        notUploadedFiles.forEach(file => this._pendingUploadedKeys.add(this._getFileKey(file)))
+        this._setStatItem('pending', this._pendingUploadedKeys.size);
 
         this._uploader.onProgress((uploadData) => {
             const $item = this._getItemElement(uploadData.file);
             Classes.add($item, CLASS_NAME_LOADING);
+
+            const button = this._getButtonElement(uploadData.file);
+            if (isElement(button)) {
+                let li = button.closest(`li`);
+                if (li) {
+                    this._setButtonElement(uploadData.file);
+
+                    let fileRemove = Selectors.find('.file-remove', li);
+                    if (fileRemove) {
+                        fileRemove.innerHTML = '';
+                        fileRemove.appendChild(this._setButtonElement(uploadData.file, true));
+                    }
+                }
+            }
         });
 
         this._uploader.onComplete((uploadData) => {
-            this._uploadedKeys.add(this._getFileKey(uploadData.file));
-            const $item = this._getItemElement(uploadData.file);
-            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED);
-            Classes.remove($item, CLASS_NAME_PENDING);
+            if (!this._uploadedKeys.has(this._getFileKey(uploadData.file))) {
+                const $item = this._getItemElement(uploadData.file);
 
-            const button = this._getButtonElement(uploadData.file);
-            const id = normalizeData(uploadData.result.response.id) || uploadData.id || uploadData.file.lastModified;
+                Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED);
+                Classes.remove($item, CLASS_NAME_PENDING);
 
-            if (isElement(button) && id) {
-                let li = button.closest(`li`);
+                const button = this._getButtonElement(uploadData.file);
+                const id = normalizeData(uploadData.result.response.id) || uploadData.id || uploadData.file.lastModified;
+                uploadData.file.id = id;
 
-                if (li) Manipulator.set(li, 'data-id', id);
-                Manipulator.set(button, 'data-id', id);
+                if (isElement(button) && id) {
+                    let li = button.closest(`li`);
+                    if (li) {
+                        Manipulator.set(li, 'data-id', id);
+                        this._setButtonElement(uploadData.file);
+
+                        let fileRemove = Selectors.find('.file-remove', li);
+                        if (fileRemove) {
+                            fileRemove.innerHTML = '';
+                            fileRemove.appendChild(this._setButtonElement(uploadData.file, true, 'completed'));
+                            Classes.add(li, CLASS_NAME_COMPLETED);
+
+                            setTimeout(() => {
+                                fileRemove.innerHTML = '';
+                                fileRemove.appendChild(this._setButtonElement(uploadData.file));
+                                Classes.remove(li, CLASS_NAME_COMPLETED);
+                            }, 1000)
+                        }
+                    }
+                }
             }
+
+            this._uploadedKeys.add(this._getFileKey(uploadData.file));
+            this._failingUploadedKeys.delete(this._getFileKey(uploadData.file));
+            this._pendingUploadedKeys.delete(this._getFileKey(uploadData.file));
+
+            this._setStatItem('completed', this._uploadedKeys.size);
+            this._setStatItem('pending', this._pendingUploadedKeys.size);
         });
 
         this._uploader.onError((uploadData, error) => {
             this._uploadedKeys.delete(this._getFileKey(uploadData.file));
             const $item = this._getItemElement(uploadData.file);
+
+            this._failingUploadedKeys.add(this._getFileKey(uploadData.file));
+            this._pendingUploadedKeys.delete(this._getFileKey(uploadData.file));
+
+            Classes.remove($item, CLASS_NAME_PENDING);
             Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING);
-            console.error('Upload error:', error);
+
+            this._setStatItem('failing', this._failingUploadedKeys.size);
+            this._setStatItem('pending', this._pendingUploadedKeys.size);
         });
 
         this._uploader.onAllComplete(() => {
+            if (this._uploadedKeys.size) this._updateCounter()
             EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
         });
 
@@ -244,15 +298,26 @@ class VGFiles extends BaseModule {
     /**
      * Создание кнопки удаления
      */
-    _setButtonElement(file) {
-        let icon = getSVG('trash');
+    _setButtonElement(file, isAjax = false, status = '') {
+        let icon = getSVG('trash'),
+            action = 'data-vg-dismiss';
         if (!this._params.info) icon = getSVG('cross');
+        if (isAjax) {
+            icon = getSVG('spinner');
+
+            if (status === 'completed') {
+                icon = getSVG('check');
+            } else {
+                action = 'data-vg-reload';
+            }
+        }
+
 
         return this._tpl.button([
             this._tpl.i({}, icon, { isHTML: true }),
         ], 'button', {
             type: 'button',
-            'data-vg-dismiss': 'file',
+            [action]: 'file',
             'data-name': file.name,
             'data-size': file.size,
             'data-type': file.type,
@@ -288,22 +353,90 @@ class VGFiles extends BaseModule {
     /**
      * Обновление счётчика файлов и общего размера
      */
-    _updateCounter() {
+    _updateCounter(isAjax = false) {
         if (!this._nodes.wrapper) return;
 
         const $count = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-count`, this._nodes.info);
         if (!$count) return;
 
+        const $reset = Selectors.find(SELECTOR_DATA_DISMISS_ALL, this._nodes.wrapper);
+        if ($reset) {
+            if (isAjax) {
+                Manipulator.set($reset, 'disabled', 'disabled');
+            } else {
+                Manipulator.remove($reset, 'disabled');
+            }
+        }
+
         const totalSize = this._getSizes(this._files, true);
         $count.innerHTML = this._files.length
             ? `${this._files.length}<span>[${totalSize}]</span>`
             : '';
+
+        if (this._params.ajax) {
+            const $stat = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat`, this._nodes.info);
+            if (!$stat) return;
+            this._renderStat();
+        }
+    }
+
+    _renderStat() {
+        if (!this._nodes.info) return;
+
+        const $stat = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat`, this._nodes.info);
+        if (!$stat) return;
+
+        let $statList = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list`, $stat);
+        if (!$statList) {
+            $statList = this._tpl.ul([
+                this._tpl.li({
+                    class: 'stat-item pending',
+                    'data-count': '0',
+                    'title': lang_messages(this._params.lang, NAME)['pending']
+                }, [
+                    this._tpl.span({ class: 'stat-label' }, getSVG('cloud-dot'), { isHTML: true }),
+                    this._tpl.span({ class: 'stat-value' }, 0),
+                ]),
+                this._tpl.li({
+                    class: 'stat-item completed',
+                    'data-count': '0',
+                    'title': lang_messages(this._params.lang, NAME)['completed']
+                }, [
+                    this._tpl.span({ class: 'stat-label' }, getSVG('cloud-dot'), { isHTML: true }),
+                    this._tpl.span({ class: 'stat-value' }, 0),
+                ]),
+                this._tpl.li({
+                    class: 'stat-item failing',
+                    'data-count': '0',
+                    'title': lang_messages(this._params.lang, NAME)['failing']
+                }, [
+                    this._tpl.span({ class: 'stat-label' }, getSVG('cloud-dot'), { isHTML: true }),
+                    this._tpl.span({ class: 'stat-value' }, 0),
+                ])
+            ], { class: CLASS_NAME_INFO_WRAPPER + '-stat-list' });
+            $stat.appendChild($statList);
+        }
+    }
+
+    _getStatItem(status) {
+        return Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list li.${status}`, this._nodes.wrapper);
+    }
+
+    _setStatItem(status, count) {
+        const $item = this._getStatItem(status);
+        if (!$item) return;
+        Manipulator.set($item, 'data-count', count);
+
+        const $statValue = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list li.${status} .stat-value`, this._nodes.wrapper);
+        if ($statValue) {
+            $statValue.innerHTML = count;
+        }
     }
 
     /**
      * Отображение списка файлов
      */
-    _renderInfoList(files) {
+    _renderInfoList(files, isAjax) {
         if (!this._nodes.info) return;
 
         let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
@@ -355,7 +488,7 @@ class VGFiles extends BaseModule {
             // Добавляем кнопку удаления, если разрешено
             if (this._params.detach) {
                 const $fileRemove = this._tpl.div({ class: 'file-remove' }, [
-                    this._setButtonElement(file)
+                    this._setButtonElement(file, isAjax)
                 ])
                 $li.appendChild($fileRemove);
             }
@@ -420,29 +553,26 @@ class VGFiles extends BaseModule {
             this._uploadedKeys.delete(key);
         }
 
-        if (!id) {
-            id = this._getItemElement().map(el => {
-                let button = Selectors.find('button', el), id = '', size = '', name = '';
-                if (button) {
-                    id = normalizeData(Manipulator.get(button, 'data-id'));
-                    name = normalizeData(Manipulator.get(button, 'data-name'));
-                    size = normalizeData(Manipulator.get(button, 'data-size'));
+        this._getItemElement().map(el => {
+            let button = Selectors.find('button', el), id = '', size = '', name = '';
+            if (button) {
+                id = normalizeData(Manipulator.get(button, 'data-id'));
+                name = normalizeData(Manipulator.get(button, 'data-name'));
+                size = normalizeData(Manipulator.get(button, 'data-size'));
+            }
+
+            this._files.map(file => {
+                if (file.name === name && file.size === size) {
+                    file.id = id;
                 }
-
-                this._files.map(file => {
-                    if (file.name === name && file.size === size) {
-                        file.id = id;
-                    }
-                });
-
-                if (fileToRemove?.name === name && fileToRemove?.size === size) {
-                    fileToRemove.id = id;
-                    return id;
-                }
-
-                return '';
             });
-        }
+
+            if (fileToRemove?.name === name && fileToRemove?.size === size) {
+                fileToRemove.id = id;
+            }
+        });
+
+        if (!id) return;
 
         if (this._params.ajax && id && this._params.removes.single.route) {
             const paramsAjax = {

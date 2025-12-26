@@ -280,6 +280,8 @@ class FileUploader {
 
 	getStats() {
 		const all = Array.from(this.uploads.values());
+		const totalSize = all.reduce((sum, u) => sum + (u.file?.size || 0), 0);
+
 		return {
 			total: all.length,
 			active: this.activeCount,
@@ -290,8 +292,25 @@ class FileUploader {
 			cancelled: all.filter(u => u.status === 'cancelled').length,
 			mode: this.mode,
 			isPaused: this.isPaused,
-			queueLength: this.queue.length
+			queueLength: this.queue.length,
+			totalSizeFormatted: (totalSize / (1024 * 1024)).toFixed(2) + ' MB'
 		};
+	}
+
+	printDebugStats() {
+		const stats = this.getStats();
+		console.group('--- Uploader Statistics ---');
+		console.table({
+			'Mode': stats.mode,
+			'Status': stats.isPaused ? 'Paused' : 'Running',
+			'Total Files': stats.total,
+			'Uploading': stats.uploading,
+			'Completed': stats.completed,
+			'Failed': stats.failed,
+			'Queue': stats.queueLength
+		});
+		console.log(`Total Size: ${stats.totalSizeFormatted}`);
+		console.groupEnd();
 	}
 
 	generateId() {

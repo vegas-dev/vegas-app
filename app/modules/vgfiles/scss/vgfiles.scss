@@ -135,7 +135,6 @@
 			display: flex;
 			gap: 1rem;
 			align-items: center;
-			justify-content: space-between;
 
 			&-title {
 				color: var(--vg-success);
@@ -152,6 +151,8 @@
 			}
 
 			&-dismiss {
+				margin-left: auto;
+
 				a {
 					--vg-color-link: var(--vg-secondary);
 					display: flex;
@@ -161,6 +162,11 @@
 					text-decoration: none;
 					color: var(--vg-color-link);
 					font-size: 16px;
+
+					&[disabled] {
+						pointer-events: none;
+						opacity: .5;
+					}
 
 					&:hover {
 						--vg-color-link: var(--vg-body-color);
@@ -173,6 +179,74 @@
 
 							path {
 								fill: var(--vg-color-link);
+							}
+						}
+					}
+				}
+			}
+
+			&-stat {
+				&-list {
+					display: flex;
+					gap: 4px;
+					list-style: none;
+					padding: 0;
+					margin: 0;
+					font-size: 14px;
+					color: var(--vg-secondary);
+
+					.stat-item {
+						display: flex;
+						align-items: center;
+						gap: 2px;
+
+						&.pending {
+							.stat-label {
+								svg {
+									path.dot {
+										animation: flash 1s linear infinite;
+									}
+								}
+							}
+						}
+
+						&.pending[data-count="0"] {
+							.stat-label {
+								svg {
+									path.dot {
+										animation: none;
+									}
+								}
+							}
+						}
+
+						&.completed:not([data-count="0"]) {
+							.stat-label {
+								svg {
+									path.dot {
+										fill: var(--vg-success);
+										opacity: .72;
+									}
+								}
+							}
+						}
+
+						&.failing:not([data-count="0"]) {
+							.stat-label {
+								svg {
+									path.dot {
+										fill: var(--vg-danger);
+										opacity: .72;
+									}
+								}
+							}
+						}
+					}
+
+					.stat-label {
+						svg {
+							path {
+								fill: var(--vg-secondary-bg);
 							}
 						}
 					}
@@ -228,6 +302,7 @@
 			}
 
 			.file {
+				--vg-button-color: var(--vg-secondary);
 				display: flex;
 				align-items: center;
 				gap: var(--vg-files-gap);
@@ -242,6 +317,10 @@
 
 				&:hover {
 					background-color: rgba(var(--vg-secondary-bg-rgb), .4);
+				}
+
+				> * {
+					transition: all .2s ease-in-out;
 				}
 
 				&-image {
@@ -294,7 +373,6 @@
 					margin-left: auto;
 
 					button {
-						--vg-button-color: var(--vg-secondary);
 						width: var(--vg-files-remove-width);
 						height: var(--vg-files-remove-height);
 						border: none;
@@ -306,17 +384,26 @@
 						align-items: center;
 						justify-content: center;
 						transition: all .2s ease-in-out;
+						position: relative;
 
 						&:hover {
 							--vg-button-color: var(--vg-danger);
 						}
 
-						svg {
-							width: 16px;
-							height: 16px;
+						i {
 
-							path {
-								fill: var(--vg-button-color);
+
+							svg {
+								width: 16px;
+								height: 16px;
+								position: absolute;
+								left: 50%;
+								top: 50%;
+								transform: translate(-50%, -50%);
+
+								path {
+									fill: var(--vg-button-color);
+								}
 							}
 						}
 					}
@@ -327,6 +414,50 @@
 						.iteration {
 							display: block;
 						}
+					}
+				}
+
+				&.pending {
+					> * {
+						opacity: .32;
+						pointer-events: none;
+					}
+				}
+
+				&.loading {
+					--vg-button-color: var(--vg-body-color);
+
+					> *:not(.file-remove) {
+						opacity: .52;
+						pointer-events: none;
+					}
+
+					.file-remove {
+						opacity: 1;
+						pointer-events: none;
+
+						button {
+							i {
+								animation: spinner 1s linear infinite;
+							}
+						}
+					}
+				}
+
+				&.completed {
+					--vg-button-color: var(--vg-success);
+				}
+
+				&.failing {
+					--vg-button-color: var(--vg-danger);
+
+					> * {
+						opacity: .62;
+					}
+
+					.file-remove {
+						pointer-events: none;
+						opacity: 1;
 					}
 				}
 			}
@@ -388,4 +519,9 @@
 @keyframes flash {
 	0%, 100% { opacity: 1; }
 	50% { opacity: 0; }
+}
+
+@keyframes spinner {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
 }
