@@ -83,6 +83,7 @@
 
 			&:hover {
 				animation: none;
+				background-image: none;
 			}
 		}
 
@@ -153,7 +154,7 @@
 			}
 		}
 
-		&-list {
+		&--list {
 			display: flex;
 			align-items: center;
 			gap: 8px;
@@ -170,7 +171,7 @@
 				border-radius: 6px;
 				position: relative;
 				overflow: hidden;
-				flex: 0 0 calc(25% - 1.5rem);
+				flex: 0 0 calc(25% - 6px);
 				height: 100px;
 
 				.file-image {
@@ -317,6 +318,7 @@
 		display: flex;
 		gap: 1rem;
 		align-items: center;
+		margin-bottom: 1rem;
 
 		&:not(.show) {
 			display: none;
@@ -371,7 +373,7 @@
 			}
 		}
 
-		&-stat {
+		&-progress {
 			&-list {
 				display: flex;
 				gap: 4px;
@@ -444,6 +446,10 @@
 		margin-top: 1rem;
 		border: 1px solid var(--vg-secondary-bg);
 		border-radius: 4px;
+
+		&:not(.show) {
+			display: none;
+		}
 
 		&--list {
 			padding: 0;

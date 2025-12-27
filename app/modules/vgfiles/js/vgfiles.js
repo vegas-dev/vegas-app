@@ -24,12 +24,11 @@ const SELECTOR_DATA_DISMISS_ALL = '[data-vg-dismiss="vg-files"]';
 const SELECTOR_DATA_FAKE = '[data-vg-files="generated"]';
 
 const CLASS_NAME_CONTAINER = 'vg-files';
+const CLASS_NAME_STAT = `${CLASS_NAME_CONTAINER}-stat`;
 const CLASS_NAME_INFO = `${CLASS_NAME_CONTAINER}-info`;
-const CLASS_NAME_INFO_WRAPPER = `${CLASS_NAME_CONTAINER}-info--wrapper`;
-const CLASS_NAME_IMAGES = `${CLASS_NAME_INFO}--images`;
-const CLASS_NAME_LIST = `${CLASS_NAME_INFO}--list`;
+const CLASS_NAME_INFO_LIST = `${CLASS_NAME_INFO}--list`;
 const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
-const CLASS_NAME_DROP_LIST = `${CLASS_NAME_CONTAINER}-drop-list`;
+const CLASS_NAME_DROP_LIST = `${CLASS_NAME_CONTAINER}-drop--list`;
 const CLASS_NAME_ERRORS = `${CLASS_NAME_CONTAINER}-errors`;
 const CLASS_NAME_PENDING  = 'pending';
 const CLASS_NAME_LOADING = 'loading';
@@ -110,10 +109,12 @@ class VGFiles extends BaseModule {
         this._uploader = null;
 
         this._nodes = {
+            stat: Selectors.find(`.${CLASS_NAME_STAT}`, this._element),
             info: Selectors.find(`.${CLASS_NAME_INFO}`, this._element),
+            infoList: Selectors.find(`.${CLASS_NAME_INFO_LIST}`, this._element),
             drop: Selectors.find(`.${CLASS_NAME_DROP}`, this._element),
+            dropList: Selectors.find(`.${CLASS_NAME_DROP_LIST}`, this._element),
             dropMessage: Selectors.find(`.${CLASS_NAME_DROP}-message`, this._element),
-            wrapper: Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}`, this._element)
         };
 
         if (this._params.ajax) {
@@ -153,8 +154,7 @@ class VGFiles extends BaseModule {
      * Полная перестройка интерфейса
      */
     build() {
-        if (!this._nodes.info) return;
-        this._updateCounter();
+        this._updateStat();
         this.change();
     }
 
@@ -171,6 +171,8 @@ class VGFiles extends BaseModule {
         const processedFiles = this.append(incomingFiles);
 
         if (processedFiles.length) {
+            this._updateStat();
+
             if (this._params.ajax) {
                 this.uploadAll(processedFiles);
             } else {
@@ -178,8 +180,7 @@ class VGFiles extends BaseModule {
                 this._renderUI(processedFiles);
 
                 if (this._params.allowed) {
-                    Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
-                    this._cleanupFakeInputs();
+                    this._cleanupFakeInputs(this._params.allowed);
                     this._cleanupErrors();
                     this._files = [];
                 }
@@ -233,8 +234,6 @@ class VGFiles extends BaseModule {
 
         this._setStatItem('pending', this._pendingUploadedKeys.size);
         this._renderUI(this._files);
-
-        if (!this._nodes.drop) this._updateCounter(true);
 
         const uploadParams = {
             additionalData: {
@@ -324,6 +323,8 @@ class VGFiles extends BaseModule {
             this._uploader.off('error');
             this._uploader.off('allComplete');
         }
+
+        this._updateStat(true)
 
         this._uploader.onProgress((uploadData) => {
             const file = uploadData.file;
@@ -425,8 +426,8 @@ class VGFiles extends BaseModule {
         });
 
         this._uploader.onAllComplete(() => {
-            this._updateCounter();
             EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
+            this._updateStat(false)
 
             // Вызов колбека завершения всех загрузок
             this._triggerCallback('onUploadAllComplete', {
@@ -481,7 +482,7 @@ class VGFiles extends BaseModule {
      * Получение элемента файла по данным
      */
     _getItemElement(file = null) {
-        let className = CLASS_NAME_LIST;
+        let className = CLASS_NAME_INFO_LIST;
         if (this._nodes.drop) className = CLASS_NAME_DROP;
 
         if (!file) {
@@ -548,7 +549,6 @@ class VGFiles extends BaseModule {
             if (!this._nodes.info) return;
 
             Classes.add(this._nodes.info, 'show');
-            this._updateCounter();
             this._renderInfoList(files);
 
             if (this._params.ajax) {
@@ -629,15 +629,14 @@ class VGFiles extends BaseModule {
     /**
      * Обновление счётчика файлов и общего размера
      */
-    _updateCounter(isAjax = false) {
-        if (!this._nodes.wrapper) return;
+    _updateStat(isLoad = false) {
+        if (!this._nodes.stat) return;
 
-        const $count = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-count`, this._nodes.info);
-        if (!$count) return;
+        Classes.add(this._nodes.stat, 'show');
 
-        const $reset = Selectors.find(SELECTOR_DATA_DISMISS_ALL, this._nodes.wrapper);
+        const $reset = Selectors.find(SELECTOR_DATA_DISMISS_ALL, this._nodes.stat);
         if ($reset) {
-            if (isAjax) {
+            if (isLoad) {
                 Manipulator.set($reset, 'disabled', 'disabled');
             } else {
                 Manipulator.remove($reset, 'disabled');
@@ -645,24 +644,25 @@ class VGFiles extends BaseModule {
         }
 
         const totalSize = this._getSizes(this._files, true);
+
+        const $count = Selectors.find(`.${CLASS_NAME_STAT}-count`, this._nodes.stat);
+        if (!$count) return;
         $count.innerHTML = this._files.length
             ? `${this._files.length}<span>[${totalSize}]</span>`
             : '';
 
         if (this._params.ajax) {
-            const $stat = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat`, this._nodes.info);
-            if (!$stat) return;
             this._renderStat();
         }
     }
 
     _renderStat() {
-        if (!this._nodes.info) return;
+        if (!this._nodes.stat) return;
 
-        const $stat = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat`, this._nodes.info);
-        if (!$stat) return;
+        const $progress = Selectors.find(`.${CLASS_NAME_STAT}-progress`, this._nodes.stat);
+        if (!$progress) return;
 
-        let $statList = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list`, $stat);
+        let $statList = Selectors.find(`.${CLASS_NAME_STAT}-progress-list`, $progress);
         if (!$statList) {
             $statList = this._tpl.ul([
                 this._tpl.li({
@@ -689,14 +689,14 @@ class VGFiles extends BaseModule {
                     this._tpl.span({ class: 'stat-label' }, getSVG('cloud-dot'), { isHTML: true }),
                     this._tpl.span({ class: 'stat-value' }, 0),
                 ])
-            ], { class: CLASS_NAME_INFO_WRAPPER + '-stat-list' });
-            $stat.appendChild($statList);
+            ], { class: CLASS_NAME_STAT + '-progress-list' });
+            $progress.appendChild($statList);
         }
     }
 
     _getStatItem(status) {
-        if (this._nodes.wrapper) {
-            return Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list li.${status}`, this._nodes.wrapper);
+        if (this._nodes.stat) {
+            return Selectors.find(`.${CLASS_NAME_STAT}-progress-list li.${status}`, this._nodes.stat);
         }
     }
 
@@ -705,7 +705,7 @@ class VGFiles extends BaseModule {
         if (!$item) return;
         Manipulator.set($item, 'data-count', count);
 
-        const $statValue = Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list li.${status} .stat-value`, this._nodes.wrapper);
+        const $statValue = Selectors.find(`.${CLASS_NAME_STAT}-progress-list li.${status} .stat-value`, this._nodes.stat);
         if ($statValue) {
             $statValue.innerHTML = count;
         }
@@ -717,9 +717,11 @@ class VGFiles extends BaseModule {
     _renderInfoList(files, isAjax) {
         if (!this._nodes.info) return;
 
-        let $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+        Classes.add(this._nodes.info, 'show')
+
+        let $list = Selectors.find(`.${CLASS_NAME_INFO_LIST}`, this._element);
         if (!$list) {
-            $list = this._tpl.ul([], { class: CLASS_NAME_LIST });
+            $list = this._tpl.ul([], { class: CLASS_NAME_INFO_LIST });
             this._nodes.info.append($list);
         }
 
@@ -888,7 +890,6 @@ class VGFiles extends BaseModule {
 
             const _completeRemoveFile = (data) => {
                 this._files = this._files.filter(f => !(f.name === name && f.size === size));
-                this._updateCounter();
                 this._updateStatsAfterRemove();
 
                 if (this._files.length) {
@@ -933,7 +934,6 @@ class VGFiles extends BaseModule {
             }
         } else {
             this._files = this._files.filter(f => !(f.name === name && f.size === size));
-            this._updateCounter();
             this._updateStatsAfterRemove();
             this._files.length ? this.build() : this.clear(true);
         }
@@ -962,7 +962,7 @@ class VGFiles extends BaseModule {
         this._setStatItem('failing', this._failingUploadedKeys.size);
 
         // Также обновляем общий счётчик файлов и размер
-        this._updateCounter();
+        this._updateStat();
     }
 
     /**
@@ -1030,7 +1030,11 @@ class VGFiles extends BaseModule {
     /**
      * Очистка сгенерированных input'ов
      */
-    _cleanupFakeInputs() {
+    _cleanupFakeInputs(isAllowed = false) {
+        if (isAllowed) {
+            Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
+        }
+
         Selectors.findAll(SELECTOR_DATA_FAKE, this._element).forEach(el => el.remove());
     }
 
@@ -1133,11 +1137,13 @@ class VGFiles extends BaseModule {
                 Classes.add(this._nodes.dropMessage, 'show');
                 Classes.remove(this._nodes.drop, 'active');
             } else {
-                [`.${CLASS_NAME_LIST}`].forEach(selector => {
+                [`.${CLASS_NAME_INFO_LIST}`].forEach(selector => {
                     const el = Selectors.find(selector, this._element);
                     if (el) el.innerHTML = '';
                 });
             }
+
+            if (this._nodes.stat) Classes.remove(this._nodes.stat, 'show');
         };
 
         if (!this._params.ajax && !this._uploadedKeys.size) {
@@ -1150,7 +1156,7 @@ class VGFiles extends BaseModule {
                 const getFilesLoaded = () => {
                     const files = [];
 
-                    let className = CLASS_NAME_LIST;
+                    let className = CLASS_NAME_INFO_LIST;
                     if (this._nodes.drop) className = CLASS_NAME_DROP_LIST;
 
                     Selectors.findAll(`.${className} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
@@ -1229,16 +1235,17 @@ class VGFiles extends BaseModule {
                 this._files = [];
                 this._uploadedKeys.clear();
 
-
                 if (this._nodes.info) {
                     Classes.remove(this._nodes.info, 'show');
                 } else if (this._nodes.drop) {
-                    const $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+                    const $list = Selectors.find(`.${CLASS_NAME_DROP_LIST}`, this._element);
                     if ($list) $list.remove();
 
                     Classes.add(this._nodes.dropMessage, 'show');
                     Classes.remove(this._nodes.drop, 'active');
                 }
+
+                if (this._nodes.stat) Classes.remove(this._nodes.stat, 'show');
             }
         }
 
