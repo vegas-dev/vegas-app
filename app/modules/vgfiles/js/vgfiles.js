@@ -16,7 +16,9 @@ import VGToast from "../../vgtoast";
  */
 const NAME = 'files';
 const NAME_KEY = 'vg.files';
+
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="files"]';
+const SELECTOR_DATA_RELOAD = '[data-vg-reload="file"]';
 const SELECTOR_DATA_DISMISS = '[data-vg-dismiss="file"]';
 const SELECTOR_DATA_DISMISS_ALL = '[data-vg-dismiss="vg-files"]';
 const SELECTOR_DATA_FAKE = '[data-vg-files="generated"]';
@@ -37,13 +39,14 @@ const CLASS_NAME_COMPLETED = 'completed';
 const EVENT_KEY_CHANGE = `${NAME_KEY}.change`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 const EVENT_KEY_DISMISS_DATA_API = `click.${NAME_KEY}.data.api`;
+const EVENT_KEY_RELOAD_DATA_API = `click.${NAME_KEY}.data.api`;
 
 class VGFiles extends BaseModule {
     constructor(element, params = {}) {
         super(element, params);
 
         this._params = this._getParams(this._element, mergeDeepObject({
-            allowed: true,
+            allowed: false,
             lang: document.documentElement.lang || 'ru',
             limits: {
                 count: 0,
@@ -60,7 +63,7 @@ class VGFiles extends BaseModule {
                 route: '', // Ссылка на сервер загрузки файлов
                 maxParallel: 3, // Количество файлов при параллельной загрузке
                 maxConcurrent: 1, // Количество файлов при последовательной загрузке
-                retryAttempts: 3, // Повтор неудачных отправок
+                retryAttempts: 1, // Повтор неудачных отправок
                 retryDelay: 1000, // Задержка при повторной отправке
             },
             removes: {
@@ -89,6 +92,7 @@ class VGFiles extends BaseModule {
         this._uploadedKeys = new Set();
         this._failingUploadedKeys = new Set();
         this._pendingUploadedKeys = new Set();
+        this._unUploadedFiles = [];
         this._uploader = null;
 
         this._nodes = {
@@ -96,6 +100,14 @@ class VGFiles extends BaseModule {
             drop: Selectors.find(`.${CLASS_NAME_DROP}`, this._element),
             wrapper: Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}`, this._element)
         };
+
+        if (this._params.ajax) {
+            this._params.allowed = false;
+        }
+
+        if (this._params.allowed && !this._params.ajax) {
+            this._params.detach = false;
+        }
 
         this._init();
         this._addEventListener();
@@ -108,10 +120,6 @@ class VGFiles extends BaseModule {
      * Инициализация компонента
      */
     _init() {
-        if (this._params.ajax) {
-            this._params.allowed = true;
-        }
-
         this._preventOriginalInputFromSubmit();
         if (this._nodes.drop) new Droper(this._nodes.drop, this._params).init();
     }
@@ -133,7 +141,6 @@ class VGFiles extends BaseModule {
         if (!incomingFiles.length || (input?.files && input.files.length === 0)) return;
 
         if (!this._params.ajax) this.clear();
-        if (!this._params.allowed) return;
 
         this._cleanupErrors();
         const processedFiles = this.append(incomingFiles);
@@ -144,6 +151,13 @@ class VGFiles extends BaseModule {
             } else {
                 this._generateHiddenInputs(processedFiles);
                 this._renderUI(processedFiles);
+
+                if (this._params.allowed) {
+                    Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
+                    this._cleanupFakeInputs();
+                    this._cleanupErrors();
+                    this._files = [];
+                }
             }
         }
 
@@ -156,104 +170,39 @@ class VGFiles extends BaseModule {
     async uploadAll(files) {
         if (!this._params.ajax || !this._params.uploads.route) return;
 
-        if (!this._uploadedKeys.size) this._failingUploadedKeys.clear();
+        // Очищаем состояние ошибок при новом цикле загрузки
+        if (!this._uploadedKeys.size) {
+            this._failingUploadedKeys.clear();
+        }
 
+        // Фильтруем только те файлы, которые ещё не были загружены
         const notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
         if (!notUploadedFiles.length) return;
 
-        this._uploader = new FileUploader({
-            mode: this._params.uploads.mode,
-            maxConcurrent: this._params.uploads.maxConcurrent,
-            maxParallel: this._params.uploads.maxParallel,
-            retryAttempts: this._params.uploads.retryAttempts,
-            retryDelay: this._params.uploads.retryDelay
+        // Инициализация uploader'а
+        if (!this._uploader || this._uploader.isIdle()) {
+            this._uploader = new FileUploader({
+                mode: this._params.uploads.mode,
+                maxConcurrent: this._params.uploads.maxConcurrent,
+                maxParallel: this._params.uploads.maxParallel,
+                retryAttempts: this._params.uploads.retryAttempts,
+                retryDelay: this._params.uploads.retryDelay
+            });
+
+            // Настройка обработчиков событий один раз
+            this._setupUploadEventHandlers();
+        }
+
+        // Добавляем файлы в очередь ожидания
+        notUploadedFiles.forEach(file => {
+            const fileKey = this._getFileKey(file);
+            this._pendingUploadedKeys.add(fileKey);
+            this._unUploadedFiles = this._unUploadedFiles.filter(f => this._getFileKey(f) !== fileKey);
         });
 
-
+        this._setStatItem('pending', this._pendingUploadedKeys.size);
         this._renderUI(this._files);
         this._updateCounter(true);
-
-        notUploadedFiles.forEach(file => this._pendingUploadedKeys.add(this._getFileKey(file)))
-        this._setStatItem('pending', this._pendingUploadedKeys.size);
-
-        this._uploader.onProgress((uploadData) => {
-            const $item = this._getItemElement(uploadData.file);
-            Classes.add($item, CLASS_NAME_LOADING);
-
-            const button = this._getButtonElement(uploadData.file);
-            if (isElement(button)) {
-                let li = button.closest(`li`);
-                if (li) {
-                    this._setButtonElement(uploadData.file);
-
-                    let fileRemove = Selectors.find('.file-remove', li);
-                    if (fileRemove) {
-                        fileRemove.innerHTML = '';
-                        fileRemove.appendChild(this._setButtonElement(uploadData.file, true));
-                    }
-                }
-            }
-        });
-
-        this._uploader.onComplete((uploadData) => {
-            if (!this._uploadedKeys.has(this._getFileKey(uploadData.file))) {
-                const $item = this._getItemElement(uploadData.file);
-
-                Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED);
-                Classes.remove($item, CLASS_NAME_PENDING);
-
-                const button = this._getButtonElement(uploadData.file);
-                const id = normalizeData(uploadData.result.response.id) || uploadData.id || uploadData.file.lastModified;
-                uploadData.file.id = id;
-
-                if (isElement(button) && id) {
-                    let li = button.closest(`li`);
-                    if (li) {
-                        Manipulator.set(li, 'data-id', id);
-                        this._setButtonElement(uploadData.file);
-
-                        let fileRemove = Selectors.find('.file-remove', li);
-                        if (fileRemove) {
-                            fileRemove.innerHTML = '';
-                            fileRemove.appendChild(this._setButtonElement(uploadData.file, true, 'completed'));
-                            Classes.add(li, CLASS_NAME_COMPLETED);
-
-                            setTimeout(() => {
-                                fileRemove.innerHTML = '';
-                                fileRemove.appendChild(this._setButtonElement(uploadData.file));
-                                Classes.remove(li, CLASS_NAME_COMPLETED);
-                            }, 1000)
-                        }
-                    }
-                }
-            }
-
-            this._uploadedKeys.add(this._getFileKey(uploadData.file));
-            this._failingUploadedKeys.delete(this._getFileKey(uploadData.file));
-            this._pendingUploadedKeys.delete(this._getFileKey(uploadData.file));
-
-            this._setStatItem('completed', this._uploadedKeys.size);
-            this._setStatItem('pending', this._pendingUploadedKeys.size);
-        });
-
-        this._uploader.onError((uploadData, error) => {
-            this._uploadedKeys.delete(this._getFileKey(uploadData.file));
-            const $item = this._getItemElement(uploadData.file);
-
-            this._failingUploadedKeys.add(this._getFileKey(uploadData.file));
-            this._pendingUploadedKeys.delete(this._getFileKey(uploadData.file));
-
-            Classes.remove($item, CLASS_NAME_PENDING);
-            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING);
-
-            this._setStatItem('failing', this._failingUploadedKeys.size);
-            this._setStatItem('pending', this._pendingUploadedKeys.size);
-        });
-
-        this._uploader.onAllComplete(() => {
-            if (this._uploadedKeys.size) this._updateCounter()
-            EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
-        });
 
         const uploadParams = {
             additionalData: {
@@ -267,6 +216,199 @@ class VGFiles extends BaseModule {
         } catch (error) {
             console.error('Bulk upload failed:', error);
         }
+    }
+
+    /**
+     * Асинхронная загрузка файла
+     */
+    async upload(file) {
+        if (!this._params.ajax || !this._params.uploads.route) return;
+
+        // Создаем uploader только если его ещё нет или предыдущий завершил работу
+        if (!this._uploader || this._uploader.isIdle()) {
+            this._uploader = new FileUploader({
+                mode: this._params.uploads.mode,
+                maxConcurrent: this._params.uploads.maxConcurrent,
+                maxParallel: this._params.uploads.maxParallel,
+                retryAttempts: this._params.uploads.retryAttempts,
+                retryDelay: this._params.uploads.retryDelay
+            });
+        }
+
+        const fileKey = this._getFileKey(file);
+
+        // Убедимся, что файл в списке ожидания
+        if (!this._pendingUploadedKeys.has(fileKey)) {
+            this._pendingUploadedKeys.add(fileKey);
+            this._setStatItem('pending', this._pendingUploadedKeys.size);
+        }
+
+        // Убираем из unUploadedFiles, если был там
+        this._unUploadedFiles = this._unUploadedFiles.filter(f => this._getFileKey(f) !== fileKey);
+
+        // Обновляем UI: устанавливаем состояние "loading"
+        const $item = this._getItemElement(file);
+        if ($item) {
+            Classes.remove($item, CLASS_NAME_FAILING);
+            Classes.add($item, CLASS_NAME_LOADING);
+            Classes.add($item, CLASS_NAME_PENDING);
+        }
+
+        // Настройка событий загрузки
+        this._setupUploadEventHandlers(file);
+
+        const uploadParams = {
+            additionalData: {
+                timestamp: new Date().toISOString(),
+                source: 'web_uploader'
+            }
+        };
+
+        try {
+            await this._uploader.uploadFiles([file], this._params.uploads.route, uploadParams);
+        } catch (error) {
+            console.error('Upload failed:', error);
+            // Ошибка будет обработана через onError callback
+        }
+    }
+
+    /**
+     * Вспомогательный метод: настройка обработчиков событий загрузки
+     */
+    _setupUploadEventHandlers() {
+        // Очищаем старые обработчики, если нужно
+        if (typeof this._uploader.offAll === 'function') {
+            this._uploader.offAll();
+        } else {
+            // Ручная отвязка всех возможных событий, если offAll недоступен
+            this._uploader.off('progress');
+            this._uploader.off('complete');
+            this._uploader.off('error');
+            this._uploader.off('allComplete');
+        }
+
+        this._uploader.onProgress((uploadData) => {
+            const file = uploadData.file;
+            const $item = this._getItemElement(file);
+            if (!$item) return;
+
+            Classes.add($item, CLASS_NAME_LOADING);
+            Classes.add($item, CLASS_NAME_PENDING);
+
+            const button = this._getButtonElement(file);
+            if (isElement(button)) {
+                const li = button.closest('li');
+                if (li) {
+                    const fileRemove = Selectors.find('.file-remove', li);
+                    if (fileRemove) {
+                        fileRemove.innerHTML = '';
+                        fileRemove.appendChild(this._setButtonElement(file, true));
+                    }
+                }
+            }
+        });
+
+        this._uploader.onComplete((uploadData) => {
+            const file = uploadData.file;
+            const fileKey = this._getFileKey(file);
+            const $item = this._getItemElement(file);
+
+            if (!$item) return;
+
+            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_LOADED);
+            Classes.remove($item, CLASS_NAME_PENDING);
+
+            const button = this._getButtonElement(file);
+            const id = normalizeData(uploadData.result?.response?.id) || uploadData.id || file.lastModified;
+            file.id = id;
+
+            if (isElement(button) && id) {
+                const li = button.closest('li');
+                if (li) {
+                    Manipulator.set(li, 'data-id', id);
+                    this._setButtonElement(file);
+
+                    const fileRemove = Selectors.find('.file-remove', li);
+                    if (fileRemove) {
+                        fileRemove.innerHTML = '';
+                        fileRemove.appendChild(this._setButtonElement(file, true, 'completed'));
+                        Classes.add(li, CLASS_NAME_COMPLETED);
+
+                        setTimeout(() => {
+                            fileRemove.innerHTML = '';
+                            fileRemove.appendChild(this._setButtonElement(file));
+                            Classes.remove(li, CLASS_NAME_COMPLETED);
+                        }, 1000);
+                    }
+                }
+            }
+
+            this._uploadedKeys.add(fileKey);
+            this._failingUploadedKeys.delete(fileKey);
+            this._pendingUploadedKeys.delete(fileKey);
+
+            this._setStatItem('completed', this._uploadedKeys.size);
+            this._setStatItem('pending', this._pendingUploadedKeys.size);
+        });
+
+        this._uploader.onError((uploadData, error) => {
+            const file = uploadData.file;
+            const fileKey = this._getFileKey(file);
+            const $item = this._getItemElement(file);
+
+            if (!$item) return;
+
+            this._uploadedKeys.delete(fileKey);
+            this._failingUploadedKeys.add(fileKey);
+            this._pendingUploadedKeys.delete(fileKey);
+            this._unUploadedFiles.push(file);
+
+            Classes.remove($item, CLASS_NAME_PENDING);
+            Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING);
+
+            this._setStatItem('failing', this._failingUploadedKeys.size);
+            this._setStatItem('pending', this._pendingUploadedKeys.size);
+        });
+
+        this._uploader.onAllComplete(() => {
+            this._updateCounter();
+            EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
+        });
+    }
+
+
+    /**
+     * Метод для повторной загрузки файла
+     */
+    reload(button) {
+        if (!this._params.ajax || !this._params.uploads.route) return;
+
+        const dataButton = Manipulator.get(button, 'data');
+        const fileData = {
+            name: dataButton.name,
+            size: dataButton.size,
+            type: dataButton.type,
+            lastModified: dataButton['last-modified']
+        };
+
+        // Проверяем, что файл действительно находится в списке неудачных
+        const fileKey = this._getFileKey(fileData);
+        if (!this._failingUploadedKeys.has(fileKey)) return;
+
+        // Ищем оригинальный File объект в списке незагруженных
+        const fileToRetry = this._unUploadedFiles.find(f => this._getFileKey(f) === fileKey);
+        if (!fileToRetry) return;
+
+        // Убираем из failing, добавляем в pending
+        this._failingUploadedKeys.delete(fileKey);
+        this._pendingUploadedKeys.add(fileKey);
+
+        // Обновляем статистику
+        this._setStatItem('failing', this._failingUploadedKeys.size);
+        this._setStatItem('pending', this._pendingUploadedKeys.size);
+
+        // Запускаем повторную загрузку
+        this.upload(fileToRetry);
     }
 
     /**
@@ -323,6 +465,7 @@ class VGFiles extends BaseModule {
             'data-name': file.name,
             'data-size': file.size,
             'data-type': file.type,
+            'data-last-modified': file.lastModified,
             'data-id': file.id || ''
         });
     }
@@ -547,20 +690,22 @@ class VGFiles extends BaseModule {
     removeFile(button) {
         const name = normalizeData(Manipulator.get(button, 'data-name'));
         const size = normalizeData(Manipulator.get(button, 'data-size'));
-        let id   = normalizeData(Manipulator.get(button, 'data-id'));
+        let id = normalizeData(Manipulator.get(button, 'data-id'));
 
         const fileToRemove = this._files.find(f => f.name === name && f.size === size);
         if (fileToRemove) {
             const key = this._getFileKey(fileToRemove);
             this._uploadedKeys.delete(key);
+            this._pendingUploadedKeys.delete(key);
+            this._failingUploadedKeys.delete(key);
         }
 
         this._getItemElement().map(el => {
-            let button = Selectors.find('button', el), id = '', size = '', name = '';
-            if (button) {
-                id = normalizeData(Manipulator.get(button, 'data-id'));
-                name = normalizeData(Manipulator.get(button, 'data-name'));
-                size = normalizeData(Manipulator.get(button, 'data-size'));
+            let btn = Selectors.find('button', el), id = '', size = '', name = '';
+            if (btn) {
+                id = normalizeData(Manipulator.get(btn, 'data-id'));
+                name = normalizeData(Manipulator.get(btn, 'data-name'));
+                size = normalizeData(Manipulator.get(btn, 'data-size'));
             }
 
             this._files.map(file => {
@@ -574,19 +719,23 @@ class VGFiles extends BaseModule {
             }
         });
 
-        if (!id) return;
+        if (this._params.ajax && this._params.removes.single.route) {
+            if (!id) return;
 
-        if (this._params.ajax && id && this._params.removes.single.route) {
             const paramsAjax = {
                 route: this._params.removes.single.route,
                 data: { id: id },
                 method: 'delete'
-            }
+            };
 
             const _completeRemoveFile = (data) => {
                 this._files = this._files.filter(f => !(f.name === name && f.size === size));
+
+                // ✅ Обновляем счётчики и статистику
+                this._updateCounter();
+                this._updateStatsAfterRemove(); // Обновляем статистику по статусам
+
                 if (this._files.length) {
-                    this._updateCounter();
                     this._renderUI(this._files);
                 } else {
                     this.clear(true, false);
@@ -595,7 +744,7 @@ class VGFiles extends BaseModule {
                 if (this._params.removes.single.toast) {
                     VGToast.run(data.response?.message);
                 }
-            }
+            };
 
             if (this._params.removes.single.alert) {
                 VGAlert.confirm(button, {
@@ -618,19 +767,40 @@ class VGFiles extends BaseModule {
                 });
 
                 EventHandler.on(button, 'vg.alert.accept', (event) => {
-                    _completeRemoveFile(event.vgalert.data)
+                    _completeRemoveFile(event.vgalert.data);
                 });
             } else {
                 this._params.ajax = paramsAjax;
                 this._route((status, data) => {
-                    _completeRemoveFile(data)
+                    _completeRemoveFile(data);
                 });
             }
         } else {
             this._files = this._files.filter(f => !(f.name === name && f.size === size));
+            this._updateCounter();
+            this._updateStatsAfterRemove();
+
             this._files.length ? this.build() : this.clear(true);
         }
+
+        this._resetFileInput();
     }
+
+    /**
+     * Обновление статистики после удаления файла
+     */
+    _updateStatsAfterRemove() {
+        if (!this._params.ajax) return;
+
+        // Обновляем значения статистики
+        this._setStatItem('completed', this._uploadedKeys.size);
+        this._setStatItem('pending', this._pendingUploadedKeys.size);
+        this._setStatItem('failing', this._failingUploadedKeys.size);
+
+        // Также обновляем общий счётчик файлов и размер
+        this._updateCounter();
+    }
+
 
     /**
      * Фильтрация файлов по ограничениям
@@ -757,7 +927,7 @@ class VGFiles extends BaseModule {
      * Уникальный ключ файла
      */
     _getFileKey(file) {
-        return `${file.name}-${file.size}-${file.lastModified}`;
+        return `${file.name}-${file.size}`;
     }
 
     /**
@@ -791,7 +961,7 @@ class VGFiles extends BaseModule {
      */
     clear(all = false, isAjax = false) {
         const clearUI = () => {
-            [`.${CLASS_NAME_IMAGES}`, `.${CLASS_NAME_LIST}`].forEach(selector => {
+            [`.${CLASS_NAME_LIST}`].forEach(selector => {
                 const el = Selectors.find(selector, this._element);
                 if (el) el.innerHTML = '';
             });
@@ -827,16 +997,18 @@ class VGFiles extends BaseModule {
                         this._files = [];
                         this._uploadedKeys.clear();
 
+                        this._resetFileInput();
+
                         if (this._params.removes.all.toast) {
                             VGToast.run(data.response?.message);
                         }
-                    }
+                    };
 
                     const paramsAjax = {
                         route: this._params.removes.all.route,
                         data: { ids: ids.join(',') },
                         method: 'delete'
-                    }
+                    };
 
                     if (this._params.removes.all.alert) {
                         VGAlert.confirm(btnDelete, {
@@ -859,17 +1031,17 @@ class VGFiles extends BaseModule {
                         });
 
                         EventHandler.on(btnDelete, 'vg.alert.accept', (event) => {
-                            _completeClearRoute(event.vgalert.data)
+                            _completeClearRoute(event.vgalert.data);
                         });
                     } else {
                         this._params.ajax = paramsAjax;
                         this._route((status, data) => {
-                            _completeClearRoute(data)
+                            _completeClearRoute(data);
                         });
                     }
                 }
             } else {
-                Selectors.findAll('[type="file"]', this._element).forEach(i => i.value = '');
+                this._resetFileInput();
                 this._cleanupFakeInputs();
                 this._cleanupErrors();
                 if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
@@ -885,6 +1057,16 @@ class VGFiles extends BaseModule {
     _revokeUrls() {
         this._objectUrls.forEach(url => URL.revokeObjectURL(url));
         this._objectUrls = [];
+    }
+
+    /**
+     * Сброс оригинального input[type="file"] для возможности повторного выбора одинаковых файлов
+     */
+    _resetFileInput() {
+        const fileInputs = Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element);
+        fileInputs.forEach(input => {
+            input.value = ''; // Сбрасываем значение
+        });
     }
 
     /**
@@ -919,6 +1101,16 @@ EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS_ALL,
     e.preventDefault();
 
     VGFiles.getOrCreateInstance(target).clear(true, true);
+});
+
+// Обработка удаления всех файлов
+EventHandler.on(document, EVENT_KEY_RELOAD_DATA_API, SELECTOR_DATA_RELOAD, function (e) {
+    const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
+    if (!target) return;
+    e.preventDefault();
+
+    const button = e.target.closest(SELECTOR_DATA_RELOAD) || e.target;
+    VGFiles.getOrCreateInstance(target).reload(button);
 });
 
 export default VGFiles;

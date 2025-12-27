@@ -354,6 +354,29 @@ class FileUploader {
 		this.callbacks.allComplete.forEach(cb => this._safeCall(cb, { completed: this.completed, stats: this.getStats() }));
 	}
 
+	isIdle() {
+		const hasActiveUploads = this.activeCount > 0;
+		const hasPendingInQueue = this.queue.length > 0;
+		const hasWaitingPromises = this.waitingPromises.length > 0;
+		const hasRunningUploads = Array.from(this.uploads.values()).some(u =>
+			['uploading', 'retrying', 'pending'].includes(u.status)
+		);
+
+		return !hasActiveUploads && !hasPendingInQueue && !hasWaitingPromises && !hasRunningUploads;
+	}
+
+	/**
+	 * Отписывает все обработчики событий
+	 * Предотвращает утечки памяти при повторной инициализации
+	 */
+	offAll() {
+		this.callbacks.progress = [];
+		this.callbacks.complete = [];
+		this.callbacks.error = [];
+		this.callbacks.allComplete = [];
+		return this;
+	}
+
 	_safeCall(callback, ...args) {
 		try {
 			callback(...args);

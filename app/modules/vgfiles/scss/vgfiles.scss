@@ -422,6 +422,10 @@
 						opacity: .32;
 						pointer-events: none;
 					}
+
+					.file-remove {
+						opacity: 0;
+					}
 				}
 
 				&.loading {
@@ -456,7 +460,6 @@
 					}
 
 					.file-remove {
-						pointer-events: none;
 						opacity: 1;
 					}
 				}
@@ -464,6 +467,8 @@
 
 			&.list-row {
 				.file {
+					border: none;
+
 					.file-remove {
 						position: absolute;
 						right: 0;
