@@ -894,7 +894,7 @@ class VGFiles extends BaseModule {
                 if (this._files.length) {
                     this._renderUI(this._files);
                 } else {
-                    this.clear(true, false);
+                    this.clear(true, true);
                 }
 
                 if (this._params.removes.single.toast) {
@@ -1149,11 +1149,16 @@ class VGFiles extends BaseModule {
             if (this._params.ajax && this._uploadedKeys.size && this._params.removes.all.route && isAjax) {
                 const getFilesLoaded = () => {
                     const files = [];
-                    Selectors.findAll(`.${CLASS_NAME_LIST} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
+
+                    let className = CLASS_NAME_LIST;
+                    if (this._nodes.drop) className = CLASS_NAME_DROP_LIST;
+
+                    Selectors.findAll(`.${className} li.${CLASS_NAME_LOADED}`, this._element).forEach(li => files.push(li));
                     return files;
                 };
 
                 const filesLoaded = getFilesLoaded();
+
                 if (filesLoaded.length) {
                     const ids = filesLoaded.map(li => {
                         const button = Selectors.find('button', li);
@@ -1166,7 +1171,11 @@ class VGFiles extends BaseModule {
                     const _completeClearRoute = (data) => {
                         clearUI();
                         this._cleanupErrors();
-                        if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
+                        if (this._nodes.info) {
+                            Classes.remove(this._nodes.info, 'show');
+                        } else {
+                            Classes.add(this._nodes.dropMessage, 'show');
+                        }
                         this._files = [];
                         this._uploadedKeys.clear();
 
@@ -1217,9 +1226,19 @@ class VGFiles extends BaseModule {
                 this._resetFileInput();
                 this._cleanupFakeInputs();
                 this._cleanupErrors();
-                if (this._nodes.info) Classes.remove(this._nodes.info, 'show');
                 this._files = [];
                 this._uploadedKeys.clear();
+
+
+                if (this._nodes.info) {
+                    Classes.remove(this._nodes.info, 'show');
+                } else if (this._nodes.drop) {
+                    const $list = Selectors.find(`.${CLASS_NAME_LIST}`, this._element);
+                    if ($list) $list.remove();
+
+                    Classes.add(this._nodes.dropMessage, 'show');
+                    Classes.remove(this._nodes.drop, 'active');
+                }
             }
         }
 
