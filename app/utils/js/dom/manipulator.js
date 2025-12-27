@@ -158,6 +158,16 @@ const Classes = {
 			element.classList.replace(oldClass, newClass);
 		}
 	},
+
+	/**
+	 * Проверяет наличие класса у элемента.
+	 * @param {Element} element - DOM-элемент.
+	 * @param {string} className - Имя класса.
+	 * @returns {boolean} - Возвращает true, если элемент содержит указанный класс.
+	 */
+	has(element, className) {
+		return isElement(element) && element.classList.contains(className);
+	},
 };
 
 export { Manipulator, Classes };

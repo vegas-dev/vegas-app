@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import {isElement, isVisible, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
+import {isElement, mergeDeepObject, normalizeData} from "../../../utils/js/functions";
 import Html from "../../../utils/js/components/templater";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import {getSVG} from "../../module-fn";
@@ -7,7 +7,7 @@ import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import FileUploader from "./loader";
-import Droper from "./droper";
+import DnD from "./dnd";
 import VGAlert from "../../vgalert";
 import VGToast from "../../vgtoast";
 
@@ -29,6 +29,7 @@ const CLASS_NAME_INFO_WRAPPER = `${CLASS_NAME_CONTAINER}-info--wrapper`;
 const CLASS_NAME_IMAGES = `${CLASS_NAME_INFO}--images`;
 const CLASS_NAME_LIST = `${CLASS_NAME_INFO}--list`;
 const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
+const CLASS_NAME_DROP_LIST = `${CLASS_NAME_CONTAINER}-drop-list`;
 const CLASS_NAME_ERRORS = `${CLASS_NAME_CONTAINER}-errors`;
 const CLASS_NAME_PENDING  = 'pending';
 const CLASS_NAME_LOADING = 'loading';
@@ -111,6 +112,7 @@ class VGFiles extends BaseModule {
         this._nodes = {
             info: Selectors.find(`.${CLASS_NAME_INFO}`, this._element),
             drop: Selectors.find(`.${CLASS_NAME_DROP}`, this._element),
+            dropMessage: Selectors.find(`.${CLASS_NAME_DROP}-message`, this._element),
             wrapper: Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}`, this._element)
         };
 
@@ -120,6 +122,11 @@ class VGFiles extends BaseModule {
 
         if (this._params.allowed && !this._params.ajax) {
             this._params.detach = false;
+        }
+
+        if (this._nodes.drop) {
+            this._params.image = true;
+            this._params.detach = true;
         }
 
         this._init();
@@ -137,7 +144,9 @@ class VGFiles extends BaseModule {
      */
     _init() {
         this._preventOriginalInputFromSubmit();
-        if (this._nodes.drop) new Droper(this._nodes.drop, this._params).init();
+        if (this._nodes.drop) {
+            new DnD(this._nodes.drop, this._params).init();
+        }
     }
 
     /**
@@ -224,7 +233,8 @@ class VGFiles extends BaseModule {
 
         this._setStatItem('pending', this._pendingUploadedKeys.size);
         this._renderUI(this._files);
-        this._updateCounter(true);
+
+        if (!this._nodes.drop) this._updateCounter(true);
 
         const uploadParams = {
             additionalData: {
@@ -427,7 +437,6 @@ class VGFiles extends BaseModule {
         });
     }
 
-
     /**
      * Метод для повторной загрузки файла
      */
@@ -528,28 +537,91 @@ class VGFiles extends BaseModule {
     }
 
     /**
-     * Обновление UI: отображение файлов
+     * Обновление UI: отображение файлов списком
      */
     _renderUI(files) {
-        if (!this._nodes.info) return;
+        if(this._nodes.drop) {
+            this._renderUIDrop(files);
+        } else {
+            if (!this._nodes.info) return;
 
-        Classes.add(this._nodes.info, 'show');
-        this._updateCounter();
-        this._renderInfoList(files);
+            Classes.add(this._nodes.info, 'show');
+            this._updateCounter();
+            this._renderInfoList(files);
 
-        if (this._params.ajax) {
-            files.forEach(file => {
-                const $item = this._getItemElement(file);
-                if (!$item) return;
+            if (this._params.ajax) {
+                files.forEach(file => {
+                    const $item = this._getItemElement(file);
+                    if (!$item) return;
 
-                const key = this._getFileKey(file);
-                if (this._uploadedKeys.has(key)) {
-                    Classes.add($item, CLASS_NAME_LOADED);
-                } else {
-                    Classes.add($item, CLASS_NAME_PENDING);
-                }
-            });
+                    const key = this._getFileKey(file);
+                    if (this._uploadedKeys.has(key)) {
+                        Classes.add($item, CLASS_NAME_LOADED);
+                    } else {
+                        Classes.add($item, CLASS_NAME_PENDING);
+                    }
+                });
+            }
         }
+    }
+
+    /**
+     * Обновление UI: отображение файлов в дроп зоне
+     */
+    _renderUIDrop(files) {
+        if (!this._nodes.drop) return;
+        Classes.remove(this._nodes.dropMessage, 'show');
+        Classes.add(this._nodes.drop, 'active');
+        this._renderUIDropList(files);
+    }
+
+    _renderUIDropList(files, isAjax = false) {
+        let $list = Selectors.find(`.${CLASS_NAME_DROP_LIST}`, this._nodes.drop);
+        if (!$list) {
+            $list = this._tpl.ul([], { class: CLASS_NAME_DROP_LIST });
+        }
+
+        const fragment = document.createDocumentFragment();
+        files.forEach((file) => {
+            let classes = [];
+
+            if (this._params.detach) {
+                classes.push('with-remove')
+            }
+
+            if (this._params.limits.count === 1) {
+                classes.push('single');
+
+                if (file.type.startsWith('image/')) {
+                    classes.push('single-image')
+                } else {
+                    classes.push('single-file')
+                }
+            }
+
+            const $li = this._tpl.li(
+                { 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') },
+                []
+            );
+
+            // Добавляем превью изображения, если включено и файл — картинка
+            this._renderUIImages(file, $li);
+
+            // Добавляем кнопку удаления, если разрешено
+            if (this._params.detach) {
+                const $fileRemove = this._tpl.div({ class: 'file-remove' }, [
+                    this._setButtonElement(file, isAjax)
+                ])
+                $li.appendChild($fileRemove);
+            }
+
+            fragment.appendChild($li);
+        });
+
+        $list.innerHTML = '';
+        $list.appendChild(fragment);
+
+        this._nodes.drop.appendChild($list);
     }
 
     /**
@@ -621,7 +693,9 @@ class VGFiles extends BaseModule {
     }
 
     _getStatItem(status) {
-        return Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list li.${status}`, this._nodes.wrapper);
+        if (this._nodes.wrapper) {
+            return Selectors.find(`.${CLASS_NAME_INFO_WRAPPER}-stat-list li.${status}`, this._nodes.wrapper);
+        }
     }
 
     _setStatItem(status, count) {
@@ -669,13 +743,7 @@ class VGFiles extends BaseModule {
             );
 
             // Добавляем превью изображения, если включено и файл — картинка
-            if (this._params.image && file.type.startsWith('image/')) {
-                const src = URL.createObjectURL(file);
-                this._objectUrls.push(src);
-                const $imgPreview = this._tpl.img(src, file.name, { class: 'file-preview' });
-                const $imgContainer = this._tpl.div({ class: 'file-image' }, $imgPreview);
-                $li.appendChild($imgContainer);
-            }
+            this._renderUIImages(file, $li);
 
             // Добавляем информационную часть (имя, размер), если включено
             if (this._params.info) {
@@ -700,6 +768,37 @@ class VGFiles extends BaseModule {
 
         $list.innerHTML = '';
         $list.appendChild(fragment);
+    }
+
+    _renderUIImages(file, $container) {
+        if (this._params.image) {
+            const $imgContainer = this._tpl.div({ class: 'file-image' });
+
+            if (file.type.startsWith('image/')) {
+                const src = URL.createObjectURL(file);
+                this._objectUrls.push(src);
+                const $imgPreview = this._tpl.img(src, file.name, { class: 'file-preview' });
+                $imgContainer.appendChild($imgPreview);
+            } else {
+                let icon = 'file-generic';
+                if (file.type === 'application/pdf') {
+                    icon = 'file-pdf';
+                } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+                    icon = 'file-word';
+                } else if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
+                    icon = 'file-excel';
+                } else if (file.type === 'application/zip' || file.name.endsWith('.zip') || file.name.endsWith('.rar') || file.name.endsWith('.7z')) {
+                    icon = 'file-zip';
+                } else if (file.name.endsWith('.txt')) {
+                    icon = 'file-text';
+                }
+
+                const $icon = this._tpl.i({}, getSVG(icon), { isHTML: true });
+                $imgContainer.appendChild($icon);
+            }
+
+            $container.appendChild($imgContainer);
+        }
     }
 
     /**
@@ -1023,10 +1122,20 @@ class VGFiles extends BaseModule {
      */
     clear(all = false, isAjax = false) {
         const clearUI = () => {
-            [`.${CLASS_NAME_LIST}`].forEach(selector => {
-                const el = Selectors.find(selector, this._element);
-                if (el) el.innerHTML = '';
-            });
+            if (this._nodes.drop) {
+                [`.${CLASS_NAME_DROP_LIST}`].forEach(selector => {
+                    const el = Selectors.find(selector, this._element);
+                    if (el) el.innerHTML = '';
+                });
+
+                Classes.add(this._nodes.dropMessage, 'show');
+                Classes.remove(this._nodes.drop, 'active');
+            } else {
+                [`.${CLASS_NAME_LIST}`].forEach(selector => {
+                    const el = Selectors.find(selector, this._element);
+                    if (el) el.innerHTML = '';
+                });
+            }
         };
 
         if (!this._params.ajax && !this._uploadedKeys.size) {
@@ -1186,7 +1295,7 @@ EventHandler.on(document, EVENT_KEY_DISMISS_DATA_API, SELECTOR_DATA_DISMISS_ALL,
     VGFiles.getOrCreateInstance(target).clear(true, true);
 });
 
-// Обработка удаления всех файлов
+// Обработка повторной загрузки файла
 EventHandler.on(document, EVENT_KEY_RELOAD_DATA_API, SELECTOR_DATA_RELOAD, function (e) {
     const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (!target) return;
