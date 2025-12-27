@@ -779,7 +779,7 @@ class VGFiles extends BaseModule {
         if (this._params.ajax && this._params.removes.single.route) {
             if (!id) return;
 
-            const route = this._params.removes.single.route.replace(/\{id}/g, encodeURIComponent(id));
+            const route = this._params.removes.single.route + '/' + encodeURIComponent(id);
             const paramsAjax = {
                 route: route,
                 method: 'delete'
