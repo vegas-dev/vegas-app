@@ -131,7 +131,7 @@ class BaseModule {
 			}
 
 			if (this._params.ajax.method.toLowerCase() === 'delete') {
-				ajax.delete(this._params.ajax.route, this._params.ajax.data, ajaxData);
+				ajax.delete(this._params.ajax.route, ajaxData);
 			}
 		}, timeout);
 	}

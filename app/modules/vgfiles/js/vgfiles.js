@@ -37,6 +37,7 @@ const CLASS_NAME_FAILING = 'failing';
 const CLASS_NAME_COMPLETED = 'completed';
 
 const EVENT_KEY_CHANGE = `${NAME_KEY}.change`;
+
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 const EVENT_KEY_DISMISS_DATA_API = `click.${NAME_KEY}.data.api`;
 const EVENT_KEY_RELOAD_DATA_API = `click.${NAME_KEY}.data.api`;
@@ -77,6 +78,18 @@ class VGFiles extends BaseModule {
                    alert: true,
                    toast: true
                }
+            },
+            callbacks: {
+                onInit: null,
+                onChange: null,
+                onUploadStart: null,
+                onUploadProgress: null,
+                onUploadComplete: null,
+                onUploadError: null,
+                onUploadAllComplete: null,
+                onRemoveFile: null,
+                onClear: null,
+                onReload: null
             }
         }, params));
 
@@ -111,6 +124,9 @@ class VGFiles extends BaseModule {
 
         this._init();
         this._addEventListener();
+
+        // Вызов колбека инициализации
+        this._triggerCallback('onInit', { element: this._element });
     }
 
     static get NAME() { return NAME; }
@@ -162,6 +178,12 @@ class VGFiles extends BaseModule {
         }
 
         EventHandler.trigger(this._element, EVENT_KEY_CHANGE, { files: processedFiles });
+
+        // Вызов колбека изменения
+        this._triggerCallback('onChange', {
+            files: processedFiles,
+            input: input
+        });
     }
 
     /**
@@ -210,6 +232,12 @@ class VGFiles extends BaseModule {
                 source: 'web_uploader'
             }
         };
+
+        // Вызов колбека начала загрузки
+        this._triggerCallback('onUploadStart', {
+            files: notUploadedFiles,
+            total: notUploadedFiles.length
+        });
 
         try {
             await this._uploader.uploadFiles(notUploadedFiles, this._params.uploads.route, uploadParams);
@@ -306,6 +334,14 @@ class VGFiles extends BaseModule {
                     }
                 }
             }
+
+            // Вызов колбека прогресса загрузки
+            this._triggerCallback('onUploadProgress', {
+                file: uploadData.file,
+                progress: uploadData.progress,
+                bytesSent: uploadData.bytesSent,
+                totalBytes: uploadData.totalBytes
+            });
         });
 
         this._uploader.onComplete((uploadData) => {
@@ -349,9 +385,17 @@ class VGFiles extends BaseModule {
 
             this._setStatItem('completed', this._uploadedKeys.size);
             this._setStatItem('pending', this._pendingUploadedKeys.size);
+
+            // Вызов колбека завершения загрузки файла
+            this._triggerCallback('onUploadComplete', {
+                file: uploadData.file,
+                response: uploadData.result?.response,
+                status: uploadData.result?.status,
+                id: file.id
+            });
         });
 
-        this._uploader.onError((uploadData, error) => {
+        this._uploader.onError((uploadData) => {
             const file = uploadData.file;
             const fileKey = this._getFileKey(file);
             const $item = this._getItemElement(file);
@@ -373,6 +417,13 @@ class VGFiles extends BaseModule {
         this._uploader.onAllComplete(() => {
             this._updateCounter();
             EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
+
+            // Вызов колбека завершения всех загрузок
+            this._triggerCallback('onUploadAllComplete', {
+                uploaded: this._uploadedKeys.size,
+                failed: this._failingUploadedKeys.size,
+                total: this._files.length
+            });
         });
     }
 
@@ -406,6 +457,12 @@ class VGFiles extends BaseModule {
         // Обновляем статистику
         this._setStatItem('failing', this._failingUploadedKeys.size);
         this._setStatItem('pending', this._pendingUploadedKeys.size);
+
+        // Вызов колбека повторной загрузки
+        this._triggerCallback('onReload', {
+            button: button,
+            file: fileToRetry
+        });
 
         // Запускаем повторную загрузку
         this.upload(fileToRetry);
@@ -690,7 +747,7 @@ class VGFiles extends BaseModule {
     removeFile(button) {
         const name = normalizeData(Manipulator.get(button, 'data-name'));
         const size = normalizeData(Manipulator.get(button, 'data-size'));
-        let id = normalizeData(Manipulator.get(button, 'data-id'));
+        const id = normalizeData(Manipulator.get(button, 'data-id'));
 
         const fileToRemove = this._files.find(f => f.name === name && f.size === size);
         if (fileToRemove) {
@@ -700,40 +757,38 @@ class VGFiles extends BaseModule {
             this._failingUploadedKeys.delete(key);
         }
 
-        this._getItemElement().map(el => {
-            let btn = Selectors.find('button', el), id = '', size = '', name = '';
-            if (btn) {
-                id = normalizeData(Manipulator.get(btn, 'data-id'));
-                name = normalizeData(Manipulator.get(btn, 'data-name'));
-                size = normalizeData(Manipulator.get(btn, 'data-size'));
-            }
+        // Синхронизируем id с остальными элементами (если нужно)
+        this._getItemElement().forEach(el => {
+            const btn = Selectors.find('button', el);
+            if (!btn) return;
+            const btnId = normalizeData(Manipulator.get(btn, 'data-id'));
+            const btnName = normalizeData(Manipulator.get(btn, 'data-name'));
+            const btnSize = normalizeData(Manipulator.get(btn, 'data-size'));
 
-            this._files.map(file => {
-                if (file.name === name && file.size === size) {
-                    file.id = id;
+            this._files.forEach(file => {
+                if (file.name === btnName && file.size === btnSize) {
+                    file.id = btnId;
                 }
             });
 
-            if (fileToRemove?.name === name && fileToRemove?.size === size) {
-                fileToRemove.id = id;
+            if (fileToRemove?.name === btnName && fileToRemove?.size === btnSize) {
+                fileToRemove.id = btnId;
             }
         });
 
         if (this._params.ajax && this._params.removes.single.route) {
             if (!id) return;
 
+            const route = this._params.removes.single.route.replace(/\{id}/g, encodeURIComponent(id));
             const paramsAjax = {
-                route: this._params.removes.single.route,
-                data: { id: id },
+                route: route,
                 method: 'delete'
             };
 
             const _completeRemoveFile = (data) => {
                 this._files = this._files.filter(f => !(f.name === name && f.size === size));
-
-                // ✅ Обновляем счётчики и статистику
                 this._updateCounter();
-                this._updateStatsAfterRemove(); // Обновляем статистику по статусам
+                this._updateStatsAfterRemove();
 
                 if (this._files.length) {
                     this._renderUI(this._files);
@@ -742,7 +797,7 @@ class VGFiles extends BaseModule {
                 }
 
                 if (this._params.removes.single.toast) {
-                    VGToast.run(data.response?.message);
+                    VGToast.run(data?.response?.message);
                 }
             };
 
@@ -766,7 +821,7 @@ class VGFiles extends BaseModule {
                     }
                 });
 
-                EventHandler.on(button, 'vg.alert.accept', (event) => {
+                EventHandler.one(button, 'vg.alert.accept', (event) => {
                     _completeRemoveFile(event.vgalert.data);
                 });
             } else {
@@ -779,11 +834,19 @@ class VGFiles extends BaseModule {
             this._files = this._files.filter(f => !(f.name === name && f.size === size));
             this._updateCounter();
             this._updateStatsAfterRemove();
-
             this._files.length ? this.build() : this.clear(true);
         }
 
         this._resetFileInput();
+
+        // Вызов колбека удаления файла
+        this._triggerCallback('onRemoveFile', {
+            button: button,
+            name: name,
+            size: size,
+            id: id,
+            remaining: this._files.length
+        });
     }
 
     /**
@@ -800,7 +863,6 @@ class VGFiles extends BaseModule {
         // Также обновляем общий счётчик файлов и размер
         this._updateCounter();
     }
-
 
     /**
      * Фильтрация файлов по ограничениям
@@ -1007,7 +1069,7 @@ class VGFiles extends BaseModule {
                     const paramsAjax = {
                         route: this._params.removes.all.route,
                         data: { ids: ids.join(',') },
-                        method: 'delete'
+                        method: 'post'
                     };
 
                     if (this._params.removes.all.alert) {
@@ -1030,7 +1092,7 @@ class VGFiles extends BaseModule {
                             }
                         });
 
-                        EventHandler.on(btnDelete, 'vg.alert.accept', (event) => {
+                        EventHandler.one(btnDelete, 'vg.alert.accept', (event) => {
                             _completeClearRoute(event.vgalert.data);
                         });
                     } else {
@@ -1049,6 +1111,13 @@ class VGFiles extends BaseModule {
                 this._uploadedKeys.clear();
             }
         }
+
+        // Вызов колбека очистки
+        this._triggerCallback('onClear', {
+            all: all,
+            isAjax: isAjax,
+            filesRemaining: this._files.length
+        });
     }
 
     /**
@@ -1067,6 +1136,20 @@ class VGFiles extends BaseModule {
         fileInputs.forEach(input => {
             input.value = ''; // Сбрасываем значение
         });
+    }
+
+    /**
+     * Вспомогательный метод для вызова колбеков
+     */
+    _triggerCallback(callbackName, data = {}) {
+        const callback = this._params.callbacks?.[callbackName];
+        if (typeof callback === 'function') {
+            try {
+                callback.call(this, data, this);
+            } catch (error) {
+                console.error(`Error in ${callbackName} callback:`, error);
+            }
+        }
     }
 
     /**

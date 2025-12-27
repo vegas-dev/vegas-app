@@ -157,6 +157,7 @@ class Ajax {
 						() => {}
 					);
 				} else {
+					console.log(data)
 					onSuccess(data);
 				}
 			})
@@ -266,8 +267,8 @@ class Ajax {
 		return this.request(url, { method: "PUT", body, ...options });
 	}
 
-	delete(url, body, options = {}) {
-		return this.request(url, { method: "DELETE", body, ...options });
+	delete(url, options = {}) {
+		return this.request(url, { method: "DELETE", ...options });
 	}
 
 	patch(url, body, options = {}) {
