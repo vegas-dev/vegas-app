@@ -423,6 +423,21 @@ class VGFiles extends BaseModule {
 
             this._setStatItem('failing', this._failingUploadedKeys.size);
             this._setStatItem('pending', this._pendingUploadedKeys.size);
+
+            const button = this._getButtonElement(file);
+            if (isElement(button)) {
+                const li = button.closest('li');
+                if (li) {
+                    this._setButtonElement(file);
+
+                    const fileRemove = Selectors.find('.file-remove', li);
+                    if (fileRemove) {
+                        fileRemove.innerHTML = '';
+                        fileRemove.appendChild(this._setButtonElement(file, true, 'failing'));
+                        Classes.add(li, CLASS_NAME_FAILING);
+                    }
+                }
+            }
         });
 
         this._uploader.onAllComplete(() => {
@@ -525,6 +540,11 @@ class VGFiles extends BaseModule {
             }
         }
 
+        if (this._failingUploadedKeys.has(this._getFileKey(file))) {
+            icon = getSVG('spinner');
+            action = 'data-vg-reload';
+        }
+
 
         return this._tpl.button([
             this._tpl.i({}, icon, { isHTML: true }),
@@ -551,19 +571,7 @@ class VGFiles extends BaseModule {
             Classes.add(this._nodes.info, 'show');
             this._renderInfoList(files);
 
-            if (this._params.ajax) {
-                files.forEach(file => {
-                    const $item = this._getItemElement(file);
-                    if (!$item) return;
-
-                    const key = this._getFileKey(file);
-                    if (this._uploadedKeys.has(key)) {
-                        Classes.add($item, CLASS_NAME_LOADED);
-                    } else {
-                        Classes.add($item, CLASS_NAME_PENDING);
-                    }
-                });
-            }
+            this._renderUIStatusDropInfoAjax(files)
         }
     }
 
@@ -606,10 +614,8 @@ class VGFiles extends BaseModule {
                 []
             );
 
-            // Добавляем превью изображения, если включено и файл — картинка
             this._renderUIImages(file, $li);
 
-            // Добавляем кнопку удаления, если разрешено
             if (this._params.detach) {
                 const $fileRemove = this._tpl.div({ class: 'file-remove' }, [
                     this._setButtonElement(file, isAjax)
@@ -624,6 +630,26 @@ class VGFiles extends BaseModule {
         $list.appendChild(fragment);
 
         this._nodes.drop.appendChild($list);
+
+        this._renderUIStatusDropInfoAjax(files)
+    }
+
+    _renderUIStatusDropInfoAjax(files) {
+        if (this._params.ajax) {
+            files.forEach(file => {
+                const $item = this._getItemElement(file);
+                if (!$item) return;
+
+                const key = this._getFileKey(file);
+                if (this._uploadedKeys.has(key)) {
+                    Classes.add($item, CLASS_NAME_LOADED);
+                } else if (this._failingUploadedKeys.has(key)) {
+                    Classes.add($item, CLASS_NAME_FAILING);
+                } else {
+                    Classes.add($item, CLASS_NAME_PENDING);
+                }
+            });
+        }
     }
 
     /**
@@ -714,7 +740,7 @@ class VGFiles extends BaseModule {
     /**
      * Отображение списка файлов
      */
-    _renderInfoList(files, isAjax) {
+    _renderInfoList(files) {
         if (!this._nodes.info) return;
 
         Classes.add(this._nodes.info, 'show')
@@ -762,7 +788,7 @@ class VGFiles extends BaseModule {
             // Добавляем кнопку удаления, если разрешено
             if (this._params.detach) {
                 const $fileRemove = this._tpl.div({ class: 'file-remove' }, [
-                    this._setButtonElement(file, isAjax)
+                    this._setButtonElement(file)
                 ])
                 $li.appendChild($fileRemove);
             }
