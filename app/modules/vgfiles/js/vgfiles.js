@@ -481,15 +481,17 @@ class VGFiles extends BaseModule {
      * Получение элемента файла по данным
      */
     _getItemElement(file = null) {
+        let className = CLASS_NAME_LIST;
+        if (this._nodes.drop) className = CLASS_NAME_DROP;
+
         if (!file) {
             return Selectors.findAll(
-                `.${CLASS_NAME_LIST} li.loaded, .${CLASS_NAME_IMAGES} span.loaded`,
+                `.${className} li.loaded`,
                 this._element
             )
         } else {
             return Selectors.find(
-             `.${CLASS_NAME_LIST} li[data-name="${file.name}"][data-size="${file.size}"], 
-                     .${CLASS_NAME_IMAGES} span[data-name="${file.name}"][data-size="${file.size}"]`,
+             `.${className} li[data-name="${file.name}"][data-size="${file.size}"]`,
                 this._element
             );
         }

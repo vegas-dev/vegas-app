@@ -160,6 +160,7 @@
 			overflow: hidden;
 
 			.file {
+				--vg-button-color: var(--vg-body-color);
 				border-radius: 6px;
 				position: relative;
 				overflow: hidden;
@@ -239,9 +240,56 @@
 
 						svg {
 							path {
-								fill: var(--vg-body-color);
+								fill: var(--vg-button-color);
 							}
 						}
+					}
+				}
+
+				&.pending {
+					> * {
+						opacity: .32;
+						pointer-events: none;
+					}
+
+					.file-remove {
+						opacity: 0;
+					}
+				}
+
+				&.loading {
+					--vg-button-color: var(--vg-body-color);
+
+					> *:not(.file-remove) {
+						opacity: .52;
+						pointer-events: none;
+					}
+
+					.file-remove {
+						opacity: 1;
+						pointer-events: none;
+
+						button {
+							i {
+								animation: spinner 1s linear infinite;
+							}
+						}
+					}
+				}
+
+				&.completed {
+					--vg-button-color: var(--vg-success);
+				}
+
+				&.failing {
+					--vg-button-color: var(--vg-danger);
+
+					> * {
+						opacity: .62;
+					}
+
+					.file-remove {
+						opacity: 1;
 					}
 				}
 			}
