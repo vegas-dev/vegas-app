@@ -34,6 +34,7 @@ class VGFilesBase extends BaseModule {
 			'info-list': 'vg-files-info--list',
 			'drop': 'vg-files-drop',
 			'drop-list': 'vg-files-drop--list',
+			'drop-message': 'vg-files-drop-message',
 			'errors': 'vg-files-errors'
 		};
 		return map[name] || '';
@@ -128,8 +129,7 @@ class VGFilesBase extends BaseModule {
 
 		if (!$errorCont) {
 			$errorCont = this._tpl.div({ class: this._getClass('errors') });
-			const $info = Selectors.find(`.${this._getClass('info')}`, this._element);
-			if ($info) $info.before($errorCont);
+			this._element.prepend($errorCont);
 		}
 
 		this._errors.forEach(errKey => {
@@ -154,6 +154,8 @@ class VGFilesBase extends BaseModule {
 		} else if (this._nodes.info) {
 			this._renderInfoList(files);
 		}
+
+		this._renderUIStatusDropInfoAjax(this._files)
 	}
 
 	_renderUIDropList(files) {
@@ -261,11 +263,14 @@ class VGFilesBase extends BaseModule {
 
 	_updateStat() {
 		if (!this._nodes.stat) return;
+
 		const totalSize = this._getSizes(this._files, true);
 		const $count = Selectors.find(`.${this._getClass('stat')}-count`, this._nodes.stat);
 		if ($count) {
 			$count.innerHTML = this._files.length ? `${this._files.length}<span>[${totalSize}]</span>` : '';
 		}
+
+		Classes.add(this._nodes.stat, 'show');
 	}
 
 	_generateHiddenInputs(files) {
@@ -308,7 +313,10 @@ class VGFilesBase extends BaseModule {
 		if (this._nodes.drop) {
 			const $list = Selectors.find(`.${this._getClass('drop-list')}`, this._element);
 			if ($list) $list.innerHTML = '';
-			Classes.add(this._nodes.dropMessage, 'show');
+
+			const $message = Selectors.find(`.${this._getClass('drop-message')}`, this._element);
+			if ($message) Classes.add($message, 'show');
+
 			Classes.remove(this._nodes.drop, 'active');
 		}
 		if (this._nodes.stat) {
