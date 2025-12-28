@@ -4,6 +4,7 @@ import Html from "../../../utils/js/components/templater";
 import { lang_messages } from "../../../utils/js/components/lang";
 import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
+import {getSVG} from "../../module-fn";
 
 /**
  * Базовый класс управления файлами (без AJAX)
@@ -91,13 +92,23 @@ class VGFilesBase extends BaseModule {
 		return filtered;
 	}
 
-	append(values) {
-		const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
-		Array.from(values).forEach(file => {
-			fileMap.set(this._getFileKey(file), file);
-		});
-		this._files = this._filterFiles(Array.from(fileMap.values()));
+	append(values, replace = true) {
+		const incoming = Array.from(values);
+		let filesToProcess;
+
+		if (replace) {
+			filesToProcess = incoming;
+		} else {
+			const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
+			incoming.forEach(file => {
+				fileMap.set(this._getFileKey(file), file);
+			});
+			filesToProcess = Array.from(fileMap.values());
+		}
+
+		this._files = this._filterFiles(filesToProcess);
 		this._renderErrors();
+		this.build();
 		return this._files;
 	}
 
@@ -118,7 +129,9 @@ class VGFilesBase extends BaseModule {
 	_cleanupErrors() {
 		this._errors.clear();
 		const $errorCont = Selectors.find(`.${this._getClass('errors')}`, this._element);
-		if ($errorCont) $errorCont.remove();
+		if ($errorCont) {
+			$errorCont.remove()
+		}
 	}
 
 	_renderErrors() {
@@ -130,6 +143,8 @@ class VGFilesBase extends BaseModule {
 		if (!$errorCont) {
 			$errorCont = this._tpl.div({ class: this._getClass('errors') });
 			this._element.prepend($errorCont);
+		} else {
+			$errorCont.innerHTML = '';
 		}
 
 		this._errors.forEach(errKey => {
@@ -159,25 +174,49 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_renderUIDropList(files) {
-		let $list = Selectors.find(`.${this._getClass('drop-list')}`, this._element);
+		if (!this._nodes.drop) return;
+
+		let $list = Selectors.find(`.${this._getClass('drop-list')}`, this._nodes.drop);
 		if (!$list) {
 			$list = this._tpl.ul([], { class: this._getClass('drop-list') });
-			this._nodes.drop.appendChild($list);
 		}
 
-		$list.innerHTML = '';
 		const fragment = document.createDocumentFragment();
-		files.forEach(file => {
+		files.forEach((file) => {
+			let classes = [];
+
+			if (this._params.detach) {
+				classes.push('with-remove')
+			}
+
+			if (this._params.limits.count === 1) {
+				classes.push('single');
+
+				if (file.type.startsWith('image/')) {
+					classes.push('single-image')
+				} else {
+					classes.push('single-file')
+				}
+			}
+
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, class: 'file with-remove' },
-				[
+				{ 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, [
 					this._renderUIImage(file),
-					this._tpl.div({ class: 'file-remove' }, [this._tpl.button({}, '×')])
+					this._renderUIDetach(file)
 				]
 			);
+
 			fragment.appendChild($li);
 		});
+
+		$list.innerHTML = '';
 		$list.appendChild(fragment);
+
+		const $message = Selectors.find(`.${this._getClass('drop-message')}`, this._nodes.drop);
+		if ($message) Classes.remove($message, 'show');
+
+		this._nodes.drop.appendChild($list);
+		Classes.add(this._nodes.drop, 'active');
 	}
 
 	_renderInfoList(files) {
@@ -253,12 +292,12 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_getIconByFileType(file) {
-		if (file.type === 'application/pdf') return '<svg>PDF</svg>';
-		if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) return '<svg>DOC</svg>';
-		if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) return '<svg>XLS</svg>';
-		if (file.type === 'application/zip' || file.name.endsWith('.zip')) return '<svg>ZIP</svg>';
-		if (file.name.endsWith('.txt')) return '<svg>TXT</svg>';
-		return '<svg>FILE</svg>';
+		if (file.type === 'application/pdf') return getSVG('file-pdf');
+		if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) return getSVG('file-word');
+		if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) return getSVG('file-exel');
+		if (file.type === 'application/zip' || file.name.endsWith('.zip')) return getSVG('file-zip');
+		if (file.name.endsWith('.txt')) return getSVG('file-text');
+		return getSVG('file-generic');
 	}
 
 	_updateStat() {
@@ -356,9 +395,15 @@ class VGFilesBase extends BaseModule {
 		if (!incomingFiles?.length) return;
 
 		const filesArray = Array.from(incomingFiles);
-		this.clear();
-		this.append(filesArray);
-		this.build();
+
+		if (!this._params.allowed) {
+			this.append(filesArray, false);
+		} else {
+			this.clear();
+			this.append(filesArray, true);
+		}
+
+		if (this._params.prepend) this._files.reverse();
 	}
 
 	build() {

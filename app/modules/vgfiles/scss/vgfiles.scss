@@ -173,6 +173,11 @@
 				overflow: hidden;
 				flex: 0 0 calc(25% - 6px);
 				height: 100px;
+				cursor: grab;
+
+				&:active {
+					cursor: grabbing;
+				}
 
 				.file-image {
 					width: 100%;
@@ -307,6 +312,18 @@
 					.file-remove {
 						opacity: 1;
 					}
+				}
+
+				&.dragging {
+					opacity: 0.6;
+					transform: scale(1.02);
+					z-index: 1000;
+					position: relative;
+				}
+
+				&.dragging-transparent {
+					pointer-events: none;
+					opacity: 0.3;
 				}
 			}
 		}
@@ -507,6 +524,11 @@
 				border-bottom: 1px solid var(--vg-secondary-bg);
 				transition: all .2s ease-in-out;
 				position: relative;
+				cursor: grab;
+
+				&:active {
+					cursor: grabbing;
+				}
 
 				&:last-child {
 					border-bottom: none;
@@ -673,6 +695,18 @@
 					.file-remove {
 						opacity: 1;
 					}
+				}
+
+				&.dragging {
+					opacity: 0.6;
+					transform: scale(1.02);
+					z-index: 1000;
+					position: relative;
+				}
+
+				&.dragging-transparent {
+					pointer-events: none;
+					opacity: 0.3;
 				}
 			}
 

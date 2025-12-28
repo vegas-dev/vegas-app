@@ -1,6 +1,6 @@
 import VGFilesBase from "./base";
 import FileUploader from "./loader";
-import DnD from "./dnd";
+import VGFilesDroppable from "./droppable";
 import { getSVG } from "../../module-fn";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -20,8 +20,6 @@ const SELECTOR_DATA_DISMISS_ALL = '[data-vg-dismiss="vg-files"]';
 
 const CLASS_NAME_CONTAINER = 'vg-files';
 const CLASS_NAME_STAT = `${CLASS_NAME_CONTAINER}-stat`;
-const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
-const CLASS_NAME_DROP_LIST = `${CLASS_NAME_CONTAINER}-drop--list`;
 const CLASS_NAME_COMPLETED = 'completed';
 const CLASS_NAME_PENDING = 'pending';
 const CLASS_NAME_LOADING = 'loading';
@@ -39,6 +37,7 @@ class VGFiles extends VGFilesBase {
             info: true,
             types: [],
             ajax: false,
+            prepend: false,
             uploads: {
                 mode: 'sequential',
                 route: '',
@@ -50,6 +49,12 @@ class VGFiles extends VGFilesBase {
             removes: {
                 all: { route: '', alert: true, toast: true },
                 single: { route: '', alert: true, toast: true }
+            },
+            sortable: {
+                enabled: false,
+                route: '',
+                handle: '.file',
+                lists: [`vg-files-info--list`, `vg-files-drop--list`]
             },
             callbacks: {
                 onInit: null,
@@ -73,6 +78,7 @@ class VGFiles extends VGFilesBase {
         this._pendingUploadedKeys = new Set();
         this._unUploadedFiles = [];
         this._uploader = null;
+        this._sortable = null;
 
         this._initExtended();
     }
@@ -86,7 +92,8 @@ class VGFiles extends VGFilesBase {
         if (this._nodes.drop) {
             this._params.image = true;
             this._params.detach = true;
-            new DnD(this._nodes.drop, this._params).init();
+
+            VGFilesDroppable.getOrCreateInstance(this._nodes.drop, this._params).init();
         }
 
         this._addEventListenerExtended();
@@ -142,12 +149,12 @@ class VGFiles extends VGFilesBase {
         });
 
         this._setStatItem('pending', this._pendingUploadedKeys.size);
-        //this._renderUI(this._files);
 
         const uploadParams = {
             additionalData: {
                 timestamp: new Date().toISOString(),
-                source: 'web_uploader'
+                source: 'web_uploader',
+                prepend: this._params.prepend
             }
         };
 
@@ -345,7 +352,19 @@ class VGFiles extends VGFilesBase {
 
         this._uploader.onAllComplete(() => {
             EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
-            this._updateStat(false)
+            this._updateStat(false);
+
+            if (this._params.sortable?.enabled && this._params.sortable.route) {
+                import('./sortable.js').then(module => {
+                    if (this._sortable && typeof this._sortable.destroy === 'function') {
+                        this._sortable.destroy();
+                    }
+
+                    this._sortable = new module.default(this, this._params.sortable);
+                }).catch(err => {
+                    console.error('Ошибка загрузки VGFilesSortable:', err);
+                });
+            }
 
             // Вызов колбека завершения всех загрузок
             this._triggerCallback('onUploadAllComplete', {
@@ -633,6 +652,11 @@ class VGFiles extends VGFilesBase {
     }
 
     dispose() {
+        if (this._sortable && typeof this._sortable.destroy === 'function') {
+            this._sortable.destroy();
+        }
+        this._sortable = null;
+
         this.clear();
         if (this._uploader) this._uploader.destroy();
         super.dispose();
