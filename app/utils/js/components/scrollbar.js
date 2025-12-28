@@ -9,8 +9,8 @@
  */
 
 import { Manipulator } from "../dom/manipulator";
-import { isElement } from "../functions";
 import Selectors from "../dom/selectors";
+import { isElement } from "../functions";
 
 /**
  * Константы
@@ -54,16 +54,17 @@ class ScrollBarHelper {
 		if (width === 0) return;
 
 		this._disableOverflow();
-		this._setStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING, value => value + width);
-		this._setStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN, value => value - width);
-		this._setStyle(this._element, PROPERTY_PADDING, value => value + width);
+
+		this._setStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING, width, (value) => value + width);
+		this._setStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN, width, (value) => value - width);
+		this._setStyle(this._element, PROPERTY_PADDING, width, (value) => value + width);
 	}
 
 	/**
 	 * Сбрасывает стили до исходных значений
 	 */
 	reset() {
-		this._resetStyle(this._element, 'overflow');
+		this._resetStyle(this._element, "overflow");
 		this._resetStyle(this._element, PROPERTY_PADDING);
 		this._resetStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING);
 		this._resetStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN);
@@ -76,19 +77,19 @@ class ScrollBarHelper {
 	 * @private
 	 */
 	_disableOverflow() {
-		this._saveInitialStyle(this._element, 'overflow');
-		this._element.style.overflow = 'hidden';
+		this._saveInitialStyle(this._element, "overflow");
+		this._element.style.overflow = "hidden";
 	}
 
 	/**
 	 * Устанавливает стили с сохранением начальных значений
 	 * @param {string|HTMLElement} selector
 	 * @param {string} property
+	 * @param {number} width
 	 * @param {(value: number) => number} callback
 	 * @private
 	 */
-	_setStyle(selector, property, callback) {
-		const width = this.getWidth();
+	_setStyle(selector, property, width, callback) {
 		const apply = (element) => {
 			// Исключаем элементы, у которых и так нет места под скролл
 			if (element !== this._element && window.innerWidth > element.clientWidth + width) {
@@ -96,8 +97,10 @@ class ScrollBarHelper {
 			}
 
 			this._saveInitialStyle(element, property);
+
 			const current = getComputedStyle(element).getPropertyValue(property);
 			const value = Number.parseFloat(current) || 0;
+
 			element.style.setProperty(property, `${callback(value)}px`);
 		};
 
@@ -116,24 +119,29 @@ class ScrollBarHelper {
 
 			if (value === null) {
 				element.style.removeProperty(property);
-			} else {
-				Manipulator.remove(element, property);
-				element.style.setProperty(property, value);
+				return;
 			}
+
+			Manipulator.remove(element, property);
+			element.style.setProperty(property, value);
 		};
 
 		this._applyToElements(selector, apply);
 	}
 
 	/**
-	 * Сохраняет текущее значение стиля через Manipulator
+	 * Сохраняет текущее значение inline-стиля через Manipulator
+	 * (включая пустое значение, чтобы reset() работал стабильно).
 	 * @param {HTMLElement} element
 	 * @param {string} property
 	 * @private
 	 */
 	_saveInitialStyle(element, property) {
 		const value = element.style.getPropertyValue(property);
-		if (value) {
+
+		// Важно: сохраняем даже пустую строку (если inline-стиля не было)
+		// чтобы reset() мог корректно восстановить "как было".
+		if (value !== null) {
 			Manipulator.set(element, property, value);
 		}
 	}

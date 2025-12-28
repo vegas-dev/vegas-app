@@ -189,6 +189,10 @@ class VGFilesBase extends BaseModule {
 				classes.push('with-remove')
 			}
 
+			if (this._params.sortable.enabled) {
+				classes.push('with-sortable')
+			}
+
 			if (this._params.limits.count === 1) {
 				classes.push('single');
 
@@ -238,11 +242,17 @@ class VGFilesBase extends BaseModule {
 			if (this._params.image) {
 				classes.push('with-image');
 			}
+
 			if (this._params.info) {
 				classes.push('with-info');
 			}
+
 			if (this._params.detach) {
 				classes.push('with-remove')
+			}
+
+			if (this._params.sortable.enabled) {
+				classes.push('with-sortable')
 			}
 
 			const $li = this._tpl.li(

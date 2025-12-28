@@ -1,0 +1,73 @@
+/**
+ * Локальные миксины модуля (убирают дублирование между списками)
+ */
+@mixin vgfiles-sortable() {
+	&.with-sortable {
+		cursor: grab;
+
+		&:active {
+			cursor: grabbing;
+		}
+
+		&.dragging {
+			opacity: 0.6;
+			transform: scale(1.02);
+			z-index: 1000;
+			position: relative;
+		}
+
+		&.dragging-transparent {
+			pointer-events: none;
+			opacity: 0.3;
+		}
+	}
+}
+
+@mixin vgfiles-state() {
+	&.pending {
+		> * {
+			opacity: .32;
+			pointer-events: none;
+		}
+
+		.file-remove {
+			opacity: 0;
+		}
+	}
+
+	&.loading {
+		--vg-button-color: var(--vg-body-color);
+
+		> *:not(.file-remove) {
+			opacity: .52;
+			pointer-events: none;
+		}
+
+		.file-remove {
+			opacity: 1;
+			pointer-events: none;
+
+			button {
+				i {
+					animation: spinner 1s linear infinite;
+				}
+			}
+		}
+	}
+
+	&.completed {
+		--vg-button-color: var(--vg-success);
+	}
+
+	&.failing {
+		--vg-button-color: var(--vg-danger);
+
+		> * {
+			opacity: .62;
+		}
+
+		.file-remove {
+			opacity: 1;
+		}
+	}
+}
