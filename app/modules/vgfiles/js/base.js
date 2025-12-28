@@ -31,6 +31,7 @@ class VGFilesBase extends BaseModule {
 	_getClass(name) {
 		const map = {
 			'stat': 'vg-files-stat',
+			'stat-progress': 'vg-files-stat-progress',
 			'info': 'vg-files-info',
 			'info-list': 'vg-files-info--list',
 			'drop': 'vg-files-drop',

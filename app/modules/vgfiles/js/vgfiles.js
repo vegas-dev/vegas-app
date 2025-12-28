@@ -602,7 +602,8 @@ class VGFiles extends VGFilesBase {
                     this._tpl.span({ class: 'stat-label' }, getSVG('cloud-dot'), { isHTML: true }),
                     this._tpl.span({ class: 'stat-value' }, 0),
                 ])
-            ], { class: CLASS_NAME_STAT + '-progress-list' });
+
+            ], { class: CLASS_NAME_STAT + '-progress-list' }, true);
             $progress.appendChild($statList);
         }
     }

@@ -213,10 +213,16 @@ class LaravelHtmlBuilder {
 		return this.element('textarea', { name, ...attributes }, content);
 	}
 
-	ul(items = [], attributes = {}) {
-		const listItems = items.map(item =>
-			this.element('li', {}, item)
-		);
+	ul(items = [], attributes = {}, isNative = false) {
+		let listItems = [];
+
+		if (!isNative) {
+			listItems = items.map(item =>
+				this.element('li', {}, item)
+			);
+		} else {
+			listItems = items
+		}
 		return this.element('ul', attributes, listItems);
 	}
 
