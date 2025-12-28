@@ -17,6 +17,15 @@
 	@include mix-vars('files', $files-map);
 	position: relative;
 
+	a {
+		text-decoration: none;
+
+		&:hover {
+			outline: none;
+			text-decoration: none;
+		}
+	}
+
 	input {
 		visibility: initial;
 		width: 0;
@@ -520,7 +529,7 @@
 				}
 
 				&-info {
-					flex: 0 0 var(--vg-files-info-width);
+					flex: 1; // 0 0 var(--vg-files-info-width)
 					max-width: var(--vg-files-info-width);
 					display: flex;
 					gap: 4px;

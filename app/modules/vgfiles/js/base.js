@@ -289,16 +289,36 @@ class VGFilesBase extends BaseModule {
 		}
 	}
 
+	_serializeFileForData(file) {
+		return {
+			id: file?.id || '',
+			name: file?.name || '',
+			size: Number(file?.size || 0),
+			type: file?.type || '',
+			lastModified: Number(file?.lastModified || 0),
+			// для нативных
+			src: file?.src || file?.image || ''
+		};
+	}
+
 	_renderUIImage(file) {
 		const $container = this._tpl.div({ class: 'file-image' });
-		if (file.type.startsWith('image/')) {
-			const src = URL.createObjectURL(file);
-			this._objectUrls.push(src);
-			$container.appendChild(this._tpl.img(src, file.name, { class: 'file-preview' }));
-		} else {
-			const icon = this._getIconByFileType(file);
-			$container.appendChild(this._tpl.i({}, icon, { isHTML: true }));
+
+		const src = file?.src || file?.image;
+		if (src) {
+			$container.appendChild(this._tpl.img(src, file.name || '', { class: 'file-preview' }));
+			return $container;
 		}
+
+		if (file?.type && file.type.startsWith('image/')) {
+			const objectUrl = URL.createObjectURL(file);
+			this._objectUrls.push(objectUrl);
+			$container.appendChild(this._tpl.img(objectUrl, file.name, { class: 'file-preview' }));
+			return $container;
+		}
+
+		const icon = this._getIconByFileType(file);
+		$container.appendChild(this._tpl.i({}, icon, { isHTML: true }));
 		return $container;
 	}
 
