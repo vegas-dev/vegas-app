@@ -206,36 +206,35 @@ class VGFilesBase extends BaseModule {
 
 			const $li = this._tpl.li(
 				{ 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, [
-					this._renderUIImage(file)
+					this._renderUIImage(file),
+					this._renderUIInfo(file, i),
+					this._renderUIDetach(file)
 				]
 			);
-
-			// Добавляем превью изображения, если включено и файл — картинка
-
-
-			// Добавляем информационную часть (имя, размер), если включено
-			if (this._params.info) {
-				const $infoContainer = this._tpl.div({ class: 'file-info' }, [
-					this._tpl.span({ class: 'iteration' }, `${i + 1}.`),
-					this._tpl.span({ class: 'name' }, file.name),
-					this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
-				]);
-				$li.appendChild($infoContainer);
-			}
-
-			// Добавляем кнопку удаления, если разрешено
-			if (this._params.detach) {
-				const $fileRemove = this._tpl.div({ class: 'file-remove' }, [
-					this._setButtonElement(file)
-				])
-				$li.appendChild($fileRemove);
-			}
 
 			fragment.appendChild($li);
 		});
 		$list.appendChild(fragment);
 
 		Classes.add(this._nodes.info, 'show')
+	}
+
+	_renderUIDetach(file) {
+		if (this._params.detach) {
+			return this._tpl.div({ class: 'file-remove' }, [
+				this._setButtonElement(file)
+			])
+		}
+	}
+
+	_renderUIInfo(file, i) {
+		if (this._params.info) {
+			return  this._tpl.div({ class: 'file-info' }, [
+				this._tpl.span({ class: 'iteration' }, `${i + 1}.`),
+				this._tpl.span({ class: 'name' }, file.name),
+				this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
+			]);
+		}
 	}
 
 	_renderUIImage(file) {
