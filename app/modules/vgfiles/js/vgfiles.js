@@ -142,7 +142,7 @@ class VGFiles extends VGFilesBase {
         });
 
         this._setStatItem('pending', this._pendingUploadedKeys.size);
-        this._renderUI(this._files);
+        //this._renderUI(this._files);
 
         const uploadParams = {
             additionalData: {
