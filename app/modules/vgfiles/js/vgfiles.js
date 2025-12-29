@@ -9,6 +9,7 @@ import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import VGAlert from "../../vgalert";
 import VGToast from "../../vgtoast";
+import VGFilesTemplateRender from "./render";
 
 const NAME = 'files';
 const NAME_KEY = 'vg.files';
@@ -95,6 +96,8 @@ class VGFiles extends VGFilesBase {
 
             VGFilesDroppable.getOrCreateInstance(this._nodes.drop, this._params).init();
         }
+
+        //VGFilesTemplateRender.getOrCreateInstance(this._element, this._params).init();
 
         this._addEventListenerExtended();
         this._renderStat();

@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import { isElement, mergeDeepObject, normalizeData } from "../../../utils/js/functions";
+import { mergeDeepObject } from "../../../utils/js/functions";
 import Html from "../../../utils/js/components/templater";
 import { lang_messages } from "../../../utils/js/components/lang";
 import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
