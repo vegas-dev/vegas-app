@@ -135,24 +135,19 @@ class VGFilesSortable {
     }
 
     _saveOrder() {
-        const ids = [... new Set(this._getUploadedIds())]
+        const ids = Array.from(this._list.querySelectorAll('[data-id]'))
+            .map(el => {
+                const id = normalizeData(el.getAttribute('data-id'));
+                return id ? id : null;
+            })
+            .filter(Boolean);
 
         if (!ids.length || !this._params.route) return;
-
-        console.log(ids)
 
         const xhr = new Ajax();
         xhr.post(this._params.route, { ids }, {
             onSuccess: (data) => VGToast.run(data.response.message),
         });
-    }
-
-    _getUploadedIds() {
-        return Array.from(this._list.querySelectorAll('[data-id]'))
-            .map(el => {
-                const id = normalizeData(el.getAttribute('data-id'));
-                return id ? id : null;
-            }).filter(id => id !== null);
     }
 
     destroy() {

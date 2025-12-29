@@ -6,6 +6,9 @@ import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
 
+/**
+ * Базовый класс управления файлами (без AJAX)
+ */
 class VGFilesBase extends BaseModule {
 	constructor(element, params = {}, defaults = {}) {
 		super(element, params);
@@ -284,6 +287,18 @@ class VGFilesBase extends BaseModule {
 				this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
 			]);
 		}
+	}
+
+	_serializeFileForData(file) {
+		return {
+			id: file?.id || '',
+			name: file?.name || '',
+			size: Number(file?.size || 0),
+			type: file?.type || '',
+			lastModified: Number(file?.lastModified || 0),
+			// для нативных
+			src: file?.src || file?.image || ''
+		};
 	}
 
 	_renderUIImage(file) {
