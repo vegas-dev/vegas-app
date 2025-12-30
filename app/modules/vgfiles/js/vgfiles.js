@@ -96,24 +96,6 @@ class VGFiles extends VGFilesBase {
             VGFilesDroppable.getOrCreateInstance(this._nodes.drop, this._params).init();
         }
 
-        import('./render.js').then(module => {
-            this._render = new module.default(this, this._element, this._params).init();
-
-            if (this._render && this._params.sortable.enabled && this._params.sortable.route) {
-                import('./sortable.js').then(module => {
-                    if (this._sortable && typeof this._sortable.destroy === 'function') {
-                        this._sortable.destroy();
-                    }
-
-                    this._sortable = new module.default(this, this._params.sortable);
-                }).catch(err => {
-                    console.error('Ошибка загрузки VGFilesSortable:', err);
-                });
-            }
-        }).catch(err => {
-            console.error('Ошибка загрузки VGFilesTemplateRender:', err);
-        });
-
         this._addEventListenerExtended();
         this._renderStat();
         this._triggerCallback('onInit', { element: this._element });
@@ -127,7 +109,6 @@ class VGFiles extends VGFilesBase {
     }
 
     _handleChange(e) {
-        this.change(e.target);
         if (this._params.ajax) this.uploadAll(this._files);
         this._triggerCallback('onChange', { files: this._files, input: e.target });
         EventHandler.trigger(this._element, `${NAME_KEY}.change`, { files: this._files });

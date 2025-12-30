@@ -1,7 +1,7 @@
-import {isElement} from "../../../utils/js/functions";
+import {isElement, normalizeData} from "../../../utils/js/functions";
 import Params from "../../../utils/js/components/params";
 import Selectors from "../../../utils/js/dom/selectors";
-import {Manipulator} from "../../../utils/js/dom/manipulator";
+import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 
 class VGFilesTemplateRender {
 	constructor(vgFilesInstance, element, params = {}) {
@@ -30,22 +30,47 @@ class VGFilesTemplateRender {
 	}
 
 	_nativeRenderFilesInfo() {
-		const $list = Selectors.find(`.vg-files-info--list`, this._nodes.info);
+/*		const $list = Selectors.find(`.vg-files-info--list`, this._nodes.info);
 		if (!$list) return;
 
-		this.bufferTemplate.add([... Selectors.findAll('li', $list)].map((item) => {
-			if (Manipulator.has(item, 'data-file') && !Manipulator.get(item, 'data-file')) {
-				return item;
-			}
-		}));
+		const $items = Array.from($list.querySelectorAll('li'));
+		if (!$items.length) return false;
 
-		console.log(this.bufferTemplate)
+		this._setTemplateInBuffer($items);
+		if (!this.bufferTemplate.size) return;
+
+		if (!this._params.info) Classes.add($list, 'list-row');
+
+		const rawDataFile = $items.map(li => normalizeData(Manipulator.get(li, 'data-file')));
+		if (!rawDataFile && this.bufferTemplate.size) {
+			console.log('asd')
+		}
+
+		console.log(this.bufferTemplate)*/
 
 		return false;
 	}
 
 	_nativeRenderFilesDrop() {
 		return false
+	}
+
+	_setTemplateInBuffer($list = []) {
+		const seen = new Set();
+		$list.forEach(li => {
+			const html = li.outerHTML;
+			if (!seen.has(html)) {
+				seen.add(html);
+				this.bufferTemplate.add(li);
+
+				const hasDataFile = Manipulator.has(li, 'data-file') || Manipulator.get(li, 'data-file') !== '';
+				const isEmptyContent = li.textContent.trim() === '' && li.children.length === 0;
+
+				if ((hasDataFile || isEmptyContent) && !this.module._files.length) {
+					li.remove();
+				}
+			}
+		});
 	}
 
 	dispose() {

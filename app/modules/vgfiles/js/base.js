@@ -5,6 +5,7 @@ import { lang_messages } from "../../../utils/js/components/lang";
 import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
+import VGFilesTemplateRender from "./render";
 
 class VGFilesBase extends BaseModule {
 	constructor(element, params = {}, defaults = {}) {
@@ -22,6 +23,7 @@ class VGFilesBase extends BaseModule {
 			drop: Selectors.find(`.${this._getClass('drop')}`, this._element),
 		};
 
+		this._render = new VGFilesTemplateRender(this, this._element, this._params);
 		this._init();
 	}
 
@@ -40,6 +42,7 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_init() {
+		//if (this._params.ajax) this._render.init();
 		this._preventOriginalInputFromSubmit();
 		this._addEventListener();
 	}
@@ -254,7 +257,7 @@ class VGFilesBase extends BaseModule {
 			}
 
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, [
+				{ 'data-name': file.name, 'data-size': file.size, 'data-type': file.type, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, [
 					this._renderUIImage(file),
 					this._renderUIInfo(file, i),
 					this._renderUIDetach(file)
@@ -424,9 +427,15 @@ class VGFilesBase extends BaseModule {
 
 	build() {
 		this._updateStat();
-		this._renderUI(this._files);
 
-		if (!this._params.ajax) {
+		if (this._params.ajax) {
+			if (this._render.init()) {
+				this._render.init()
+			} else {
+				this._renderUI(this._files);
+			}
+		} else {
+			this._renderUI(this._files);
 			this._generateHiddenInputs(this._files);
 		}
 	}
