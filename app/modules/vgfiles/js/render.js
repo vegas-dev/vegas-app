@@ -57,6 +57,7 @@ class VGFilesTemplateRender {
 
 	_setTemplateInBuffer($items) {
 		if (!$items.length) return;
+		if (this.bufferTemplate) return;
 
 		let first = $items[0];
 
