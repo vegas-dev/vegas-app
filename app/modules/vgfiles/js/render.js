@@ -2,6 +2,7 @@ import {isElement, normalizeData} from "../../../utils/js/functions";
 import Params from "../../../utils/js/components/params";
 import Selectors from "../../../utils/js/dom/selectors";
 import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
+import data from "../../../utils/js/dom/data";
 
 class VGFilesTemplateRender {
 	constructor(vgFilesInstance, element, params = {}) {
@@ -14,7 +15,8 @@ class VGFilesTemplateRender {
 			info: this.module._nodes.info,
 			drop: this.module._nodes.drop
 		}
-		this.bufferTemplate = new Set();
+		this.bufferTemplate = '';
+		this.fileObjData = {};
 	}
 
 	init() {
@@ -30,47 +32,45 @@ class VGFilesTemplateRender {
 	}
 
 	_nativeRenderFilesInfo() {
-/*		const $list = Selectors.find(`.vg-files-info--list`, this._nodes.info);
+		const $list = Selectors.find(`.vg-files-info--list`, this._nodes.info);
 		if (!$list) return;
 
 		const $items = Array.from($list.querySelectorAll('li'));
 		if (!$items.length) return false;
 
 		this._setTemplateInBuffer($items);
-		if (!this.bufferTemplate.size) return;
+		if (!this.bufferTemplate) return false;
 
-		if (!this._params.info) Classes.add($list, 'list-row');
+		if (!$items.length) return false;
+		Classes.add(this._nodes.info, 'show')
 
-		const rawDataFile = $items.map(li => normalizeData(Manipulator.get(li, 'data-file')));
-		if (!rawDataFile && this.bufferTemplate.size) {
-			console.log('asd')
-		}
+		$items.forEach((li, i) => {
+			if (!Classes.has(li, 'file')) Classes.add(li, 'file');
+		});
 
-		console.log(this.bufferTemplate)*/
-
-		return false;
+		return true;
 	}
 
 	_nativeRenderFilesDrop() {
 		return false
 	}
 
-	_setTemplateInBuffer($list = []) {
-		const seen = new Set();
-		$list.forEach(li => {
-			const html = li.outerHTML;
-			if (!seen.has(html)) {
-				seen.add(html);
-				this.bufferTemplate.add(li);
+	_setTemplateInBuffer($items) {
+		if (!$items.length) return;
 
-				const hasDataFile = Manipulator.has(li, 'data-file') || Manipulator.get(li, 'data-file') !== '';
-				const isEmptyContent = li.textContent.trim() === '' && li.children.length === 0;
+		let first = $items[0];
 
-				if ((hasDataFile || isEmptyContent) && !this.module._files.length) {
-					li.remove();
-				}
-			}
-		});
+		if (Manipulator.has(first, 'data-file')) {
+			this.fileObjData = normalizeData(Manipulator.get(first, 'data-file'));
+		}
+
+		if (!this.fileObjData) {
+			this.bufferTemplate = first.outerHTML;
+			first.remove();
+			$items.shift();
+		} else {
+			this.bufferTemplate = first.outerHTML;
+		}
 	}
 
 	dispose() {

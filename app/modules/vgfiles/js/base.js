@@ -42,9 +42,64 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_init() {
-		//if (this._params.ajax) this._render.init();
+		if (this._params.ajax) this._render.init();
 		this._preventOriginalInputFromSubmit();
 		this._addEventListener();
+	}
+
+	change(input = null) {
+		const incomingFiles = input?.files;
+		if (!incomingFiles?.length) return;
+
+		const filesArray = Array.from(incomingFiles);
+
+		if (!this._params.allowed) {
+			this.append(filesArray, false);
+			this.build();
+		} else {
+			this.clear();
+			this.append(filesArray, true);
+			this.build();
+		}
+	}
+
+	build() {
+		this._updateStat();
+
+		if (this._params.ajax) {
+			if (this._render.init()) {
+				this._render.init()
+			} else {
+				this._renderUI(this._files);
+			}
+		} else {
+			this._renderUI(this._files);
+			this._generateHiddenInputs(this._files);
+		}
+	}
+
+	append(values, replace = true) {
+		const incoming = Array.from(values);
+		let filesToProcess;
+
+		if (replace) {
+			filesToProcess = incoming;
+		} else {
+			const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
+			incoming.forEach(file => {
+				fileMap.set(this._getFileKey(file), file);
+			});
+			filesToProcess = Array.from(fileMap.values());
+		}
+
+		this._files = this._filterFiles(filesToProcess);
+		if (this._params.prepend) this._files.reverse();
+
+		this._renderErrors();
+
+		console.log(this._files)
+
+		return this._files;
 	}
 
 	_getFileKey(file) {
@@ -91,26 +146,6 @@ class VGFilesBase extends BaseModule {
 		}
 
 		return filtered;
-	}
-
-	append(values, replace = true) {
-		const incoming = Array.from(values);
-		let filesToProcess;
-
-		if (replace) {
-			filesToProcess = incoming;
-		} else {
-			const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
-			incoming.forEach(file => {
-				fileMap.set(this._getFileKey(file), file);
-			});
-			filesToProcess = Array.from(fileMap.values());
-		}
-
-		this._files = this._filterFiles(filesToProcess);
-		this._renderErrors();
-		this.build();
-		return this._files;
 	}
 
 	_getSizes(size, isArray = false) {
@@ -407,37 +442,6 @@ class VGFilesBase extends BaseModule {
 		Selectors.findAll('[data-vg-toggle="files"]', this._element).forEach(el => {
 			el.addEventListener('change', () => this.change(el));
 		});
-	}
-
-	change(input = null) {
-		const incomingFiles = input?.files;
-		if (!incomingFiles?.length) return;
-
-		const filesArray = Array.from(incomingFiles);
-
-		if (!this._params.allowed) {
-			this.append(filesArray, false);
-		} else {
-			this.clear();
-			this.append(filesArray, true);
-		}
-
-		if (this._params.prepend) this._files.reverse();
-	}
-
-	build() {
-		this._updateStat();
-
-		if (this._params.ajax) {
-			if (this._render.init()) {
-				this._render.init()
-			} else {
-				this._renderUI(this._files);
-			}
-		} else {
-			this._renderUI(this._files);
-			this._generateHiddenInputs(this._files);
-		}
 	}
 
 	dispose() {
