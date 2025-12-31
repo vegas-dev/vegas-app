@@ -179,3 +179,15 @@ const files = new VGFiles(document.querySelector('.vg-files'), {
 ---
 
 ✅ **Гибкий | Расширяемый | Локализуемый | Готов к production**
+
+---
+
+## 📝 Лицензия
+
+MIT. Свободно использовать и модифицировать.
+
+---
+
+📌 *Разработано в рамках фронтенд-системы VG Modules.*
+> 🚀 Автор: VEGAS STUDIO (vegas-dev.com)
+> 📍 Поддерживается в проектах VEGAS
