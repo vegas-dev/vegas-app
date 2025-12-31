@@ -1,11 +1,11 @@
 import VGFilesBase from "./base";
 import FileUploader from "./loader";
 import VGFilesDroppable from "./droppable";
-import { getSVG } from "../../module-fn";
+import {getSVG} from "../../module-fn";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
-import { isElement, normalizeData } from "../../../utils/js/functions";
-import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
+import {isElement, normalizeData} from "../../../utils/js/functions";
+import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import VGAlert from "../../vgalert";
 import VGToast from "../../vgtoast";
@@ -82,6 +82,7 @@ class VGFiles extends VGFilesBase {
         this._sortable = null;
 
         this._render = new VGFilesTemplateRender(this, this._element, this._params);
+        this.isRenderNonInit = false;
         this._initExtended();
     }
 
@@ -91,7 +92,12 @@ class VGFiles extends VGFilesBase {
     _initExtended() {
         if (this._params.ajax) {
             this._params.allowed = false;
-            this._render.init();
+
+            if (this.isRenderNonInit) return;
+            this.isRenderNonInit = this._render.init();
+            if (this._render.parsedFiles.length) {
+                this._addExternalFiles(this._render.parsedFiles);
+            }
         }
         if (this._params.allowed && !this._params.ajax) this._params.detach = false;
         if (this._nodes.drop) {
@@ -106,6 +112,69 @@ class VGFiles extends VGFilesBase {
         this._triggerCallback('onInit', { element: this._element });
     }
 
+    _addExternalFiles(files) {
+        if (!Array.isArray(files) || !files.length) return;
+
+        files.forEach(fileData => {
+            const file = new File([""], fileData.name, {
+                type: fileData.type || "application/octet-stream",
+                lastModified: fileData.lastModified || Date.now()
+            });
+
+            // Добавляем ID, если он есть
+            Object.defineProperty(file, 'id', {
+                value: fileData.id,
+                writable: true,
+                enumerable: true
+            });
+
+            // Добавляем Size, если он есть
+            Object.defineProperty(file, 'size', {
+                value: fileData.size,
+                writable: true,
+                enumerable: true
+            });
+
+            // Добавляем Src, если он есть
+            Object.defineProperty(file, 'src', {
+                value: fileData.src,
+                writable: true,
+                enumerable: true
+            });
+
+            const fileKey = this._getFileKey(file);
+
+            // Помечаем как уже загруженные
+            this._uploadedKeys.add(fileKey);
+            this._pendingUploadedKeys.delete(fileKey);
+            this._failingUploadedKeys.delete(fileKey);
+
+            // Добавляем в общий список
+            this._files.push(file);
+        });
+
+        // Перестраиваем интерфейс
+        this._renderUI(this._files);
+
+        // Обновляем статистику
+        this._renderStat();
+        this._updateStat();
+        this._setStatItem('completed', this._uploadedKeys.size);
+
+        // Если нужно — запустить sortable
+        if (this._params.sortable?.enabled && this._params.sortable.route && !this._sortable) {
+            import('./sortable.js').then(module => {
+                this._sortable = new module.default(this, this._params.sortable);
+            }).catch(err => {
+                console.error('Ошибка загрузки VGFilesSortable:', err);
+            });
+        }
+
+        // Триггерим изменение
+        this._triggerCallback('onChange', { files: this._files });
+        EventHandler.trigger(this._element, `${NAME_KEY}.change`, { files: this._files });
+    }
+
     _addEventListenerExtended() {
         Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element).forEach(el => {
             el.removeEventListener('change', this.change.bind(this));
@@ -115,7 +184,7 @@ class VGFiles extends VGFilesBase {
 
     _handleChange(e) {
         if (this._params.ajax) this.uploadAll(this._files);
-        this._triggerCallback('onChange', { files: this._files, input: e.target });
+        this._triggerCallback('onChange', { files: this._files, input: e?.target || e?.src || '' });
         EventHandler.trigger(this._element, `${NAME_KEY}.change`, { files: this._files });
     }
 

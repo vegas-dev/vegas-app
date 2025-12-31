@@ -208,10 +208,19 @@ class VGFilesBase extends BaseModule {
 		this._renderUIStatusDropInfoAjax(this._files)
 	}
 
-	_parseTemplate(tmpl) {
+	_parseTemplate() {
+		const render = this._render;
+		let tmpl = this.template;
+
+		if (render) {
+			if (render.bufferTemplate) tmpl = render.bufferTemplate;
+		}
+
 		const temp = document.createElement('div');
 		temp.innerHTML = tmpl;
 		const liElement = temp.firstElementChild;
+		const liClasses = liElement.className || '';
+		const liClassList = liClasses ? liClasses.split(' ').filter(cls => cls.trim() !== '') : [];
 
 		const childCount = liElement.childElementCount;
 
@@ -224,7 +233,12 @@ class VGFilesBase extends BaseModule {
 			});
 		}
 
-		return children;
+		return {
+			children: children,
+			template: tmpl,
+			liClasses: liClassList,
+			liClassName: liClasses
+		};
 	}
 
 	_renderUIDropList(files) {
@@ -235,18 +249,15 @@ class VGFilesBase extends BaseModule {
 			$list = this._tpl.ul([], { class: this._getClass('drop-list') });
 		}
 
+		const $itemsTemplate = this._parseTemplate().children;
+		const $itemsTemplateClasses = this._parseTemplate().liClasses.filter(cls => cls !== 'file');
 		const fragment = document.createDocumentFragment();
+
 		files.forEach((file) => {
-			let classes = [];
+			let classes = $itemsTemplateClasses;;
 
-			if (this._params.detach) {
-				classes.push('with-remove')
-			}
-
-			if (this._params.sortable.enabled) {
-				classes.push('with-sortable')
-			}
-
+			if (this._params.detach) classes.push('with-remove')
+			if (this._params.sortable.enabled) classes.push('with-sortable')
 			if (this._params.limits.count === 1) {
 				classes.push('single');
 
@@ -257,11 +268,19 @@ class VGFilesBase extends BaseModule {
 				}
 			}
 
+			let parts = [];
+			$itemsTemplate.forEach(tmpl => {
+				if (tmpl.className === 'file-image') {
+					parts.push(this._renderUIImage(file))
+				} else if (tmpl.className === 'file-remove') {
+					parts.push(this._renderUIDetach(file))
+				} else {
+					parts.push(tmpl.element.cloneNode(true));
+				}
+			});
+
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, [
-					this._renderUIImage(file),
-					this._renderUIDetach(file)
-				]
+				{ 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, parts
 			);
 
 			fragment.appendChild($li);
@@ -290,17 +309,19 @@ class VGFilesBase extends BaseModule {
 
 		$list.innerHTML = '';
 
-		const $itemsTemplate = this._parseTemplate(this.template);
+		const $itemsTemplate = this._parseTemplate().children;
+		const $itemsTemplateClasses = this._parseTemplate().liClasses.filter(cls => cls !== 'file');
 		const fragment = document.createDocumentFragment();
+
 		files.forEach((file, i) => {
-			let classes = [];
+			let classes = $itemsTemplateClasses;
 
 			if (this._params.image) classes.push('with-image');
 			if (this._params.info) classes.push('with-info');
 			if (this._params.detach) classes.push('with-remove')
 			if (this._params.sortable.enabled) classes.push('with-sortable');
 
-			const parts = [];
+			let parts = [];
 			$itemsTemplate.forEach(tmpl => {
 				if (tmpl.className === 'file-image') {
 					parts.push(this._renderUIImage(file))
@@ -309,14 +330,12 @@ class VGFilesBase extends BaseModule {
 				} else if (tmpl.className === 'file-remove') {
 					parts.push(this._renderUIDetach(file))
 				} else {
-					parts.push(tmpl.element)
+					parts.push(tmpl.element.cloneNode(true));
 				}
 			});
 
-			console.log(parts)
-
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, 'data-type': file.type, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, parts
+				{ 'data-name': file.name, 'data-size': file.size, 'data-type': file.type, 'data-id': file.id || '', class: 'file ' + classes.join(' ') + ' ' }, parts
 			);
 			fragment.appendChild($li);
 		});
@@ -345,6 +364,8 @@ class VGFilesBase extends BaseModule {
 
 	_renderUIImage(file) {
 		const $container = this._tpl.div({ class: 'file-image' });
+
+		console.log(file)
 
 		const src = file?.src || file?.image;
 		if (src) {

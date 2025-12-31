@@ -1,134 +1,82 @@
-import {isElement, normalizeData} from "../../../utils/js/functions";
+import { isElement, normalizeData } from "../../../utils/js/functions";
 import Params from "../../../utils/js/components/params";
 import Selectors from "../../../utils/js/dom/selectors";
-import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
-import data from "../../../utils/js/dom/data";
+import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
 
 class VGFilesTemplateRender {
 	constructor(vgFilesInstance, element, params = {}) {
 		this.module = vgFilesInstance;
 		this.element = isElement(element);
 
-		if (!this.element) return console.error('Element is not valid', element);
+		if (!this.element) {
+			console.error('Invalid element provided:', element);
+			return;
+		}
+
 		this._params = new Params(params, element).get();
 		this._nodes = {
 			info: this.module._nodes.info,
 			drop: this.module._nodes.drop
-		}
+		};
+
 		this.bufferTemplate = '';
+		this.parsedFiles = [];
 	}
 
 	init() {
-		return this._nativeRenderFiles();
+		const $targetNode = this._nodes.info || this._nodes.drop;
+		if (!$targetNode) return false;
+
+		const area = this._nodes.info ? 'info' : 'drop';
+		return this._nativeRenderFiles(area, $targetNode);
 	}
 
-	_nativeRenderFiles() {
-		const $info = this._nodes.info;
-		if ($info) return this._nativeRenderFilesInfo();
+	_nativeRenderFiles(area, $node) {
+		const $list = Selectors.find(`.vg-files-${area}--list`, $node);
+		if (!$list) return false;
 
-		const $drop = this._nodes.drop;
-		if ($drop) return this._nativeRenderFilesDrop();
-	}
+		const $items = Array.from($list.children).filter(li => li.tagName === 'LI');
+		if ($items.length === 0) return false;
 
-	_nativeRenderFilesInfo() {
-		const $list = Selectors.find(`.vg-files-info--list`, this._nodes.info);
-		if (!$list) return;
-
-		const $items = Array.from($list.querySelectorAll('li'));
-		if (!$items.length) return false;
-
+		// Сохраняем шаблон только один раз
 		this._setTemplateInBuffer($items);
+
 		if (!this.bufferTemplate) return false;
 
-		if (!$items.length) return false;
-		Classes.add(this._nodes.info, 'show');
+		// Парсим данные файлов
+		this.parsedFiles = $items
+			.map(li => {
+				const rawData = Manipulator.get(li, 'data-file');
+				if (!rawData) return null;
 
-		const parsed = [];
+				const dataFile = normalizeData(rawData);
+				const requiredKeys = ['id', 'name', 'size', 'type', 'src'];
+				const isValid = requiredKeys.every(key => dataFile.hasOwnProperty(key));
 
-		$items.forEach((li, i) => {
-			const rawDataFile = normalizeData(Manipulator.get(li, 'data-file'));
-			if (!rawDataFile) return;
-
-			let dataFile = normalizeData(rawDataFile),
-				rulesData = ['id', 'name', 'size', 'type', 'src'];
-
-			let isNonFound = !rulesData.every(rule => dataFile.hasOwnProperty(rule));
-			if (isNonFound) return;
-
-			parsed.push(dataFile);
-
-			Manipulator.set(li, 'data-name', dataFile.name);
-			Manipulator.set(li, 'data-size', dataFile.size);
-			Manipulator.set(li, 'data-id', dataFile.id);
-			Manipulator.set(li, 'data-type', dataFile.type);
-			if ('lastModified' in dataFile) Manipulator.set(li, 'data-last-modified', dataFile.lastModified);
-
-			const renderClasses = [];
-			if (this._params.image) renderClasses.push('with-image');
-			if (this._params.info) renderClasses.push('with-info');
-			if (this._params.detach) renderClasses.push('with-remove');
-			if (this._params.sortable?.enabled) renderClasses.push('with-sortable');
-
-			if (this._params.ajax) {
-				this.module._uploadedKeys.add(this.module._getFileKey(dataFile));
-			}
-
-			const preservedStateClasses = [
-				'loaded',
-				'loading',
-				'pending',
-				'failing',
-				'completed'
-			].filter(c => li.classList.contains(c));
-
-			li.className = ['file', ...renderClasses, ...preservedStateClasses].join(' ');
-			Classes.add(li, 'loaded');
-
-			const parts = {
-				image: Selectors.find('.file-image', li),
-				info: Selectors.find('.file-info', li),
-				remove: Selectors.find('.file-remove', li)
-			};
-
-			if (!parts.image) {
-				parts.image = this.module._renderUIImage(dataFile);
-				li.prepend(parts.image);
-			}
-
-			this.module._updateStat();
-		});
-
-		/*console.log(parsed)*/
+				return isValid ? dataFile : null;
+			})
+			.filter(Boolean); // Убираем null
 
 		return true;
 	}
 
-	_nativeRenderFilesDrop() {
-		return false
-	}
-
 	_setTemplateInBuffer($items) {
-		if (!$items.length) return;
-		if (this.bufferTemplate) return;
+		if (this.bufferTemplate || $items.length === 0) return;
 
-		let first = $items[0],
-			fileObjData = {};
+		const firstItem = $items[0];
 
-		if (Manipulator.has(first, 'data-file')) {
-			fileObjData = normalizeData(Manipulator.get(first, 'data-file'));
-		}
-
-		if (!fileObjData) {
-			this.bufferTemplate = first.outerHTML;
-			first.remove();
-			$items.shift();
+		// Если нет data-file — шаблон извлекается и элемент удаляется
+		if (!Manipulator.has(firstItem, 'data-file')) {
+			this.bufferTemplate = firstItem.outerHTML;
+			firstItem.remove();
 		} else {
-			this.bufferTemplate = first.outerHTML;
+			this.bufferTemplate = firstItem.outerHTML;
 		}
 	}
 
 	dispose() {
-		this.bufferTemplate.clear();
+		this.bufferTemplate = '';
+		this.parsedFiles = [];
 	}
 }
 

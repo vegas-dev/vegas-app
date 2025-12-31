@@ -7,16 +7,14 @@ class VGFilesSortable {
     constructor(vgFilesInstance, options = {}) {
         this._vg = vgFilesInstance;
         this._params = {
-            handle: '.file',          // за что хватаемся (можно переопределить в options)
-            itemSelector: 'li.file',  // что именно перетаскиваем (можно переопределить в options)
+            handle: '.file',
+            itemSelector: 'li.file',
             route: null,
             method: 'POST',
             toast: true,
             ...options
         };
 
-        // Если в options пришёл handle (например ".file"), а itemSelector не задан —
-        // будем перетаскивать ближайший LI с этим handle-классом
         if (!options.itemSelector && options.handle) {
             this._params.itemSelector = `li${options.handle}`;
         }
@@ -46,7 +44,6 @@ class VGFilesSortable {
     }
 
     _init() {
-        // КЛЮЧЕВОЕ: без draggable dragstart в дропзоне может вообще не стартовать
         this._enableDraggableItems();
 
         this._setupEvents();
@@ -59,7 +56,6 @@ class VGFilesSortable {
         items.forEach(li => {
             li.setAttribute('draggable', 'true');
 
-            // Чтобы браузер не пытался тащить картинку как "Files/URI"
             const img = li.querySelector('img');
             if (img) img.setAttribute('draggable', 'false');
         });
@@ -73,11 +69,9 @@ class VGFilesSortable {
     }
 
     _onDragStart(e) {
-        // Разрешаем стартовать drag только если начали тянуть за handle
         const handleEl = e.target.closest(this._params.handle);
         if (!handleEl) return;
 
-        // А перетаскиваем всегда целый item (li/.vg-files-item)
         const item = e.target.closest(this._params.itemSelector) || e.target.closest('li');
         if (!item) return;
 
@@ -99,8 +93,6 @@ class VGFilesSortable {
     }
 
     _onDragOver(e) {
-        // ✅ Если сейчас НЕ сортировка — не вмешиваемся.
-        // Это важно для drag&drop файлов на дропзону.
         if (!this._draggedItem) return;
 
         e.preventDefault();
@@ -124,9 +116,6 @@ class VGFilesSortable {
     }
 
     _onDrop(e) {
-        // ✅ Ключевой фикс:
-        // если это не сортировка (нет draggedItem), значит это может быть drop файлов
-        // — не блокируем всплытие, пусть обработает VGFilesDroppable на label.
         if (!this._draggedItem) return;
 
         e.preventDefault();
@@ -138,8 +127,6 @@ class VGFilesSortable {
         const ids = [... new Set(this._getUploadedIds())]
 
         if (!ids.length || !this._params.route) return;
-
-        console.log(ids)
 
         const xhr = new Ajax();
         xhr.post(this._params.route, { ids }, {
