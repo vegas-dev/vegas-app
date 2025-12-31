@@ -23,7 +23,8 @@ class VGFilesBase extends BaseModule {
 			drop: Selectors.find(`.${this._getClass('drop')}`, this._element),
 		};
 
-		this._render = new VGFilesTemplateRender(this, this._element, this._params);
+		this.template = '<li data-file="" class="file"><div class="file-image"></div><div class="file-info"></div><div class="file-remove"></div></li>';
+
 		this._init();
 	}
 
@@ -42,7 +43,6 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_init() {
-		if (this._params.ajax) this._render.init();
 		this._preventOriginalInputFromSubmit();
 		this._addEventListener();
 	}
@@ -72,6 +72,7 @@ class VGFilesBase extends BaseModule {
 			} else {
 				this._renderUI(this._files);
 			}
+			this._renderUI(this._files);
 		} else {
 			this._renderUI(this._files);
 			this._generateHiddenInputs(this._files);
@@ -97,13 +98,11 @@ class VGFilesBase extends BaseModule {
 
 		this._renderErrors();
 
-		console.log(this._files)
-
 		return this._files;
 	}
 
 	_getFileKey(file) {
-		return `${file.name}-${file.size}`;
+		return `${file.name}-${file.size}-${file.type}`;
 	}
 
 	_filterFiles(files) {
@@ -209,6 +208,25 @@ class VGFilesBase extends BaseModule {
 		this._renderUIStatusDropInfoAjax(this._files)
 	}
 
+	_parseTemplate(tmpl) {
+		const temp = document.createElement('div');
+		temp.innerHTML = tmpl;
+		const liElement = temp.firstElementChild;
+
+		const childCount = liElement.childElementCount;
+
+		const children = [];
+		for (let i = 0; i < childCount; i++) {
+			children.push({
+				index: i,
+				element: liElement.children[i],
+				className: liElement.children[i].className
+			});
+		}
+
+		return children;
+	}
+
 	_renderUIDropList(files) {
 		if (!this._nodes.drop) return;
 
@@ -271,34 +289,35 @@ class VGFilesBase extends BaseModule {
 		if (!this._params.info) Classes.add($list, 'list-row');
 
 		$list.innerHTML = '';
+
+		const $itemsTemplate = this._parseTemplate(this.template);
 		const fragment = document.createDocumentFragment();
 		files.forEach((file, i) => {
 			let classes = [];
 
-			if (this._params.image) {
-				classes.push('with-image');
-			}
+			if (this._params.image) classes.push('with-image');
+			if (this._params.info) classes.push('with-info');
+			if (this._params.detach) classes.push('with-remove')
+			if (this._params.sortable.enabled) classes.push('with-sortable');
 
-			if (this._params.info) {
-				classes.push('with-info');
-			}
+			const parts = [];
+			$itemsTemplate.forEach(tmpl => {
+				if (tmpl.className === 'file-image') {
+					parts.push(this._renderUIImage(file))
+				} else if (tmpl.className === 'file-info') {
+					parts.push(this._renderUIInfo(file, i))
+				} else if (tmpl.className === 'file-remove') {
+					parts.push(this._renderUIDetach(file))
+				} else {
+					parts.push(tmpl.element)
+				}
+			});
 
-			if (this._params.detach) {
-				classes.push('with-remove')
-			}
-
-			if (this._params.sortable.enabled) {
-				classes.push('with-sortable')
-			}
+			console.log(parts)
 
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, 'data-type': file.type, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, [
-					this._renderUIImage(file),
-					this._renderUIInfo(file, i),
-					this._renderUIDetach(file)
-				]
+				{ 'data-name': file.name, 'data-size': file.size, 'data-type': file.type, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, parts
 			);
-
 			fragment.appendChild($li);
 		});
 		$list.appendChild(fragment);

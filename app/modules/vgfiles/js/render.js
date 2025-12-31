@@ -16,7 +16,6 @@ class VGFilesTemplateRender {
 			drop: this.module._nodes.drop
 		}
 		this.bufferTemplate = '';
-		this.fileObjData = {};
 	}
 
 	init() {
@@ -42,11 +41,64 @@ class VGFilesTemplateRender {
 		if (!this.bufferTemplate) return false;
 
 		if (!$items.length) return false;
-		Classes.add(this._nodes.info, 'show')
+		Classes.add(this._nodes.info, 'show');
+
+		const parsed = [];
 
 		$items.forEach((li, i) => {
-			if (!Classes.has(li, 'file')) Classes.add(li, 'file');
+			const rawDataFile = normalizeData(Manipulator.get(li, 'data-file'));
+			if (!rawDataFile) return;
+
+			let dataFile = normalizeData(rawDataFile),
+				rulesData = ['id', 'name', 'size', 'type', 'src'];
+
+			let isNonFound = !rulesData.every(rule => dataFile.hasOwnProperty(rule));
+			if (isNonFound) return;
+
+			parsed.push(dataFile);
+
+			Manipulator.set(li, 'data-name', dataFile.name);
+			Manipulator.set(li, 'data-size', dataFile.size);
+			Manipulator.set(li, 'data-id', dataFile.id);
+			Manipulator.set(li, 'data-type', dataFile.type);
+			if ('lastModified' in dataFile) Manipulator.set(li, 'data-last-modified', dataFile.lastModified);
+
+			const renderClasses = [];
+			if (this._params.image) renderClasses.push('with-image');
+			if (this._params.info) renderClasses.push('with-info');
+			if (this._params.detach) renderClasses.push('with-remove');
+			if (this._params.sortable?.enabled) renderClasses.push('with-sortable');
+
+			if (this._params.ajax) {
+				this.module._uploadedKeys.add(this.module._getFileKey(dataFile));
+			}
+
+			const preservedStateClasses = [
+				'loaded',
+				'loading',
+				'pending',
+				'failing',
+				'completed'
+			].filter(c => li.classList.contains(c));
+
+			li.className = ['file', ...renderClasses, ...preservedStateClasses].join(' ');
+			Classes.add(li, 'loaded');
+
+			const parts = {
+				image: Selectors.find('.file-image', li),
+				info: Selectors.find('.file-info', li),
+				remove: Selectors.find('.file-remove', li)
+			};
+
+			if (!parts.image) {
+				parts.image = this.module._renderUIImage(dataFile);
+				li.prepend(parts.image);
+			}
+
+			this.module._updateStat();
 		});
+
+		/*console.log(parsed)*/
 
 		return true;
 	}
@@ -59,13 +111,14 @@ class VGFilesTemplateRender {
 		if (!$items.length) return;
 		if (this.bufferTemplate) return;
 
-		let first = $items[0];
+		let first = $items[0],
+			fileObjData = {};
 
 		if (Manipulator.has(first, 'data-file')) {
-			this.fileObjData = normalizeData(Manipulator.get(first, 'data-file'));
+			fileObjData = normalizeData(Manipulator.get(first, 'data-file'));
 		}
 
-		if (!this.fileObjData) {
+		if (!fileObjData) {
 			this.bufferTemplate = first.outerHTML;
 			first.remove();
 			$items.shift();

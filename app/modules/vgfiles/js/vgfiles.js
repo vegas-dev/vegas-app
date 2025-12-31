@@ -9,6 +9,7 @@ import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
 import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import VGAlert from "../../vgalert";
 import VGToast from "../../vgtoast";
+import VGFilesTemplateRender from "./render";
 
 const NAME = 'files';
 const NAME_KEY = 'vg.files';
@@ -80,6 +81,7 @@ class VGFiles extends VGFilesBase {
         this._uploader = null;
         this._sortable = null;
 
+        this._render = new VGFilesTemplateRender(this, this._element, this._params);
         this._initExtended();
     }
 
@@ -87,7 +89,10 @@ class VGFiles extends VGFilesBase {
     static get NAME_KEY() { return NAME_KEY; }
 
     _initExtended() {
-        if (this._params.ajax) this._params.allowed = false;
+        if (this._params.ajax) {
+            this._params.allowed = false;
+            this._render.init();
+        }
         if (this._params.allowed && !this._params.ajax) this._params.detach = false;
         if (this._nodes.drop) {
             this._params.image = true;
