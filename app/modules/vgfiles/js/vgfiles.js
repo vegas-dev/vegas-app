@@ -30,6 +30,7 @@ const CLASS_NAME_LOADED = 'loaded';
 class VGFiles extends VGFilesBase {
     constructor(element, params = {}) {
         const defaults = {
+            init: true,
             allowed: false,
             lang: document.documentElement.lang || 'ru',
             limits: { count: 0, sizes: 10, total: 0 },
@@ -80,8 +81,8 @@ class VGFiles extends VGFilesBase {
         this._unUploadedFiles = [];
         this._uploader = null;
         this._sortable = null;
+        this._render = null;
 
-        this._render = new VGFilesTemplateRender(this, this._element, this._params);
         this.isRenderNonInit = false;
         this._initExtended();
     }
@@ -90,6 +91,10 @@ class VGFiles extends VGFilesBase {
     static get NAME_KEY() { return NAME_KEY; }
 
     _initExtended() {
+        if (!this._isInitialized) return;
+
+        this._render = new VGFilesTemplateRender(this, this._element, this._params);
+
         if (this._params.ajax) {
             this._params.allowed = false;
 
@@ -410,6 +415,10 @@ class VGFiles extends VGFilesBase {
                     }
                 }
             }
+
+            this._triggerCallback('onUploadError', {
+                file: uploadData.file
+            });
         });
 
         this._uploader.onAllComplete(() => {
@@ -626,6 +635,7 @@ class VGFiles extends VGFilesBase {
 
     _renderStat() {
         if (!this._nodes.stat) return;
+        if (!this._params.ajax) return;
 
         const $progress = Selectors.find(`.${CLASS_NAME_STAT}-progress`, this._nodes.stat);
         if (!$progress) return;

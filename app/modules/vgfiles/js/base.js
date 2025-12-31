@@ -1,17 +1,24 @@
 import BaseModule from "../../base-module";
-import { mergeDeepObject } from "../../../utils/js/functions";
+import {mergeDeepObject} from "../../../utils/js/functions";
 import Html from "../../../utils/js/components/templater";
-import { lang_messages } from "../../../utils/js/components/lang";
-import { Manipulator, Classes } from "../../../utils/js/dom/manipulator";
+import {lang_messages} from "../../../utils/js/components/lang";
+import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
-import VGFilesTemplateRender from "./render";
 
 class VGFilesBase extends BaseModule {
 	constructor(element, params = {}, defaults = {}) {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject(defaults, params));
+		this._params.init = ('init' in params) && params.init || this._params.init;
+
+		if (!this._params.init) {
+			this._isInitialized = false;
+			return;
+		}
+		this._isInitialized = true;
+
 		this._tpl = Html('dom');
 		this._files = [];
 		this._errors = new Set();
@@ -24,7 +31,6 @@ class VGFilesBase extends BaseModule {
 		};
 
 		this.template = '<li data-file="" class="file"><div class="file-image"></div><div class="file-info"></div><div class="file-remove"></div></li>';
-
 		this._init();
 	}
 
@@ -43,6 +49,8 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_init() {
+		if (!this._isInitialized) return;
+
 		this._preventOriginalInputFromSubmit();
 		this._addEventListener();
 	}
@@ -364,8 +372,6 @@ class VGFilesBase extends BaseModule {
 
 	_renderUIImage(file) {
 		const $container = this._tpl.div({ class: 'file-image' });
-
-		console.log(file)
 
 		const src = file?.src || file?.image;
 		if (src) {
