@@ -6,5 +6,11 @@
   "files": {
     "agree": "Yeah, I agree",
     "cancel": "Cancel"
+  },
+  "loadmore": {
+    "send": "Uploading...",
+    "show": "I'm showing you...",
+    "text-ajax": "Upload more",
+    "text-more": "Show more"
   }
 }
