@@ -12,5 +12,10 @@
     "show": "I'm showing you...",
     "text-ajax": "Upload more",
     "text-more": "Show more"
+  },
+  "rollup": {
+    "less": "Roll up",
+    "show": "Show",
+    "more": " more "
   }
 }

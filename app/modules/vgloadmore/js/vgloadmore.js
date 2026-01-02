@@ -147,13 +147,13 @@ class VGLoadMore extends BaseModule {
 		this._isToggleElement = element.hasAttribute('data-vg-toggle');
 
 		// Локализация текстов кнопок
-		this._params.button.send = lang_buttons(this._params.lang, VGLoadMore.NAME)['send'];
-		this._params.button.show = lang_buttons(this._params.lang, VGLoadMore.NAME)['show'];
+		this._params.button.send = lang_buttons(this._params.lang, NAME)['send'];
+		this._params.button.show = lang_buttons(this._params.lang, NAME)['show'];
 
 		if (!this._params.button.text) {
 			this._params.button.text = this._isToggleElement
-				? this._element.innerHTML.trim() || lang_buttons(this._params.lang, VGLoadMore.NAME)['text-ajax']
-				: this._params.ajax.route ? lang_buttons(this._params.lang, VGLoadMore.NAME)['text-ajax'] : lang_buttons(this._params.lang, VGLoadMore.NAME)['text-more'];
+				? this._element.innerHTML.trim() || lang_buttons(this._params.lang, NAME)['text-ajax']
+				: this._params.ajax.route ? lang_buttons(this._params.lang, NAME)['text-ajax'] : lang_buttons(this._params.lang, NAME)['text-more'];
 		}
 
 		if (this._isToggleElement) {
