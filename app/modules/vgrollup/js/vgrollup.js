@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import {execute, isDisabled, mergeDeepObject} from "../../../utils/js/functions";
+import { execute, isDisabled, mergeDeepObject } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
@@ -10,14 +10,13 @@ const NAME = 'rollup';
 const NAME_KEY = 'vg.rollup';
 const CLASS_NAME_SHOW = 'show';
 const CLASS_NAME_HIDE = 'vg-rollup-display--none';
-const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="rollup"]'
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="rollup"]';
 
-const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
-const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
-
+const EVENT_KEY_HIDE = `${NAME_KEY}.hide`;
+const EVENT_KEY_SHOW = `${NAME_KEY}.show`;
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
-class VGRollup  extends BaseModule {
+class VGRollup extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
@@ -33,7 +32,7 @@ class VGRollup  extends BaseModule {
 			},
 			more: ' еще ',
 			button: {
-				enable: true,
+				enabled: true,
 				more: "Показать",
 				less: "Свернуть"
 			}
@@ -48,8 +47,10 @@ class VGRollup  extends BaseModule {
 			transition: "vg-rollup-content--transition"
 		};
 
-		this.total       = 0;
-		this.count       = 0;
+		this.total = 0;
+		this.count = 0;
+		this.offset = 0;
+		this.isOffset = false;
 
 		this.build();
 	}
@@ -59,177 +60,177 @@ class VGRollup  extends BaseModule {
 	}
 
 	static get NAME_KEY() {
-		return NAME_KEY
+		return NAME_KEY;
 	}
 
 	static toggle(target, relatedTarget) {
 		const instance = VGRollup.getOrCreateInstance(target);
-		let isShown = instance.isShow();
+		const isShown = instance.isShow();
 
 		if (!isShown) {
-			instance._element.classList.add(CLASS_NAME_SHOW);
-			relatedTarget.innerHTML = instance._params.button.less;
-			relatedTarget.setAttribute("aria-expanded", true);
-
-			if (instance.offset > 0) {
-				if (instance.isOffset) {
-					relatedTarget.innerHTML = instance._params.button.more;
-					relatedTarget.setAttribute("aria-expanded", true);
-				} else {
-					relatedTarget.innerHTML = instance._params.button.less;
-					relatedTarget.setAttribute("aria-expanded", false);
-				}
-			}
-
-			instance.switch(instance._element, false);
-			EventHandler.trigger(instance._element, EVENT_KEY_SHOW, { relatedTarget });
+			instance._show(relatedTarget);
 		} else {
-			let textShowNum = '',
-				isShowNum = instance._params.number;
-
-
-			if (isShowNum) {
-				let sum = (instance.total) - (instance.count);
-
-				if (sum > 0) {
-					textShowNum = instance._params.more + sum;
-				}
-			}
-
-			if (instance.isOffset) {
-				relatedTarget.setAttribute("aria-expanded", true);
-			} else {
-				relatedTarget.setAttribute("aria-expanded", false);
-			}
-
-			instance._element.classList.remove(CLASS_NAME_SHOW);
-			relatedTarget.innerHTML = instance._params.button.more + textShowNum;
-			instance.switch(instance._element, true);
-
-			EventHandler.trigger(instance._element, EVENT_KEY_HIDE, { relatedTarget });
+			instance._hide(relatedTarget);
 		}
 	}
 
+	_show(relatedTarget) {
+		this._element.classList.add(CLASS_NAME_SHOW);
+		relatedTarget.innerHTML = this._params.button.less;
+		relatedTarget.setAttribute("aria-expanded", "true");
+
+		if (this.offset > 0) {
+			relatedTarget.innerHTML = this.isOffset ? this._params.button.more : this._params.button.less;
+			relatedTarget.setAttribute("aria-expanded", this.isOffset ? "true" : "false");
+		}
+
+		this.switch(this._element, false);
+		EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget });
+	}
+
+	_hide(relatedTarget) {
+		let buttonText = this._params.button.more;
+		const isShowNum = this._params.number;
+
+		if (isShowNum) {
+			const sum = this.total - this.count;
+			if (sum > 0) {
+				buttonText += this._params.more + sum;
+			}
+		}
+
+		this._element.classList.remove(CLASS_NAME_SHOW);
+		relatedTarget.setAttribute("aria-expanded", "false");
+		relatedTarget.textContent = buttonText;
+
+		this.switch(this._element, true);
+		EventHandler.trigger(this._element, EVENT_KEY_HIDE, { relatedTarget });
+	}
+
 	build(el = null, isButtonAppend = true) {
-		let _this = this,
-			element = el || _this._element,
-			self_height = element.clientHeight, set_height = _this._params.height || (self_height / 2);
+		const element = el || this._element;
+		const selfHeight = element.clientHeight;
+		const setHeight = this._params.height || (selfHeight / 2);
 
-		element.classList.add(_this.classes.container)
+		const {
+			fade,
+			transition,
+			button: enableButton,
+			number: showNum,
+			content,
+			elements: elementClass,
+			cnt,
+			ellipsis: ellipsisCfg
+		} = this._params;
 
-		let isFade =        _this._params.fade,
-			isTransition =  _this._params.transition,
-			isEllipsis =    _this._params.ellipsis.line !== null,
-			isButton =      _this._params.button.enable,
-			isShowNum =     _this._params.number;
+		const isEllipsis = ellipsisCfg.line !== null;
+		const isButton = enableButton && isButtonAppend;
 
-		if (!isButtonAppend) _this.switch(element);
+		element.classList.add(this.classes.container);
 
-		if (self_height > set_height && _this._params.content === 'text') {
-			element.classList.add(_this.classes.hidden);
-			element.style.height = set_height + "px";
-
-			ellipsis();
-			transition();
-			fade();
-			button();
-		} else if (_this._params.content === 'elements') {
-			let elementClass = _this._params.elements || 'item',
-				items = element.querySelectorAll('.' + elementClass),
-				cnt = _this._params.cnt || 5,
-				i = 1;
-
-			_this.total = items.length;
-			_this.count = cnt;
-
-			for (const item of items) {
-				if (i > cnt) {
-					item.classList.add(CLASS_NAME_HIDE)
-				}
-
-				i++;
-			}
-
-			if (isButton === true) isButton = (i - 1) > cnt;
-
-			ellipsis();
-			transition();
-			fade();
-			button();
+		if (!isButtonAppend) {
+			this.switch(element);
+			return;
 		}
 
-		function ellipsis() {
-			if (isEllipsis) {
-				let line = _this._params.ellipsis.line;
-				isFade = false;
+		if (content === 'text' && selfHeight > setHeight) {
+			this._setupTextContent(element, setHeight, fade, transition, isEllipsis, ellipsisCfg.line, isButton, showNum);
+		} else if (content === 'elements') {
+			this._setupElementsContent(element, elementClass, cnt, fade, transition, isEllipsis, isButton, showNum);
+		}
+	}
 
-				if (line) {
-					element.classList.add(_this.classes.ellipsis);
-					element.style.webkitLineClamp = line;
-				} else {
-					console.error("Переменная [data-line] или параметр[line] не должны быть пустыми");
-				}
-			}
+	_setupTextContent(element, height, fade, transition, isEllipsis, line, isButton, showNum) {
+		element.classList.add(this.classes.hidden);
+		element.style.height = height + "px";
+
+		if (isEllipsis && line) {
+			element.classList.add(this.classes.ellipsis);
+			element.style.webkitLineClamp = line;
+		} else if (isEllipsis) {
+			console.error("Переменная [data-line] или параметр[line] не должны быть пустыми");
 		}
 
-		// TODO no work
-		function transition() {
-			if (isTransition) {
-				element.classList.add(_this.classes.transition);
+		if (transition) element.classList.add(this.classes.transition);
+		if (fade) element.classList.add(this.classes.fade);
+
+		if (isButton) this._createButton(element, '', showNum);
+	}
+
+	_setupElementsContent(element, elementClass, cnt, fade, transition, isEllipsis, isButton, showNum) {
+		const items = element.querySelectorAll('.' + elementClass);
+		this.total = items.length;
+		this.count = cnt;
+
+		items.forEach((item, index) => {
+			if (index >= cnt) {
+				item.classList.add(CLASS_NAME_HIDE);
 			}
+		});
+
+		const shouldShowButton = isButton && items.length > cnt;
+
+		if (isEllipsis) element.classList.add(this.classes.ellipsis);
+		if (transition) element.classList.add(this.classes.transition);
+		if (fade) element.classList.add(this.classes.fade);
+
+		if (shouldShowButton) {
+			const sum = this.total - this.count;
+			const textShowNum = showNum && sum > 0 ? this._params.more + sum : '';
+			this._createButton(element, textShowNum, false);
+		}
+	}
+
+	_createButton(element, textNum = '', showNum = false) {
+		if (!element.id) {
+			element.id = `vg-rollup-${Math.random().toString(36).substr(2, 9)}`;
 		}
 
-		function fade() {
-			if (isFade) {
-				element.classList.add(_this.classes.fade);
-			}
-		}
+		const btnTextMore = this._params.button.more;
+		const btnHTML = `<div class="${this.classes.button}">
+            <a href="#" aria-expanded="false" data-vg-toggle="rollup" data-vg-target="#${element.id}">
+                ${btnTextMore}${textNum}
+            </a>
+        </div>`;
 
-		function button() {
-			if (isButtonAppend) {
-				element.setAttribute("id", element.id);
-
-				if (isButton) {
-					let textShowNum = '';
-
-					if (isShowNum) {
-						let sum = (_this.total) - (_this.count);
-
-						if (sum > 0) {
-							textShowNum = _this._params.more + sum;
-						}
-					}
-
-					let btnTextMore = _this._params.button.more;
-					element.insertAdjacentHTML("afterend", "<div  class=\"" + _this.classes.button + "\"><a href=\"#\" aria-expanded=\"false\" data-vg-toggle=\"rollup\" data-vg-target=\"#" + element.id + "\">" + btnTextMore + textShowNum + "</a></div>");
-				}
-			}
-		}
+		element.insertAdjacentHTML("afterend", btnHTML);
 	}
 
 	switch(el, switcher = false) {
 		if (switcher && !this.isOffset) {
-			this.build(el, false);
+			const { content } = this._params;
+			const selfHeight = el.clientHeight;
+			const setHeight = this._params.height || selfHeight / 2;
 
-			if (this._params.offset > 0) {
-				this.offset = this._params.offset;
-				if (this.offset > 0) this.isOffset = true;
+			if (content === 'text' && selfHeight > setHeight) {
+				el.classList.add(this.classes.hidden);
+				el.style.height = setHeight + "px";
+
+				if (this._params.ellipsis.line) {
+					el.classList.add(this.classes.ellipsis);
+					el.style.webkitLineClamp = this._params.ellipsis.line;
+				}
+
+				if (this._params.fade) el.classList.add(this.classes.fade);
+				if (this._params.transition) el.classList.add(this.classes.transition);
+			} else if (content === 'elements') {
+				const items = el.querySelectorAll('.' + this._params.elements);
+				items.forEach((item, index) => {
+					if (index >= this.count) {
+						item.classList.add(CLASS_NAME_HIDE);
+					}
+				});
 			}
-		} else {
-			el.classList.remove(this.classes.hidden);
-			el.classList.remove(this.classes.ellipsis);
-			el.classList.remove(this.classes.fade);
 
+			el.classList.add(this.classes.container);
+		} else {
+			const { hidden, ellipsis, fade } = this.classes;
+			el.classList.remove(hidden, ellipsis, fade);
 			el.removeAttribute("style");
 
 			if (this._params.content === 'elements') {
-				let className = this._params.elements;
-
-				let items = Selectors.findAll('.' + className, el);
-
-				if (items.length) {
-					items.forEach((item) => item.classList.remove(CLASS_NAME_HIDE))
-				}
+				const items = Selectors.findAll('.' + this._params.elements, el);
+				items.forEach(item => item.classList.remove(CLASS_NAME_HIDE));
 			}
 		}
 	}
@@ -238,12 +239,6 @@ class VGRollup  extends BaseModule {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
-	/**
-	 * Инициализация
-	 * @param element
-	 * @param params
-	 * @param callback
-	 */
 	static init(element, params = {}, callback) {
 		const instance = VGRollup.getOrCreateInstance(element, params);
 		execute(callback, [instance]);
@@ -254,16 +249,14 @@ class VGRollup  extends BaseModule {
  * Data API implementation
  */
 EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+	if (['A', 'AREA'].includes(this.tagName)) {
+		event.preventDefault();
+	}
+
+	if (isDisabled(this)) return;
+
 	const target = Selectors.getElementFromSelector(this);
 	if (!target) return;
-
-	if (['A', 'AREA'].includes(this.tagName)) {
-		event.preventDefault()
-	}
-
-	if (isDisabled(this)) {
-		return
-	}
 
 	VGRollup.toggle(target, this);
 });
