@@ -4,23 +4,60 @@ import EventHandler from "../../../utils/js/dom/event";
 import {getNextActiveElement, isDisabled, mergeDeepObject} from "../../../utils/js/functions";
 
 /**
- * Constants
+ * @constant {string} NAME - Имя модуля (используется для событий и идентификации)
  */
 const NAME = 'tabs';
+/**
+ * @constant {string} NAME_KEY - Полное пространство имён модуля (с префиксом)
+ */
 const NAME_KEY = 'vg.tabs';
 
+/**
+ * @event VGTabs#hide - Срабатывает перед скрытием вкладки
+ */
 const EVENT_HIDE = `${NAME_KEY}.hide`;
+/**
+ * @event VGTabs#hidden - Срабатывает после скрытия вкладки
+ */
 const EVENT_HIDDEN = `${NAME_KEY}.hidden`;
+/**
+ * @event VGTabs#show - Срабатывает перед показом вкладки
+ */
 const EVENT_SHOW = `${NAME_KEY}.show`;
+/**
+ * @event VGTabs#shown - Срабатывает после показа вкладки
+ */
 const EVENT_SHOWN = `${NAME_KEY}.shown`;
+/**
+ * @event VGTabs#loaded - Срабатывает после загрузки контента (AJAX)
+ */
 const EVENT_LOADED = `${NAME_KEY}.loaded`;
 
+/**
+ * @constant {string} EVENT_KEYDOWN - Событие клавиатуры для навигации по вкладкам
+ */
 const EVENT_KEYDOWN = `keydown.${NAME_KEY}`;
+/**
+ * @constant {string} EVENT_LOAD_DATA_API - Событие загрузки страницы
+ */
 const EVENT_LOAD_DATA_API = `load.${NAME_KEY}`;
+/**
+ * @constant {string} EVENT_CLICK_DATA_API - Событие клика для активации вкладки
+ */
 const EVENT_CLICK_DATA_API = `click.${NAME_KEY}`;
+/**
+ * @constant {string} EVENT_MOUSEOVER_DATA_API - Событие наведения для слайдера
+ */
 const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}`;
+/**
+ * @constant {string} EVENT_MOUSEOUT_DATA_API - Событие ухода курсора для слайдера
+ */
 const EVENT_MOUSEOUT_DATA_API = `mouseout.${NAME_KEY}`;
 
+/**
+ * @constant {string[]} NAV_KEYS - Клавиши для навигации между вкладками
+ */
+const NAV_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
 const ARROW_LEFT_KEY = 'ArrowLeft';
 const ARROW_RIGHT_KEY = 'ArrowRight';
 const ARROW_UP_KEY = 'ArrowUp';
@@ -28,29 +65,59 @@ const ARROW_DOWN_KEY = 'ArrowDown';
 const HOME_KEY = 'Home';
 const END_KEY = 'End';
 
-const CLASS_NAME_ACTIVE = 'active';
-const CLASS_NAME_HOVER = 'hover';
-const CLASS_NAME_FADE = 'fade';
-const CLASS_NAME_SHOW = 'show';
-const CLASS_DROPDOWN = 'dropdown';
-const CLASS_SLIDER = 'vg-tabs-slider';
-const CLASS_WITH_SLIDER = 'vg-tabs-with-slider';
+/**
+ * @constant {Object} CLASS_NAME - Классы, используемые в компоненте
+ */
+const CLASS_NAME = {
+	ACTIVE: 'active',
+	HOVER: 'hover',
+	FADE: 'fade',
+	SHOW: 'show',
+	DROPDOWN: 'dropdown',
+	SLIDER: 'vg-tabs-slider',
+	WITH_SLIDER: 'vg-tabs-with-slider'
+};
 
-const SELECTOR_DROPDOWN_TOGGLE = '[data-vg-toggle="dropdown"]';
-const SELECTOR_DROPDOWN_MENU = '.dropdown-content';
-const NOT_SELECTOR_DROPDOWN_TOGGLE = `:not(${SELECTOR_DROPDOWN_TOGGLE})`;
+/**
+ * @constant {Object} SELECTOR - CSS-селекторы, используемые в компоненте
+ */
+const INNER_SELECTOR = `.vg-tabs-link:not([data-vg-toggle="dropdown"]), .list-group-item:not([data-vg-toggle="dropdown"]), [role="tab"]:not([data-vg-toggle="dropdown"])`;
+const DATA_TOGGLE = '[data-vg-toggle="tab"]';
 
-const SELECTOR_TAB_CLASS = '.vg-tabs';
-const SELECTOR_TAB_PANEL = '.list-group, .vg-tabs-panel, [role="tablist"]';
-const SELECTOR_OUTER = '.vg-tabs-item, .list-group-item';
-const SELECTOR_INNER = `.vg-tabs-link${NOT_SELECTOR_DROPDOWN_TOGGLE}, .list-group-item${NOT_SELECTOR_DROPDOWN_TOGGLE}, [role="tab"]${NOT_SELECTOR_DROPDOWN_TOGGLE}`;
-const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="tab"]';
-const SELECTOR_INNER_ELEM = `${SELECTOR_INNER}, ${SELECTOR_DATA_TOGGLE}`;
+const SELECTOR = {
+	DROPDOWN_TOGGLE: '[data-vg-toggle="dropdown"]',
+	DROPDOWN_MENU: '.dropdown-content',
+	TAB_CLASS: '.vg-tabs',
+	TAB_PANEL: '.list-group, .vg-tabs-panel, [role="tablist"]',
+	OUTER: '.vg-tabs-item, .list-group-item',
+	INNER: INNER_SELECTOR,
+	DATA_TOGGLE: DATA_TOGGLE,
+	INNER_ELEM: `${INNER_SELECTOR}, ${DATA_TOGGLE}`,
+	DATA_TOGGLE_ACTIVE: `.active[data-vg-toggle="tab"]`
+};
 
-const SELECTOR_DATA_TOGGLE_ACTIVE = `.${CLASS_NAME_ACTIVE}[data-vg-toggle="tab"]`;
-
+/**
+ * Компонент вкладок (Tabs)
+ * Поддерживает: навигацию с клавиатуры, хеш-роутинг, AJAX-загрузку, анимацию, слайдер-индикатор.
+ *
+ * @extends BaseModule
+ */
 class VGTabs extends BaseModule {
-
+	/**
+	 * Создаёт экземпляр VGTabs
+	 *
+	 * @param {HTMLElement} element - Элемент вкладки (например, ссылка)
+	 * @param {Object} params - Параметры инициализации
+	 * @param {boolean} [params.slide=false] - Показывать ли индикатор-слайдер
+	 * @param {boolean} [params.hash=false] - Активировать вкладку по хешу в URL
+	 * @param {Object} [params.ajax] - Настройки AJAX
+	 * @param {string} [params.ajax.route=''] - URL для загрузки
+	 * @param {string} [params.ajax.target=''] - Селектор цели загрузки
+	 * @param {string} [params.ajax.method='get'] - HTTP-метод
+	 * @param {boolean} [params.ajax.loader=false] - Показывать ли лоадер
+	 * @param {boolean} [params.ajax.once=true] - Загружать один раз
+	 * @param {boolean} [params.ajax.output=true] - Выводить ли ответ в DOM
+	 */
 	constructor(element, params) {
 		super(element, params);
 
@@ -67,319 +134,360 @@ class VGTabs extends BaseModule {
 			},
 		}, this._params);
 
-		this._parent = this._element.closest(SELECTOR_TAB_PANEL);
-		this._main_parent = this._parent.closest(SELECTOR_TAB_CLASS);
-		this._params = this._getParams(this._main_parent, this._params);
-		this._params = this._getParams(this._element, this._params);
+		this._parent = this._element.closest(SELECTOR.TAB_PANEL);
+		this._main_parent = this._parent?.closest(SELECTOR.TAB_CLASS) || null;
 
 		if (!this._parent) {
-			throw new TypeError(`${element.outerHTML} не имеет родителя ${SELECTOR_INNER_ELEM}`)
+			throw new TypeError(`${element.outerHTML} не имеет родителя с селектором ${SELECTOR.INNER_ELEM}`);
 		}
+
+		this._params = this._getParams(this._main_parent, this._params);
+		this._params = this._getParams(this._element, this._params);
 
 		this._setInitialAttributes(this._parent, this._getChildren());
 		this._setInitialSlider();
 		this._setTabHash();
 
-		EventHandler.on(this._element, EVENT_KEYDOWN, event => this._keydown(event))
+		EventHandler.on(this._element, EVENT_KEYDOWN, event => this._keydown(event));
 	}
 
+	/**
+	 * Возвращает имя компонента
+	 * @returns {string}
+	 */
 	static get NAME() {
 		return NAME;
 	}
 
+	/**
+	 * Возвращает ключ компонента (с префиксом)
+	 * @returns {string}
+	 */
 	static get NAME_KEY() {
-		return NAME_KEY
+		return NAME_KEY;
 	}
 
+	/**
+	 * Активирует вкладку
+	 */
 	show() {
-		const innerElem = this._element
-		if (this._elemIsActive(innerElem)) {
-			return
-		}
+		const innerElem = this._element;
 
-		const active = this._getActiveElem()
+		if (this._elemIsActive(innerElem)) return;
 
-		const hideEvent = active ?
-			EventHandler.trigger(active, EVENT_HIDE, { relatedTarget: innerElem }) :
-			null
+		const activeElem = this._getActiveElem();
+		const relatedTarget = innerElem;
 
-		const showEvent = EventHandler.trigger(innerElem, EVENT_SHOW, { relatedTarget: active })
+		// События hide и show
+		const hideEvent = activeElem ? EventHandler.trigger(activeElem, EVENT_HIDE, {relatedTarget}) : null;
+		const showEvent = EventHandler.trigger(innerElem, EVENT_SHOW, {relatedTarget});
 
-		if (showEvent.defaultPrevented || (hideEvent && hideEvent.defaultPrevented)) {
-			return
-		}
+		if (showEvent.defaultPrevented || (hideEvent && hideEvent.defaultPrevented)) return;
 
-		this._deactivate(active, innerElem)
-		this._activate(innerElem, active)
+		this._deactivate(activeElem, innerElem);
+		this._activate(innerElem, relatedTarget);
 	}
 
+	/**
+	 * Проверяет, активен ли элемент
+	 * @param {HTMLElement} elem - Элемент для проверки
+	 * @returns {boolean}
+	 */
 	_elemIsActive(elem) {
-		return elem.classList.contains(CLASS_NAME_ACTIVE)
+		return elem?.classList.contains(CLASS_NAME.ACTIVE) || false;
 	}
 
+	/**
+	 * Получает активный элемент во вкладках
+	 * @returns {HTMLElement|null}
+	 */
 	_getActiveElem() {
-		return this._getChildren().find(child => this._elemIsActive(child)) || null
+		return this._getChildren().find(child => this._elemIsActive(child)) || null;
 	}
 
-	_activate(element, relatedElem) {
-		if (!element) {
-			return
-		}
+	/**
+	 * Активирует элемент и его целевой панель
+	 * @param {HTMLElement} element - Активируемый элемент
+	 * @param {HTMLElement} relatedTarget - Элемент, вызвавший активацию
+	 */
+	_activate(element, relatedTarget) {
+		if (!element) return;
 
-		element.classList.add(CLASS_NAME_ACTIVE);
+		element.classList.add(CLASS_NAME.ACTIVE);
 
-		this._activate(Selectors.getElementFromSelector(element));
+		const target = Selectors.getElementFromSelector(element);
+		if (target) this._activate(target, relatedTarget);
 
 		const complete = () => {
 			if (element.getAttribute('role') !== 'tab') {
-				element.classList.add(CLASS_NAME_SHOW)
-				return
-			}
-
-			this._route((status, data) => {
-				EventHandler.trigger(this._element, EVENT_LOADED, {stats: status, data: data});
-			});
-
-			element.removeAttribute('tabindex')
-			element.setAttribute('aria-selected', true);
-
-			this._toggleDropDown(element, true)
-			EventHandler.trigger(element, EVENT_SHOWN, {
-				relatedTarget: relatedElem
-			})
-		}
-
-		this._queueCallback(complete, element, element.classList.contains(CLASS_NAME_FADE))
-	}
-
-	_deactivate(element, relatedElem) {
-		if (!element) {
-			return;
-		}
-
-		element.classList.remove(CLASS_NAME_ACTIVE);
-		element.blur();
-
-		this._deactivate(Selectors.getElementFromSelector(element));
-
-		const complete = () => {
-			if (element.getAttribute('role') !== 'tab') {
-				element.classList.remove(CLASS_NAME_SHOW);
+				element.classList.add(CLASS_NAME.SHOW);
 				return;
 			}
 
-			element.setAttribute('aria-selected', false);
-			element.setAttribute('tabindex', '-1');
-			this._toggleDropDown(element, false);
-			EventHandler.trigger(element, EVENT_HIDDEN, { relatedTarget: relatedElem });
-		}
+			this._route((status, data) => {
+				EventHandler.trigger(this._element, EVENT_LOADED, { stats: status, data });
+			});
 
-		this._queueCallback(complete, element, element.classList.contains(CLASS_NAME_FADE));
+			element.removeAttribute('tabindex');
+			element.setAttribute('aria-selected', 'true');
+			this._toggleDropDown(element, true);
+
+			EventHandler.trigger(element, EVENT_SHOWN, { relatedTarget }); // ← теперь relatedTarget определён
+		};
+
+		this._queueCallback(complete, element, element.classList.contains(CLASS_NAME.FADE));
 	}
 
+	/**
+	 * Деактивирует элемент
+	 * @param {HTMLElement} element - Деактивируемый элемент
+	 * @param {HTMLElement} relatedTarget - Новый активный элемент
+	 */
+	_deactivate(element, relatedTarget) {
+		if (!element) return;
+
+		element.classList.remove(CLASS_NAME.ACTIVE);
+		element.blur();
+
+		const target = Selectors.getElementFromSelector(element);
+		if (target) this._deactivate(target, relatedTarget);
+
+		const complete = () => {
+			if (element.getAttribute('role') !== 'tab') {
+				element.classList.remove(CLASS_NAME.SHOW);
+				return;
+			}
+
+			element.setAttribute('aria-selected', 'false');
+			element.setAttribute('tabindex', '-1');
+			this._toggleDropDown(element, false);
+
+			EventHandler.trigger(element, EVENT_HIDDEN, { relatedTarget });
+		};
+
+		this._queueCallback(complete, element, element.classList.contains(CLASS_NAME.FADE));
+	}
+
+	/**
+	 * Обработка навигации с клавиатуры
+	 * @param {KeyboardEvent} event
+	 */
 	_keydown(event) {
-		if (!([ARROW_LEFT_KEY, ARROW_RIGHT_KEY, ARROW_UP_KEY, ARROW_DOWN_KEY, HOME_KEY, END_KEY].includes(event.key))) {
-			return
-		}
+		if (!NAV_KEYS.includes(event.key)) return;
 
-		event.stopPropagation()// stopPropagation/preventDefault both added to support up/down keys without scrolling the page
-		event.preventDefault()
+		event.stopPropagation();
+		event.preventDefault();
 
-		const children = this._getChildren().filter(element => !isDisabled(element))
-		let nextActiveElement
+		const children = this._getChildren().filter(el => !isDisabled(el));
+		let nextActiveElement;
 
 		if ([HOME_KEY, END_KEY].includes(event.key)) {
-			nextActiveElement = children[event.key === HOME_KEY ? 0 : children.length - 1]
+			nextActiveElement = children[event.key === HOME_KEY ? 0 : children.length - 1];
 		} else {
-			const isNext = [ARROW_RIGHT_KEY, ARROW_DOWN_KEY].includes(event.key)
-			nextActiveElement = getNextActiveElement(children, event.target, isNext, true)
+			const isNext = [ARROW_RIGHT_KEY, ARROW_DOWN_KEY].includes(event.key);
+			nextActiveElement = getNextActiveElement(children, event.target, isNext, true);
 		}
 
 		if (nextActiveElement) {
-			nextActiveElement.focus({ preventScroll: true })
-			VGTabs.getOrCreateInstance(nextActiveElement).show()
+			nextActiveElement.focus({preventScroll: true});
+			VGTabs.getOrCreateInstance(nextActiveElement).show();
 		}
 	}
 
+	/**
+	 * Активация вкладки по хешу в URL
+	 */
 	_setTabHash() {
-		if (!this._params.hash) {
-			return;
-		}
+		if (!this._params.hash) return;
 
-		let url = document.location.toString();
+		const url = document.location.toString();
+		if (!url.includes('#')) return;
 
-		if (url.match('#')) {
-			let id = url.split('#')[1];
+		const id = url.split('#')[1];
+		const element = Selectors.find(`[href="#${id}"]`, this._parent) ||
+			Selectors.find(`[data-vg-target="#${id}"]`, this._element) ||
+			null;
 
-			let element = Selectors.find('[href="#' + id +'"]', this._parent) || Selectors.find('[data-vg-target="#' + id +'"]', this._element) || null;
-			if (element) {
-				VGTabs.getOrCreateInstance(element).show();
-			}
+		if (element) {
+			VGTabs.getOrCreateInstance(element).show();
 		}
 	}
 
+	/**
+	 * Инициализация слайдера-индикатора под вкладками
+	 */
 	_setInitialSlider() {
-		if (!this._params.slide) {
-			return;
-		}
+		if (!this._params.slide) return;
 
-		let slider = Selectors.find('.' + CLASS_SLIDER, this._main_parent);
+		let slider = Selectors.find(`.${CLASS_NAME.SLIDER}`, this._main_parent);
 		if (!slider) {
 			slider = document.createElement('span');
-			slider.classList.add(CLASS_SLIDER);
+			slider.classList.add(CLASS_NAME.SLIDER);
 			this._main_parent.prepend(slider);
 		}
 
-		this._main_parent.classList.add(CLASS_WITH_SLIDER);
+		this._main_parent.classList.add(CLASS_NAME.WITH_SLIDER);
 
-		let link_active = Selectors.find('.' + CLASS_NAME_ACTIVE, this._parent),
-			{width, height} = window.getComputedStyle(link_active);
+		const activeLink = Selectors.find(`.${CLASS_NAME.ACTIVE}`, this._parent);
+		if (!activeLink) return;
 
-		link_active.classList.add(CLASS_NAME_HOVER);
+		const {width, height} = window.getComputedStyle(activeLink);
+		activeLink.classList.add(CLASS_NAME.HOVER);
 
 		slider.style.width = width;
 		slider.style.height = height;
-		slider.style.left = link_active.offsetLeft + 'px';
+		slider.style.left = `${activeLink.offsetLeft}px`;
 
-		EventHandler.on(this._main_parent, EVENT_MOUSEOVER_DATA_API, SELECTOR_DATA_TOGGLE, (event) => {
-			let link_target = event.target,
-				{width, height} = window.getComputedStyle(link_target);
+		// Наведение
+		EventHandler.on(this._main_parent, EVENT_MOUSEOVER_DATA_API, SELECTOR.DATA_TOGGLE, (event) => {
+			const target = event.target;
+			if (['A', 'AREA'].includes(target.tagName)) event.preventDefault();
+			if (isDisabled(target)) return;
 
-			if (['A', 'AREA'].includes(event.target.tagName)) {
-				event.preventDefault();
-			}
+			const hover = Selectors.find(`.${CLASS_NAME.HOVER}`, this._parent);
+			if (hover) hover.classList.remove(CLASS_NAME.HOVER);
+			target.classList.add(CLASS_NAME.HOVER);
 
-			if (isDisabled(link_target)) return;
-
-			let link_current_hover = Selectors.find('.' + CLASS_NAME_HOVER, this._parent);
-			if (link_current_hover) link_current_hover.classList.remove(CLASS_NAME_HOVER);
-			link_target.classList.add(CLASS_NAME_HOVER);
-
+			const {width, height} = window.getComputedStyle(target);
 			slider.style.width = width;
 			slider.style.height = height;
-			slider.style.left = link_target.offsetLeft + 'px';
+			slider.style.left = `${target.offsetLeft}px`;
 		});
 
-		EventHandler.on(this._main_parent, EVENT_MOUSEOUT_DATA_API, SELECTOR_DATA_TOGGLE, (event) => {
-			if (['A', 'AREA'].includes(event.target.tagName)) {
-				event.preventDefault();
-			}
+		// Уход курсора
+		EventHandler.on(this._main_parent, EVENT_MOUSEOUT_DATA_API, SELECTOR.DATA_TOGGLE, () => {
+			const active = Selectors.find(`.${CLASS_NAME.ACTIVE}`, this._parent);
+			const {width, height} = window.getComputedStyle(active);
 
-			let active = Selectors.find('.' + CLASS_NAME_ACTIVE, this._parent),
-				{width, height} = window.getComputedStyle(active);
-
-			[... Selectors.findAll('.' + CLASS_NAME_HOVER, this._parent)].forEach(el => {
-				el.classList.remove(CLASS_NAME_HOVER);
-			});
-
-			active.classList.add(CLASS_NAME_HOVER);
+			Selectors.findAll(`.${CLASS_NAME.HOVER}`, this._parent).forEach(el => el.classList.remove(CLASS_NAME.HOVER));
+			active.classList.add(CLASS_NAME.HOVER);
 
 			slider.style.width = width;
 			slider.style.height = height;
-			slider.style.left = active.offsetLeft + 'px';
+			slider.style.left = `${active.offsetLeft}px`;
 		});
 	}
 
+	/**
+	 * Устанавливает базовые ARIA-атрибуты родителю
+	 * @param {HTMLElement} parent - Родительский элемент (tablist)
+	 * @param {HTMLElement[]} children - Дочерние элементы (вкладки)
+	 */
 	_setInitialAttributes(parent, children) {
-		this._setAttributeIfNotExists(parent, 'role', 'tablist')
-
-		for (const child of children) {
-			this._setInitialAttributesOnChild(child)
-		}
+		this._setAttributeIfNotExists(parent, 'role', 'tablist');
+		children.forEach(child => this._setInitialAttributesOnChild(child));
 	}
 
+	/**
+	 * Устанавливает атрибуты для одной вкладки
+	 * @param {HTMLElement} child - Элемент вкладки
+	 */
 	_setInitialAttributesOnChild(child) {
-		child = this._getInnerElement(child)
-		const isActive = this._elemIsActive(child)
-		const outerElem = this._getOuterElement(child)
-		child.setAttribute('aria-selected', isActive)
+		child = this._getInnerElement(child);
+		const isActive = this._elemIsActive(child);
+		const outerElem = this._getOuterElement(child);
 
+		child.setAttribute('aria-selected', isActive);
 		if (outerElem !== child) {
-			this._setAttributeIfNotExists(outerElem, 'role', 'presentation')
+			this._setAttributeIfNotExists(outerElem, 'role', 'presentation');
 		}
-
 		if (!isActive) {
-			child.setAttribute('tabindex', '-1')
+			child.setAttribute('tabindex', '-1');
 		}
-
-		this._setAttributeIfNotExists(child, 'role', 'tab')
-		this._setInitialAttributesOnTargetPanel(child)
+		this._setAttributeIfNotExists(child, 'role', 'tab');
+		this._setInitialAttributesOnTargetPanel(child);
 	}
 
+	/**
+	 * Устанавливает атрибуты целевой панели (tabpanel)
+	 * @param {HTMLElement} child - Элемент вкладки
+	 */
 	_setInitialAttributesOnTargetPanel(child) {
-		const target = Selectors.getElementFromSelector(child)
+		const target = Selectors.getElementFromSelector(child);
+		if (!target) return;
 
-		if (!target) {
-			return
-		}
-
-		this._setAttributeIfNotExists(target, 'role', 'tabpanel')
-
+		this._setAttributeIfNotExists(target, 'role', 'tabpanel');
 		if (child.id) {
-			this._setAttributeIfNotExists(target, 'aria-labelledby', `${child.id}`)
+			this._setAttributeIfNotExists(target, 'aria-labelledby', child.id);
 		}
 	}
 
+	/**
+	 * Устанавливает атрибут, если его ещё нет
+	 * @param {HTMLElement} element - Целевой элемент
+	 * @param {string} attribute - Имя атрибута
+	 * @param {string} value - Значение атрибута
+	 */
 	_setAttributeIfNotExists(element, attribute, value) {
 		if (!element.hasAttribute(attribute)) {
-			element.setAttribute(attribute, value)
+			element.setAttribute(attribute, value);
 		}
 	}
 
+	/**
+	 * Получает все дочерние элементы-вкладки
+	 * @returns {HTMLElement[]}
+	 */
 	_getChildren() {
-		return Selectors.findAll(SELECTOR_INNER_ELEM, this._parent)
+		return Selectors.findAll(SELECTOR.INNER_ELEM, this._parent);
 	}
 
+	/**
+	 * Получает внутренний элемент вкладки (ссылку)
+	 * @param {HTMLElement} elem - Элемент
+	 * @returns {HTMLElement}
+	 */
 	_getInnerElement(elem) {
-		return elem.matches(SELECTOR_INNER_ELEM) ? elem : Selectors.find(SELECTOR_INNER_ELEM, elem)
+		return elem.matches(SELECTOR.INNER_ELEM) ? elem : Selectors.find(SELECTOR.INNER_ELEM, elem);
 	}
 
+	/**
+	 * Получает внешний контейнер вкладки
+	 * @param {HTMLElement} elem - Элемент
+	 * @returns {HTMLElement}
+	 */
 	_getOuterElement(elem) {
-		return elem.closest(SELECTOR_OUTER) || elem
+		return elem.closest(SELECTOR.OUTER) || elem;
 	}
 
+	/**
+	 * Управляет состоянием выпадающего меню
+	 * @param {HTMLElement} element - Элемент вкладки
+	 * @param {boolean} open - Открыть или закрыть
+	 */
 	_toggleDropDown(element, open) {
-		const outerElem = this._getOuterElement(element)
-		if (!outerElem.classList.contains(CLASS_DROPDOWN)) {
-			return
-		}
+		const outerElem = this._getOuterElement(element);
+		if (!outerElem.classList.contains(CLASS_NAME.DROPDOWN)) return;
 
 		const toggle = (selector, className) => {
-			const element = Selectors.find(selector, outerElem)
-			if (element) {
-				element.classList.toggle(className, open)
-			}
-		}
+			const el = Selectors.find(selector, outerElem);
+			if (el) el.classList.toggle(className, open);
+		};
 
-		toggle(SELECTOR_DROPDOWN_TOGGLE, CLASS_NAME_ACTIVE)
-		toggle(SELECTOR_DROPDOWN_MENU, CLASS_NAME_SHOW)
-		outerElem.setAttribute('aria-expanded', open)
+		toggle(SELECTOR.DROPDOWN_TOGGLE, CLASS_NAME.ACTIVE);
+		toggle(SELECTOR.DROPDOWN_MENU, CLASS_NAME.SHOW);
+		outerElem.setAttribute('aria-expanded', open);
 	}
 }
 
 /**
- * Data API implementation
+ * Обработка кликов по вкладкам
  */
-EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR.DATA_TOGGLE, function (event) {
 	if (['A', 'AREA'].includes(this.tagName)) {
 		event.preventDefault();
 	}
-
-	if (isDisabled(this)) {
-		return;
-	}
-
+	if (isDisabled(this)) return;
 	VGTabs.getOrCreateInstance(this).show();
-})
-
-/**
- * Initialize on focus
- */
-EventHandler.on(window, EVENT_LOAD_DATA_API, () => {
-	for (const element of Selectors.findAll(SELECTOR_DATA_TOGGLE_ACTIVE)) {
-		VGTabs.getOrCreateInstance(element);
-	}
 });
 
+/**
+ * Инициализация активных вкладок при загрузке страницы
+ */
+EventHandler.on(window, EVENT_LOAD_DATA_API, () => {
+	Selectors.findAll(SELECTOR.DATA_TOGGLE_ACTIVE).forEach(element => {
+		VGTabs.getOrCreateInstance(element);
+	});
+});
 
 export default VGTabs;

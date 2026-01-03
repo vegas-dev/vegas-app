@@ -1,5 +1,9 @@
 # VEGAS-APP 0.8.2 (Январь, 4, 2025)
 * Оптимизирован модуль VGRollup, см. файл readme.md
+* Оптимизирован модуль VGSidebar, см. файл readme.md
+* Оптимизирован модуль VGTabs, см. файл readme.md
+* Оптимизирован модуль VGSpy, см. файл readme.md
+* Оптимизирован модуль VGToast, см. файл readme.md
 
 ---
 

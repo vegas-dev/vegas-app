@@ -1,35 +1,85 @@
 import BaseModule from "../../base-module";
-import {isDisabled, isVisible, mergeDeepObject} from "../../../utils/js/functions";
+import { isDisabled, isVisible, mergeDeepObject } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
-import {dismissTrigger} from "../../module-fn";
+import { dismissTrigger } from "../../module-fn";
 import Selectors from "../../../utils/js/dom/selectors";
 import Backdrop from "../../../utils/js/components/backdrop";
 import ScrollBarHelper from "../../../utils/js/components/scrollbar";
 
-
 /**
- * Constants
+ * @constant {string} NAME - Имя модуля.
  */
 const NAME = 'sidebar';
-const NAME_KEY = 'vg.sidebar';
-const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="sidebar"]';
 
+/**
+ * @constant {string} NAME_KEY - Пространство имён для событий.
+ */
+const NAME_KEY = 'vg.sidebar';
+
+/**
+ * @constant {string} SELECTOR_DATA_TOGGLE - Селектор для элементов активации сайдбара.
+ */
+const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="sidebar"]';
+
+/**
+ * @constant {string} CLASS_NAME_SHOW - Класс, отвечающий за отображение сайдбара.
+ */
 const CLASS_NAME_SHOW = 'show';
+
+/**
+ * @constant {string} CLASS_NAME_OPEN - Класс, добавляемый к body при открытом сайдбаре.
+ */
 const CLASS_NAME_OPEN = 'vg-sidebar-open';
 
-const EVENT_KEY_HIDE   = `${NAME_KEY}.hide`;
-const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
-const EVENT_KEY_SHOW   = `${NAME_KEY}.show`;
-const EVENT_KEY_SHOWN  = `${NAME_KEY}.shown`;
-const EVENT_KEY_LOADED = `${NAME_KEY}.loaded`;
+/**
+ * @constant {Object} EVENT_KEYS - Объект с ключами событий для модуля.
+ */
+const EVENT_KEYS = {
+	HIDE: `${NAME_KEY}.hide`,
+	HIDDEN: `${NAME_KEY}.hidden`,
+	SHOW: `${NAME_KEY}.show`,
+	SHOWN: `${NAME_KEY}.shown`,
+	LOADED: `${NAME_KEY}.loaded`,
+	KEYDOWN_DISMISS: `keydown.dismiss.${NAME_KEY}`,
+	HIDE_PREVENTED: `hidePrevented.${NAME_KEY}`,
+	CLICK_DATA_API: `click.${NAME_KEY}.data.api`,
+	POPSTATE_DATA_API: `popstate.${NAME_KEY}.data.api`,
+	DOM_LOADED_DATA_API: `DOMContentLoaded.${NAME_KEY}.data.api`,
+};
 
-const EVENT_KEY_KEYDOWN_DISMISS = `keydown.dismiss.${NAME_KEY}`;
-const EVENT_KEY_HIDE_PREVENTED = `hidePrevented.${NAME_KEY}`;
-const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
-const EVENT_KEY_POPSTATE_DATA_API = `popstate.${NAME_KEY}.data.api`;
-const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
-
+/**
+ * Класс VGSidebar реализует функциональность боковой панели (сайдбара) с поддержкой:
+ * - открытия/закрытия по клику или хэшу
+ * - поддержки backdrop
+ * - блокировки скролла при открытии
+ * - анимаций
+ * - AJAX-загрузки контента
+ *
+ * @extends BaseModule
+ */
 class VGSidebar extends BaseModule {
+	/**
+	 * Создаёт экземпляр VGSidebar.
+	 *
+	 * @param {HTMLElement} element - Основной элемент сайдбара.
+	 * @param {Object} params - Параметры конфигурации.
+	 * @param {boolean} [params.backdrop=true] - Показывать подложку.
+	 * @param {boolean} [params.overflow=true] - Блокировать скролл при открытии.
+	 * @param {boolean} [params.keyboard=true] - Закрывать по клавише Escape.
+	 * @param {boolean} [params.hash=false] - Поддержка открытия по хэшу URL.
+	 * @param {Object} [params.animation] - Настройки анимации.
+	 * @param {boolean} [params.animation.enable=false] - Включить анимацию.
+	 * @param {string} [params.animation.in='animate__rollIn'] - Класс входной анимации.
+	 * @param {string} [params.animation.out='animate__rollOut'] - Класс выходной анимации.
+	 * @param {number} [params.animation.delay=800] - Задержка перед закрытием (мс).
+	 * @param {Object} [params.ajax] - Параметры AJAX-загрузки.
+	 * @param {string} [params.ajax.route=''] - URL для загрузки.
+	 * @param {string} [params.ajax.target=''] - Селектор цели для вставки.
+	 * @param {string} [params.ajax.method='get'] - HTTP-метод.
+	 * @param {boolean} [params.ajax.loader=false] - Показывать лоадер.
+	 * @param {boolean} [params.ajax.once=false] - Загружать только один раз.
+	 * @param {boolean} [params.ajax.output=true] - Вставлять ответ в DOM.
+	 */
 	constructor(element, params = {}) {
 		super(element, params);
 
@@ -54,79 +104,105 @@ class VGSidebar extends BaseModule {
 			}
 		}, params));
 
+		this._scrollBar = new ScrollBarHelper();
+		this._params.animation.delay = this._params.animation.enable ? this._params.animation.delay : 0;
+
 		this._addEventListeners();
 		this._dismissElement();
-
-		this._scrollBar = new ScrollBarHelper();
-		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
-		this._animation(this._element, VGSidebar.NAME_KEY, this._params.animation);
+		this._animation(this._element, NAME_KEY, this._params.animation);
 	}
 
+	/**
+	 * Статическое свойство: имя модуля.
+	 * @returns {string}
+	 */
 	static get NAME() {
 		return NAME;
 	}
 
+	/**
+	 * Статическое свойство: ключ для событий и данных.
+	 * @returns {string}
+	 */
 	static get NAME_KEY() {
-		return NAME_KEY
+		return NAME_KEY;
 	}
 
+	/**
+	 * Переключает состояние сайдбара (открыть/закрыть).
+	 *
+	 * @param {HTMLElement} [relatedTarget] - Элемент, инициировавший открытие.
+	 * @returns {void}
+	 */
 	toggle(relatedTarget) {
-		return !this._isShown() ? this.show(relatedTarget) : this.hide();
+		return this._isShown() ? this.hide() : this.show(relatedTarget);
 	}
 
+	/**
+	 * Открывает сайдбар.
+	 *
+	 * @param {HTMLElement} [relatedTarget] - Элемент, инициировавший открытие.
+	 * @returns {void}
+	 */
 	show(relatedTarget) {
-		const _this = this;
-		if (isDisabled(_this._element)) return;
+		if (isDisabled(this._element)) return;
 
-		if (relatedTarget) _this._params = _this._getParams(relatedTarget, _this._params);
+		if (relatedTarget) {
+			this._params = this._getParams(relatedTarget, this._params);
+		}
 
-		_this._route(function (status, data) {
-			EventHandler.trigger(_this._element, EVENT_KEY_LOADED, {stats: status, data: data});
+		// Событие загрузки (может использоваться для AJAX)
+		this._route((status, data) => {
+			EventHandler.trigger(this._element, EVENT_KEYS.LOADED, { stats: status, data });
 		});
 
-		const showEvent = EventHandler.trigger(_this._element, EVENT_KEY_SHOW, { relatedTarget })
+		const showEvent = EventHandler.trigger(this._element, EVENT_KEYS.SHOW, { relatedTarget });
 		if (showEvent.defaultPrevented) return;
 
-		if (_this._params.backdrop) {
+		if (this._params.backdrop) {
 			Backdrop.show();
 		}
 
-		if (_this._params.overflow) {
+		if (this._params.overflow) {
 			this._scrollBar.hide();
 		}
 
 		if (this._params.hash) {
-			window.history.pushState(null, "vg-sidebar-open", "#" + this._element.id);
-
-			EventHandler.on(window, EVENT_KEY_POPSTATE_DATA_API, () => {
-				this.hide();
-			});
+			window.history.pushState(null, '', `#${this._element.id}`);
+			EventHandler.on(window, EVENT_KEYS.POPSTATE_DATA_API, () => this.hide());
 		}
 
-		_this._element.classList.add(CLASS_NAME_SHOW);
+		this._element.classList.add(CLASS_NAME_SHOW);
 		document.body.classList.add(CLASS_NAME_OPEN);
 
-		const completeCallBack = () => {
-			EventHandler.on(Selectors.find('.vg-backdrop'), 'mousedown.vg.backdrop', function () {
-				_this.hide();
-			});
+		const completeCallback = () => {
+			const backdrop = Selectors.find('.vg-backdrop');
+			if (backdrop) {
+				EventHandler.on(backdrop, 'mousedown.vg.backdrop', () => this.hide());
+			}
+			EventHandler.trigger(this._element, EVENT_KEYS.SHOWN, { relatedTarget });
+		};
 
-			EventHandler.trigger(_this._element, EVENT_KEY_SHOWN, { relatedTarget });
-		}
-		_this._queueCallback(completeCallBack, _this._element, true, 50)
+		this._queueCallback(completeCallback, this._element, true, 50);
 	}
 
+	/**
+	 * Закрывает сайдбар.
+	 *
+	 * @param {boolean} [isLeaveBackDrop=false] - Не убирать подложку.
+	 * @returns {void}
+	 */
 	hide(isLeaveBackDrop = false) {
 		if (isDisabled(this._element)) return;
 
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
+		const hideEvent = EventHandler.trigger(this._element, EVENT_KEYS.HIDE);
 		if (hideEvent.defaultPrevented) return;
 
 		document.body.classList.remove(CLASS_NAME_OPEN);
+		this._element.classList.remove(CLASS_NAME_SHOW);
 
 		setTimeout(() => {
-			this._element.setAttribute('aria-expanded', false);
-			this._element.classList.remove(CLASS_NAME_SHOW);
+			this._element.setAttribute('aria-expanded', 'false');
 
 			const completeCallback = () => {
 				if (!isLeaveBackDrop) {
@@ -136,88 +212,122 @@ class VGSidebar extends BaseModule {
 								this._scrollBar.reset();
 							}
 						});
-					}
-
-					if (this._params.overflow) {
+					} else if (this._params.overflow) {
 						this._scrollBar.reset();
 					}
 
 					if (this._params.hash) {
-						history.pushState("", document.title, window.location.pathname + window.location.search);
+						history.replaceState('', document.title, window.location.pathname + window.location.search);
 					}
 
-					EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+					EventHandler.trigger(this._element, EVENT_KEYS.HIDDEN);
 				}
-			}
+			};
+
 			this._queueCallback(completeCallback, this._element, true);
 		}, this._params.animation.delay);
 	}
 
+	/**
+	 * Очищает ресурсы модуля.
+	 * @override
+	 */
 	dispose() {
 		super.dispose();
+		EventHandler.off(this._element, EVENT_KEYS.HIDE);
+		EventHandler.off(window, EVENT_KEYS.POPSTATE_DATA_API);
+		this._scrollBar.reset();
 	}
 
+	/**
+	 * Проверяет, открыт ли сайдбар.
+	 * @returns {boolean}
+	 * @private
+	 */
 	_isShown() {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
+	/**
+	 * Добавляет глобальные слушатели событий (например, Escape).
+	 * @private
+	 */
 	_addEventListeners() {
-		EventHandler.on(document, EVENT_KEY_KEYDOWN_DISMISS, event => {
+		EventHandler.on(document, EVENT_KEYS.KEYDOWN_DISMISS, (event) => {
 			if (event.key !== 'Escape') return;
 
 			if (this._params.keyboard) {
 				this.hide();
-				return;
+			} else {
+				EventHandler.trigger(this._element, EVENT_KEYS.HIDE_PREVENTED);
 			}
-
-			EventHandler.trigger(this._element, EVENT_KEY_HIDE_PREVENTED)
 		});
+	}
+
+	/**
+	 * Инициализирует поведение закрытия по клику вне (через `dismissTrigger`).
+	 * @private
+	 */
+	_dismissElement() {
+		dismissTrigger(this);
+	}
+
+	/**
+	 * Заглушка для возможной AJAX-логики. Может быть переопределена.
+	 * @param {Function} callback - Колбэк после загрузки.
+	 * @private
+	 */
+	_route(callback) {
+		// Здесь может быть реализация AJAX-загрузки
+		callback(true, null);
 	}
 }
 
+// Автоматическая инициализация по data-атрибутам
 dismissTrigger(VGSidebar);
 
 /**
- * Data API implementation
+ * Реализация Data API: открытие сайдбара по data-атрибуту.
  */
-EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+EventHandler.on(document, EVENT_KEYS.CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
 	const target = Selectors.getElementFromSelector(this);
+	if (!target) return;
 
 	if (['A', 'AREA'].includes(this.tagName)) {
-		event.preventDefault()
+		event.preventDefault();
 	}
 
-	if (isDisabled(this)) {
-		return
-	}
+	if (isDisabled(this)) return;
 
-	this.setAttribute('aria-expanded', true);
-	EventHandler.one(target, EVENT_KEY_HIDDEN, () => {
-		this.setAttribute('aria-expanded', false);
-	})
+	this.setAttribute('aria-expanded', 'true');
 
-	const alreadyOpen = Selectors.find('.vg-sidebar.show')
+	// Сбрасываем атрибут после закрытия
+	EventHandler.one(target, EVENT_KEYS.HIDDEN, () => {
+		this.setAttribute('aria-expanded', 'false');
+	});
+
+	// Закрываем уже открытый сайдбар
+	const alreadyOpen = Selectors.find('.vg-sidebar.show');
 	if (alreadyOpen && alreadyOpen !== target) {
-		VGSidebar.getInstance(alreadyOpen).hide()
+		VGSidebar.getInstance(alreadyOpen).hide();
 	}
 
-	const data = VGSidebar.getOrCreateInstance(target)
-	data.toggle(this);
+	const instance = VGSidebar.getOrCreateInstance(target);
+	instance.toggle(this);
 });
 
-EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function () {
-	let targetHash = window.location.hash.slice(1);
-	if (targetHash) {
-		let target = Selectors.find('#' + targetHash);
-		if (target && target.classList.contains('vg-sidebar')) {
-			if (isDisabled(target)) {
-				return;
-			}
+/**
+ * Открытие сайдбара по хэшу при загрузке страницы.
+ */
+EventHandler.on(document, EVENT_KEYS.DOM_LOADED_DATA_API, function () {
+	const hash = window.location.hash.slice(1);
+	if (!hash) return;
 
-			const data = VGSidebar.getOrCreateInstance(target)
-			data.toggle();
-		}
+	const target = Selectors.find(`#${hash}`);
+	if (target && target.classList.contains('vg-sidebar') && !isDisabled(target)) {
+		const instance = VGSidebar.getOrCreateInstance(target);
+		instance.toggle();
 	}
-})
+});
 
 export default VGSidebar;

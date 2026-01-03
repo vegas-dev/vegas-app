@@ -1,228 +1,332 @@
 import BaseModule from "../../base-module";
-import {mergeDeepObject, getElement, isDisabled, isVisible} from "../../../utils/js/functions";
+import { mergeDeepObject, getElement, isDisabled, isVisible } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
 /**
- * Constants
+ * Константы модуля VGSpy
  */
 const NAME = 'spy';
 const NAME_KEY = 'vg.spy';
-const EVENT_KEY = `.${NAME_KEY}`
-const DATA_API_KEY = '.data-api'
+const EVENT_KEY = `.${NAME_KEY}`;
+const DATA_API_KEY = '.data-api';
 
-const EVENT_ACTIVATE = `activate${EVENT_KEY}`
-const EVENT_CLICK = `click${EVENT_KEY}`
-const EVENT_LOAD_DATA_API = `load${EVENT_KEY}${DATA_API_KEY}`
+const EVENT_ACTIVATE = `activate${EVENT_KEY}`;
+const EVENT_CLICK = `click${EVENT_KEY}`;
+const EVENT_LOAD_DATA_API = `load${EVENT_KEY}${DATA_API_KEY}`;
 
-const CLASS_NAME_DROPDOWN_ITEM = 'vg-dropdown-item'
-const CLASS_NAME_ACTIVE = 'active'
+const CLASS_NAME_DROPDOWN_ITEM = 'vg-dropdown-item';
+const CLASS_NAME_ACTIVE = 'active';
 
-const SELECTOR_DATA_SPY = '[data-vg-toggle="spy"]'
-const SELECTOR_TARGET_LINKS = '[href]'
-const SELECTOR_NAV_LIST_GROUP = '.nav, .list-group'
-const SELECTOR_NAV_LINKS = '.nav-link'
-const SELECTOR_NAV_ITEMS = '.nav-item'
-const SELECTOR_LIST_ITEMS = '.list-group-item'
-const SELECTOR_LINK_ITEMS = `${SELECTOR_NAV_LINKS}, ${SELECTOR_NAV_ITEMS} > ${SELECTOR_NAV_LINKS}, ${SELECTOR_LIST_ITEMS}`
-const SELECTOR_DROPDOWN = '.vg-dropdown'
-const SELECTOR_DROPDOWN_TOGGLE = '[data-vg-toggle="dropdown"]'
+const SELECTOR_DATA_SPY = '[data-vg-toggle="spy"]';
+const SELECTOR_TARGET_LINKS = '[href]';
+const SELECTOR_NAV_LIST_GROUP = '.nav, .list-group';
+const SELECTOR_NAV_LINKS = '.nav-link';
+const SELECTOR_NAV_ITEMS = '.nav-item';
+const SELECTOR_LIST_ITEMS = '.list-group-item';
+const SELECTOR_LINK_ITEMS = `${SELECTOR_NAV_LINKS}, ${SELECTOR_NAV_ITEMS} > ${SELECTOR_NAV_LINKS}, ${SELECTOR_LIST_ITEMS}`;
+const SELECTOR_DROPDOWN = '.vg-dropdown';
+const SELECTOR_DROPDOWN_TOGGLE = '[data-vg-toggle="dropdown"]';
 
-
+/**
+ * Модуль "Spy" — отслеживает прокрутку и активные секции на странице.
+ * Автоматически подсвечивает навигационные ссылки в зависимости от текущего положения скролла.
+ * Поддерживает плавную прокрутку и работу внутри контейнеров с overflow.
+ */
 class VGSpy extends BaseModule {
+	/**
+	 * Создаёт экземпляр VGSpy
+	 * @param {HTMLElement} element — корневой элемент навигации (например, .nav)
+	 * @param {Object} params — параметры конфигурации
+	 */
 	constructor(element, params) {
 		super(element, params);
 
-		this._params = this._getParams(element, mergeDeepObject({
-			offset: null, // TODO: v6 @deprecated, keep it for backwards compatibility reasons
-			rootMargin: '0px 0px -25%',
-			smoothScroll: true,
-			target: this._element,
-			threshold: [0.1, 0.5, 1]
-		}, params));
+		/**
+		 * Объединённые параметры с настройками по умолчанию
+		 * @type {Object}
+		 * @property {number|null} offset - смещение (устаревшее, для совместимости)
+		 * @property {string} rootMargin - отступ для IntersectionObserver
+		 * @property {boolean} smoothScroll - включить плавную прокрутку по якорям
+		 * @property {HTMLElement|string} target - целевой контейнер прокрутки
+		 * @property {number[]|string} threshold - пороги видимости (0.1, 0.5, 1)
+		 */
+		this._params = this._configAfterMerge(
+			mergeDeepObject(
+				{
+					offset: null, // Устаревшее, для обратной совместимости
+					rootMargin: '0px 0px -25%',
+					smoothScroll: true,
+					target: this._element,
+					threshold: [0.1, 0.5, 1],
+				},
+				params
+			)
+		);
 
-		this._targetLinks = new Map()
-		this._observableSections = new Map()
-		this._rootElement = getComputedStyle(this._element).overflowY === 'visible' ? null : this._element
-		this._activeTarget = null
-		this._observer = null
+		/**
+		 * Карта: хеш-ссылка → HTML-элемент ссылки
+		 * @type {Map<string, HTMLElement>}
+		 */
+		this._targetLinks = new Map();
+
+		/**
+		 * Карта: хеш-ссылка → HTML-элемент наблюдаемой секции
+		 * @type {Map<string, HTMLElement>}
+		 */
+		this._observableSections = new Map();
+
+		/**
+		 * Корневой элемент для IntersectionObserver (если скролл не окно)
+		 * @type {HTMLElement|null}
+		 */
+		this._rootElement = getComputedStyle(this._element).overflowY === 'visible' ? null : this._element;
+
+		/**
+		 * Текущая активная секция
+		 * @type {HTMLElement|null}
+		 */
+		this._activeTarget = null;
+
+		/**
+		 * Экземпляр IntersectionObserver
+		 * @type {IntersectionObserver|null}
+		 */
+		this._observer = null;
+
+		/**
+		 * Данные о предыдущей прокрутке для определения направления
+		 * @type {{visibleEntryTop: number, parentScrollTop: number}}
+		 */
 		this._previousScrollData = {
 			visibleEntryTop: 0,
-			parentScrollTop: 0
-		}
-		this._params = this._configAfterMerge(this._params);
+			parentScrollTop: 0,
+		};
 
 		this.refresh();
 	}
 
+	/**
+	 * Имя модуля
+	 * @returns {string}
+	 */
 	static get NAME() {
 		return NAME;
 	}
 
+	/**
+	 * Ключ модуля (для хранения в data)
+	 * @returns {string}
+	 */
 	static get NAME_KEY() {
-		return NAME_KEY
+		return NAME_KEY;
 	}
 
+	/**
+	 * Инициализирует или перезапускает модуль: находит ссылки и секции, создаёт observer
+	 */
 	refresh() {
-		this._initializeTargetsAndObservables()
-		this._maybeEnableSmoothScroll()
+		this._initializeTargetsAndObservables();
+		this._maybeEnableSmoothScroll();
 
 		if (this._observer) {
-			this._observer.disconnect()
+			this._observer.disconnect();
 		} else {
-			this._observer = this._getNewObserver()
+			this._observer = this._getNewObserver();
 		}
 
+		// Подписываемся на наблюдение за секциями
 		for (const section of this._observableSections.values()) {
-			this._observer.observe(section)
+			this._observer.observe(section);
 		}
 	}
 
+	/**
+	 * Очищает ресурсы (отключает observer)
+	 */
 	dispose() {
-		this._observer.disconnect()
-		super.dispose()
+		if (this._observer) {
+			this._observer.disconnect();
+		}
+		super.dispose();
 	}
 
-	_configAfterMerge(param) {
-		param.target = getElement(param.target) || document.body
-		param.rootMargin = param.offset ? `${param.offset}px 0px -30%` : param.rootMargin
+	/**
+	 * Обрабатывает и нормализует параметры после слияния
+	 * @param {Object} config
+	 * @returns {Object}
+	 * @private
+	 */
+	_configAfterMerge(config) {
+		config.target = getElement(config.target) || document.body;
 
-		if (typeof param.threshold === 'string') {
-			param.threshold = param.threshold.split(',').map(value => Number.parseFloat(value))
+		// Поддержка устаревшего параметра `offset`
+		if (config.offset != null) {
+			config.rootMargin = `${config.offset}px 0px -30%`;
 		}
 
-		return param
+		// Преобразуем строку порогов в массив чисел
+		if (typeof config.threshold === 'string') {
+			config.threshold = config.threshold
+				.split(',')
+				.map((value) => Number.parseFloat(value.trim()));
+		}
+
+		return config;
 	}
 
+	/**
+	 * Подключает плавную прокрутку по якорным ссылкам
+	 * @private
+	 */
 	_maybeEnableSmoothScroll() {
-		if (!this._params.smoothScroll) {
-			return
-		}
+		if (!this._params.smoothScroll) return;
 
-		EventHandler.off(this._params.target, EVENT_CLICK)
+		EventHandler.off(this._params.target, EVENT_CLICK);
+		EventHandler.on(this._params.target, EVENT_CLICK, SELECTOR_TARGET_LINKS, (event) => {
+			const hash = event.target.hash;
+			if (!hash) return;
 
-		EventHandler.on(this._params.target, EVENT_CLICK, SELECTOR_TARGET_LINKS, event => {
-			const observableSection = this._observableSections.get(event.target.hash)
-			if (observableSection) {
-				event.preventDefault()
-				const root = this._rootElement || window
-				const height = observableSection.offsetTop - this._element.offsetTop
-				if (root.scrollTo) {
-					root.scrollTo({ top: height, behavior: 'smooth' })
-					return
-				}
-				root.scrollTop = height
+			const section = this._observableSections.get(hash);
+			if (!section) return;
+
+			event.preventDefault();
+
+			const root = this._rootElement || window;
+			const scrollTop = section.offsetTop - this._element.offsetTop;
+
+			if (root.scrollTo) {
+				root.scrollTo({ top: scrollTop, behavior: 'smooth' });
+			} else {
+				root.scrollTop = scrollTop;
 			}
-		})
+		});
 	}
 
+	/**
+	 * Создаёт новый экземпляр IntersectionObserver
+	 * @returns {IntersectionObserver}
+	 * @private
+	 */
 	_getNewObserver() {
 		const options = {
 			root: this._rootElement,
+			rootMargin: this._params.rootMargin,
 			threshold: this._params.threshold,
-			rootMargin: this._params.rootMargin
-		}
+		};
 
-		return new IntersectionObserver(entries => this._observerCallback(entries), options)
+		return new IntersectionObserver((entries) => this._observerCallback(entries), options);
 	}
 
+	/**
+	 * Обработчик пересечений (IntersectionObserver)
+	 * @param {IntersectionObserverEntry[]} entries
+	 * @private
+	 */
 	_observerCallback(entries) {
-		const targetElement = entry => this._targetLinks.get(`#${entry.target.id}`);
-
-		const activate = entry => {
-			this._previousScrollData.visibleEntryTop = entry.target.offsetTop;
-			this._process(targetElement(entry));
-		}
-
-		const parentScrollTop = (this._rootElement || document.documentElement).scrollTop
-		const userScrollsDown = parentScrollTop >= this._previousScrollData.parentScrollTop
-		this._previousScrollData.parentScrollTop = parentScrollTop
+		const getTargetLink = (entry) => this._targetLinks.get(`#${entry.target.id}`);
+		const parentScrollTop = (this._rootElement || document.documentElement).scrollTop;
+		const userScrollsDown = parentScrollTop >= this._previousScrollData.parentScrollTop;
+		this._previousScrollData.parentScrollTop = parentScrollTop;
 
 		for (const entry of entries) {
 			if (!entry.isIntersecting) {
-				this._activeTarget = null
-				this._clearActiveClass(targetElement(entry))
-
-				continue
+				this._clearActiveClass(getTargetLink(entry));
+				continue;
 			}
 
-			const entryIsLowerThanPrevious = entry.target.offsetTop >= this._previousScrollData.visibleEntryTop
-			if (userScrollsDown && entryIsLowerThanPrevious) {
-				activate(entry)
-				if (!parentScrollTop) {
-					return
-				}
+			const isEntryBelow = entry.target.offsetTop >= this._previousScrollData.visibleEntryTop;
+			const shouldActivate =
+				(userScrollsDown && isEntryBelow) || (!userScrollsDown && !isEntryBelow);
 
-				continue
-			}
-
-			if (!userScrollsDown && !entryIsLowerThanPrevious) {
-				activate(entry)
+			if (shouldActivate) {
+				this._previousScrollData.visibleEntryTop = entry.target.offsetTop;
+				this._process(getTargetLink(entry));
 			}
 		}
 	}
 
+	/**
+	 * Находит все ссылки и соответствующие им секции
+	 * @private
+	 */
 	_initializeTargetsAndObservables() {
-		this._targetLinks = new Map();
-		this._observableSections = new Map();
+		this._targetLinks.clear();
+		this._observableSections.clear();
 
-		const targetLinks = Selectors.findAll(SELECTOR_TARGET_LINKS, this._params.target);
+		const links = Selectors.findAll(SELECTOR_TARGET_LINKS, this._params.target);
+		for (const link of links) {
+			const hash = link.hash;
+			if (!hash || isDisabled(link)) continue;
 
-		for (const anchor of targetLinks) {
-			if (!anchor.hash || isDisabled(anchor)) {
-				continue
-			}
-
-			const observableSection = Selectors.find(decodeURI(anchor.hash));
-
-			if (isVisible(observableSection)) {
-				this._targetLinks.set(decodeURI(anchor.hash), anchor)
-				this._observableSections.set(anchor.hash, observableSection)
+			const section = Selectors.find(decodeURI(hash));
+			if (isVisible(section)) {
+				this._targetLinks.set(decodeURI(hash), link);
+				this._observableSections.set(hash, section);
 			}
 		}
 	}
 
+	/**
+	 * Активирует элемент и запускает событие
+	 * @param {HTMLElement|null} target — элемент ссылки, который нужно активировать
+	 * @private
+	 */
 	_process(target) {
-		if (this._activeTarget === target) {
-			return
+		if (this._activeTarget === target) return;
+
+		this._clearActiveClass(this._params.target);
+		this._activeTarget = target;
+
+		if (target) {
+			target.classList.add(CLASS_NAME_ACTIVE);
+			this._activateParents(target);
+			EventHandler.trigger(this._element, EVENT_ACTIVATE, { relatedTarget: target });
 		}
-
-		this._clearActiveClass(this._params.target)
-		this._activeTarget = target
-		target.classList.add(CLASS_NAME_ACTIVE)
-		this._activateParents(target)
-
-		EventHandler.trigger(this._element, EVENT_ACTIVATE, { relatedTarget: target })
 	}
 
+	/**
+	 * Активирует родительские элементы (навигация, dropdown)
+	 * @param {HTMLElement} target — активная ссылка
+	 * @private
+	 */
 	_activateParents(target) {
 		if (target.classList.contains(CLASS_NAME_DROPDOWN_ITEM)) {
-			Selectors.find(SELECTOR_DROPDOWN_TOGGLE, target.closest(SELECTOR_DROPDOWN))
-				.classList.add(CLASS_NAME_ACTIVE)
-			return
+			const dropdownToggle = Selectors.find(SELECTOR_DROPDOWN_TOGGLE, target.closest(SELECTOR_DROPDOWN));
+			if (dropdownToggle) dropdownToggle.classList.add(CLASS_NAME_ACTIVE);
+			return;
 		}
 
-		for (const listGroup of Selectors.parents(target, SELECTOR_NAV_LIST_GROUP)) {
-			for (const item of Selectors.prev(listGroup, SELECTOR_LINK_ITEMS)) {
-				item.classList.add(CLASS_NAME_ACTIVE)
+		// Активируем предыдущие элементы в nav/list-group
+		for (const parentGroup of Selectors.parents(target, SELECTOR_NAV_LIST_GROUP)) {
+			for (const sibling of Selectors.prev(parentGroup, SELECTOR_LINK_ITEMS)) {
+				sibling.classList.add(CLASS_NAME_ACTIVE);
 			}
 		}
 	}
 
+	/**
+	 * Убирает активный класс со всех элементов
+	 * @param {HTMLElement} parent — контейнер для очистки
+	 * @private
+	 */
 	_clearActiveClass(parent) {
-		parent.classList.remove(CLASS_NAME_ACTIVE)
+		parent.classList.remove(CLASS_NAME_ACTIVE);
 
-		const activeNodes = Selectors.findAll(`${SELECTOR_TARGET_LINKS}.${CLASS_NAME_ACTIVE}`, parent);
-		for (const node of activeNodes) {
-			node.classList.remove(CLASS_NAME_ACTIVE)
+		const activeLinks = Selectors.findAll(`${SELECTOR_TARGET_LINKS}.${CLASS_NAME_ACTIVE}`, parent);
+		for (const link of activeLinks) {
+			link.classList.remove(CLASS_NAME_ACTIVE);
 		}
 	}
 }
 
+/**
+ * Инициализация через data-атрибуты при загрузке DOM
+ */
 EventHandler.on(window, EVENT_LOAD_DATA_API, () => {
 	for (const spy of Selectors.findAll(SELECTOR_DATA_SPY)) {
-		VGSpy.getOrCreateInstance(spy)
+		VGSpy.getOrCreateInstance(spy);
 	}
-})
+});
 
 export default VGSpy;
