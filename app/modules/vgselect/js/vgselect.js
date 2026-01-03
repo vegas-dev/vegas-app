@@ -9,7 +9,7 @@ import { Manipulator } from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import _handlersVGSelect from "./handlers";
-import {lang_titles} from "../../../utils/js/components/lang";
+import { lang_titles } from "../../../utils/js/components/lang";
 
 const NAME = 'select';
 const NAME_KEY = 'vg.select';
@@ -45,10 +45,19 @@ const EVENT_KEY_ERROR           = `${NAME_KEY}.error`;
 const SELECTOR_DATA_TOGGLE      = '[data-vg-toggle="select"]';
 const SELECTOR_CURRENT          = `.${CLASS_NAME_CURRENT}`;
 const SELECTOR_DROPDOWN         = `.${CLASS_NAME_DROPDOWN}`;
+const SELECTOR_SEARCH_INPUT     = `.${CLASS_NAME_SEARCH} input`;
 
-let _observerTimeout;
-
+/**
+ * Класс VGSelect
+ * Кастомный <select> с поддержкой поиска, мультивыбора, динамической загрузки, i18n и обновления через MutationObserver.
+ * @extends BaseModule
+ */
 class VGSelect extends BaseModule {
+	/**
+	 * Создаёт экземпляр VGSelect
+	 * @param {HTMLSelectElement} element - Исходный <select> элемент
+	 * @param {Object} [params] - Параметры инициализации
+	 */
 	constructor(element, params = {}) {
 		super(element, params);
 
@@ -66,13 +75,13 @@ class VGSelect extends BaseModule {
 			onShow: null,
 			onHide: null,
 			onChange: null,
-			onSearch: null,
 			onSelect: null,
 			onDeselect: null,
 			onClear: null,
 		}, params));
 
 		this._observer = null;
+		this._observerTimeout = null; // Теперь привязано к экземпляру
 		this._drop = Selectors.find(SELECTOR_DROPDOWN, this._element);
 		this._initObserver();
 
@@ -80,14 +89,28 @@ class VGSelect extends BaseModule {
 		this._callCallback('onInit');
 	}
 
+	/**
+	 * Возвращает имя компонента
+	 * @returns {string}
+	 */
 	static get NAME() {
 		return NAME;
 	}
 
+	/**
+	 * Возвращает ключ события компонента
+	 * @returns {string}
+	 */
 	static get NAME_KEY() {
 		return NAME_KEY;
 	}
 
+	/**
+	 * Перестраивает список опций в выпадающем меню
+	 * @param {HTMLSelectElement} selector - Исходный <select>
+	 * @param {HTMLElement} drop - Контейнер выпадающего списка
+	 * @returns {HTMLElement} - Обновлённый список
+	 */
 	static buildListOptions(selector, drop) {
 		let list = drop.querySelector(`.${CLASS_NAME_LIST}`);
 		if (!list) {
@@ -111,17 +134,24 @@ class VGSelect extends BaseModule {
 				label.classList.add(CLASS_NAME_OPTGROUP_TITLE);
 				ol.appendChild(label);
 
-				this._createListItems(optGroup.querySelectorAll('option'), ol, selector);
+				VGSelect._createListItems(optGroup.querySelectorAll('option'), ol, selector);
 				fragment.appendChild(ol);
 			});
 			list.appendChild(fragment);
 		} else {
-			this._createListItems(selector.options, list, selector);
+			VGSelect._createListItems(selector.options, list, selector);
 		}
 
 		return list;
 	}
 
+	/**
+	 * Создаёт <li> элементы из списка <option>
+	 * @param {HTMLCollection|NodeList} options - Коллекция <option>
+	 * @param {HTMLElement} parent - Родительский контейнер (ul/ol)
+	 * @param {HTMLSelectElement} selector - Исходный <select>
+	 * @private
+	 */
 	static _createListItems(options, parent, selector) {
 		const frag = document.createDocumentFragment();
 		const selectedIndex = selector.selectedIndex;
@@ -165,18 +195,35 @@ class VGSelect extends BaseModule {
 		parent.appendChild(frag);
 	}
 
+	/**
+	 * Проверяет, является ли значение "пустым" (соответствует placeholder)
+	 * @param {HTMLSelectElement} select - Элемент <select>
+	 * @param {string} value - Значение для проверки
+	 * @returns {boolean}
+	 */
 	static isPlaceholderValue(select, value) {
 		const attr = select.dataset.placeholderValue;
 		if (!attr) return value == null || String(value).trim() === '';
 		return attr.split(',').map(v => v.trim()).includes(String(value));
 	}
 
+	/**
+	 * Проверяет, выбрана ли допустимая опция (не placeholder)
+	 * @param {HTMLSelectElement} select - Элемент <select>
+	 * @returns {boolean}
+	 */
 	static hasSelectedValidOption(select) {
 		const index = select.selectedIndex;
 		if (index === -1) return false;
 		return !this.isPlaceholderValue(select, select.options[index]?.value);
 	}
 
+	/**
+	 * Строит кастомный UI для <select>
+	 * @param {HTMLSelectElement} selector - Исходный <select>
+	 * @param {boolean} [reBuild=false] - Пересоздать, если уже инициализирован
+	 * @returns {HTMLElement} - Обёртка (.vg-select)
+	 */
 	static build(selector, reBuild = false) {
 		if (reBuild || selector.dataset.inited === 'true') {
 			this.destroy(selector);
@@ -291,10 +338,18 @@ class VGSelect extends BaseModule {
 		return container;
 	}
 
+	/**
+	 * Переключает открытие/закрытие выпадающего списка
+	 * @param {EventTarget} [relatedTarget] - Элемент, вызвавший событие
+	 */
 	toggle(relatedTarget) {
 		return this._isShown() ? this.hide() : this.show(relatedTarget);
 	}
 
+	/**
+	 * Открывает выпадающий список
+	 * @param {EventTarget} [relatedTarget] - Элемент, вызвавший событие
+	 */
 	show(relatedTarget) {
 		if (isDisabled(this._element)) return;
 
@@ -310,8 +365,8 @@ class VGSelect extends BaseModule {
 		const toggle = this._element.querySelector(SELECTOR_DATA_TOGGLE);
 		toggle.setAttribute('aria-expanded', 'true');
 
-		if (this._params.search) {
-			const input = this._element.querySelector('input');
+		if (this._params.search?.enabled) {
+			const input = this._element.querySelector(SELECTOR_SEARCH_INPUT);
 			if (input) input.focus();
 		}
 
@@ -323,11 +378,19 @@ class VGSelect extends BaseModule {
 		}, this._drop, true, 50);
 	}
 
+	/**
+	 * Закрывает выпадающий список
+	 */
 	hide() {
 		if (isDisabled(this._element) || !this._isShown()) return;
 		this._completeHide();
 	}
 
+	/**
+	 * Полностью завершает процесс закрытия
+	 * @param {Object} [relatedTarget] - Доп. данные
+	 * @private
+	 */
 	_completeHide(relatedTarget = {}) {
 		const e = EventHandler.trigger(this._element, EVENT_KEY_HIDE, relatedTarget);
 		if (e.defaultPrevented) return;
@@ -347,10 +410,19 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Проверяет, открыт ли список
+	 * @returns {boolean}
+	 * @private
+	 */
 	_isShown() {
 		return this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
+	/**
+	 * Инициализирует MutationObserver для отслеживания изменений в <select>
+	 * @private
+	 */
 	_initObserver() {
 		if (this._observer) {
 			this._observer.disconnect();
@@ -374,8 +446,8 @@ class VGSelect extends BaseModule {
 
 			const wasShown = this._isShown();
 
-			clearTimeout(_observerTimeout);
-			_observerTimeout = setTimeout(() => {
+			clearTimeout(this._observerTimeout);
+			this._observerTimeout = setTimeout(() => {
 				if (this._element.previousElementSibling !== select || select.hasAttribute('data-updating')) return;
 
 				this._updateFromMutation();
@@ -397,6 +469,10 @@ class VGSelect extends BaseModule {
 		});
 	}
 
+	/**
+	 * Обновляет UI после изменения в DOM
+	 * @private
+	 */
 	_updateFromMutation() {
 		const select = this._element.previousElementSibling;
 		if (!select) return;
@@ -409,19 +485,26 @@ class VGSelect extends BaseModule {
 
 		const drop = this._element.querySelector(SELECTOR_DROPDOWN);
 		VGSelect.buildListOptions(select, drop);
-
 		VGSelect.updateUI(select);
 	}
 
+	/**
+	 * Освобождает ресурсы (отключает observer, очищает таймеры)
+	 */
 	dispose() {
 		if (this._observer) {
 			this._observer.disconnect();
 			this._observer = null;
 		}
-		clearTimeout(_observerTimeout);
+		clearTimeout(this._observerTimeout);
+		this._observerTimeout = null;
 		super.dispose();
 	}
 
+	/**
+	 * Удаляет кастомный UI
+	 * @param {HTMLSelectElement} select - Исходный <select>
+	 */
 	static destroy(select) {
 		const container = select.nextElementSibling;
 		if (container && container.classList.contains(CLASS_NAME_CONTAINER)) {
@@ -429,6 +512,10 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Обновляет отображаемое значение (текст, теги)
+	 * @param {HTMLSelectElement} select - Исходный <select>
+	 */
 	static updateUI(select) {
 		const container = select.nextElementSibling;
 		if (!container || !container.classList.contains(CLASS_NAME_CONTAINER)) return;
@@ -482,6 +569,12 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Программно устанавливает значение <select>
+	 * @param {HTMLSelectElement} select - Исходный <select>
+	 * @param {string} value - Значение для выбора
+	 * @param {Object} [data] - Дополнительные данные
+	 */
 	static changeSelector(select, value, data = {}) {
 		const container = select.nextElementSibling;
 		const instance = container ? VGSelect.getInstance(container) : null;
@@ -518,10 +611,22 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Вызывает кастомное событие
+	 * @param {string} eventName - Имя события
+	 * @param {Object} [detail] - Данные события
+	 * @private
+	 */
 	_triggerEvent(eventName, detail = {}) {
 		EventHandler.trigger(this._element, eventName, detail);
 	}
 
+	/**
+	 * Выполняет пользовательский коллбэк
+	 * @param {string} name - Имя коллбэка
+	 * @param {*} [arg] - Аргумент
+	 * @private
+	 */
 	_callCallback(name, arg = null) {
 		const callback = this._params[name];
 		if (typeof callback === 'function') {
@@ -529,10 +634,20 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Инициализирует или пересоздаёт компонент
+	 * @param {HTMLSelectElement} element - <select>
+	 * @param {Object} [params] - Параметры
+	 * @param {boolean} [isRebuild=false] - Пересоздать
+	 */
 	static init(element, params = {}, isRebuild = false) {
 		this.build(element, isRebuild);
 	}
 
+	/**
+	 * Закрывает все открытые выпадающие списки при клике вне
+	 * @param {MouseEvent} event
+	 */
 	static clearDrops(event) {
 		const open = Selectors.find(`.${CLASS_NAME_CONTAINER}.${CLASS_NAME_SHOW}`);
 		if (!open) return;
@@ -555,6 +670,11 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Добавляет опции в <select> и обновляет UI
+	 * @param {HTMLSelectElement} select - Исходный <select>
+	 * @param {Array|Object} data - Данные (массив или { results: [...] })
+	 */
 	static addOptions(select, data) {
 		const container = select.nextElementSibling;
 		const isRebuild = container && container.classList.contains(CLASS_NAME_CONTAINER);
@@ -570,13 +690,11 @@ class VGSelect extends BaseModule {
 			return;
 		}
 
-		// Удаляем только динамические опции
 		[...select.querySelectorAll('option')].forEach(option => {
 			const parentOptGroup = option.closest('optgroup');
-			if (option.value === '') return; // не удаляем пустую
+			if (option.value === '') return;
 			if (option.hasAttribute('data-preserve')) return;
 			if (parentOptGroup && parentOptGroup.hasAttribute('data-preserve')) return;
-
 			option.remove();
 		});
 
@@ -586,7 +704,6 @@ class VGSelect extends BaseModule {
 			}
 		});
 
-		// Добавляем новые
 		options.forEach(item => {
 			if (item.children && Array.isArray(item.children)) {
 				const optgroup = document.createElement('optgroup');
@@ -634,6 +751,11 @@ class VGSelect extends BaseModule {
 		}
 	}
 
+	/**
+	 * Выполняет удалённый запрос для поиска
+	 * @param {string} term - Поисковый запрос
+	 * @private
+	 */
 	_fetchRemoteData(term) {
 		const { route, method = 'GET' } = this._params.search;
 		const url = route.replace('{query}', encodeURIComponent(term));
@@ -647,8 +769,8 @@ class VGSelect extends BaseModule {
 			options.body = JSON.stringify({ query: term });
 		}
 
-		const searchInput = this._element.querySelector(`.${CLASS_NAME_SEARCH} input`);
-		const wasOpen = this._isShown(); // Сохраняем состояние
+		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
+		const wasOpen = this._isShown();
 
 		fetch(url, options)
 			.then(res => res.json())
@@ -662,7 +784,6 @@ class VGSelect extends BaseModule {
 				if (wasOpen && searchInput) {
 					searchInput.value = term;
 					searchInput.focus();
-
 					this._element.classList.add(CLASS_NAME_SHOW, CLASS_NAME_ACTIVE);
 				}
 			})
@@ -676,6 +797,11 @@ class VGSelect extends BaseModule {
 			});
 	}
 
+	/**
+	 * Фильтрует опции локально по введённому тексту
+	 * @param {string} term - Поисковый запрос
+	 * @private
+	 */
 	_filterLocalOptions(term) {
 		const list = this._drop.querySelector(`.${CLASS_NAME_LIST}`);
 		const options = list.querySelectorAll(`.${CLASS_NAME_OPTION}`);
