@@ -34,6 +34,8 @@ select {
 	@include mix-vars('select-optgroup-hover', $select-optgroup-hover-map);
 	@include mix-vars('select-list-hover', $select-list-hover-map);
 	@include mix-vars('select-search', $select-search-map);
+	@include mix-vars('select-tags', $select-tags-map);
+	@include mix-vars('select-tag', $select-tag-map);
 	--vg-select-list-max-height: #{$select-list-max-height};
 	--vg-select-list-scrollbar-width: #{$select-list-scrollbar-width};
 	--vg-select-list-scrollbar-bg: #{$select-list-scrollbar-bg};
@@ -49,35 +51,35 @@ select {
 	&-tags {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 4px;
+		gap: var(--vg-select-tags-gap);
 		align-items: center;
-		width: 100%;
-		min-height: 32px;
-		padding: 2px 0;
+		width: var(--vg-select-tags-width);
+		min-height: var(--vg-select-tags-min-height);
+		padding: var(--vg-select-tags-padding);
 	}
 
 	&-tag {
 		display: flex;
 		align-items: center;
-		gap: 4px;
-		background: #0d6efd;
-		color: white;
-		padding: 2px 6px;
-		border-radius: 4px;
-		font-size: 14px;
-	}
+		gap: var(--vg-select-tag-gap);
+		background: var(--vg-select-tag-background);
+		color: var(--vg-select-tag-color);
+		padding: var(--vg-select-tag-padding);
+		border-radius: var(--vg-select-tag-border-radius);
+		font-size: var(--vg-select-tag-font-size);
 
-	&-tag-remove {
-		width: 12px;
-		height: 12px;
-		cursor: pointer;
-		opacity: 0.7;
-		stroke: white;
-		stroke-width: 2;
-	}
+		&-remove {
+			cursor: pointer;
+			opacity: 0.7;
+			width: var(--vg-select-tag-remove-width);
+			height: var(--vg-select-tag-remove-height);
+			stroke: var(--vg-select-tag-remove-stroke);
+			stroke-width: var(--vg-select-tag-remove-stroke-width);
 
-	&-tag-remove:hover {
-		opacity: 1;
+			&:hover {
+				opacity: 1;
+			}
+		}
 	}
 
 	&-multiple-input {

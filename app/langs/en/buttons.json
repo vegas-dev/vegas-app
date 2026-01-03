@@ -17,5 +17,8 @@
     "less": "Roll up",
     "show": "Show",
     "more": " more "
+  },
+  "select": {
+    "load-more": "Upload more"
   }
 }

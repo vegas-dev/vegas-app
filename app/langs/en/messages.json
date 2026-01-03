@@ -28,5 +28,8 @@
     "title": "Default header",
     "description": "Description of the current action",
     "reason": "Alert already open"
+  },
+  "select": {
+    "loading": "Loading"
   }
 }

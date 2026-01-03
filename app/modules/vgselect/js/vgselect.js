@@ -5,11 +5,11 @@ import {
 	mergeDeepObject,
 	normalizeData,
 } from "../../../utils/js/functions";
-import { Manipulator } from "../../../utils/js/dom/manipulator";
+import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import _handlersVGSelect from "./handlers";
-import { lang_titles } from "../../../utils/js/components/lang";
+import {lang_buttons, lang_messages, lang_titles} from "../../../utils/js/components/lang";
 
 const NAME = 'select';
 const NAME_KEY = 'vg.select';
@@ -28,6 +28,8 @@ const CLASS_NAME_SEARCH         = 'vg-select-search';
 const CLASS_NAME_TAGS           = 'vg-select-tags';
 const CLASS_NAME_TAG            = 'vg-select-tag';
 const CLASS_NAME_TAG_REMOVE     = 'vg-select-tag-remove';
+const CLASS_NAME_LOAD_MORE      = 'vg-select-load-more';
+const CLASS_NAME_LOADING        = 'vg-select-loading';
 
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
 const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
@@ -41,15 +43,18 @@ const EVENT_KEY_CLOSE           = `${NAME_KEY}.close`;
 const EVENT_KEY_SELECT          = `${NAME_KEY}.select`;
 const EVENT_KEY_CLEAR           = `${NAME_KEY}.clear`;
 const EVENT_KEY_ERROR           = `${NAME_KEY}.error`;
+const EVENT_KEY_LOAD_NEXT       = `${NAME_KEY}.loadNext`;
 
 const SELECTOR_DATA_TOGGLE      = '[data-vg-toggle="select"]';
 const SELECTOR_CURRENT          = `.${CLASS_NAME_CURRENT}`;
 const SELECTOR_DROPDOWN         = `.${CLASS_NAME_DROPDOWN}`;
 const SELECTOR_SEARCH_INPUT     = `.${CLASS_NAME_SEARCH} input`;
+const SELECTOR_LIST             = `.${CLASS_NAME_LIST}`;
+const SELECTOR_LOAD_MORE_BTN    = `.${CLASS_NAME_LOAD_MORE}`;
 
 /**
  * Класс VGSelect
- * Кастомный <select> с поддержкой поиска, мультивыбора, динамической загрузки, i18n и обновления через MutationObserver.
+ * Кастомный <select> с поддержкой поиска, мультивыбора, динамической загрузки, i18n, пагинации и обновления через MutationObserver.
  * @extends BaseModule
  */
 class VGSelect extends BaseModule {
@@ -69,6 +74,11 @@ class VGSelect extends BaseModule {
 				remote: false,
 				delay: 300,
 				minTerm: 1,
+				pagination: false,
+				pageParam: 'page',
+				termParam: 'q',
+				perPage: 20,
+				loadMoreText: 'Загрузить ещё',
 			},
 			placeholder: '',
 			onInit: null,
@@ -78,12 +88,23 @@ class VGSelect extends BaseModule {
 			onSelect: null,
 			onDeselect: null,
 			onClear: null,
+			onLoadNext: null,
 		}, params));
 
 		this._observer = null;
-		this._observerTimeout = null; // Теперь привязано к экземпляру
+		this._observerTimeout = null;
 		this._drop = Selectors.find(SELECTOR_DROPDOWN, this._element);
+		this._searchTerm = '';
+		this._currentPage = 1;
+		this._totalPages = null;
+		this._loading = false;
+
+		if (typeof params.search === 'object') {
+			this._params.search.loadMoreText = lang_buttons(this._params.lang, NAME)['load-more'] || 'Загрузить еще'
+		}
+
 		this._initObserver();
+		this._initLoadMoreButton();
 
 		this._triggerEvent(EVENT_KEY_INIT);
 		this._callCallback('onInit');
@@ -115,26 +136,26 @@ class VGSelect extends BaseModule {
 		let list = drop.querySelector(`.${CLASS_NAME_LIST}`);
 		if (!list) {
 			list = document.createElement('ul');
-			list.classList.add(CLASS_NAME_LIST);
+			Classes.add(list, CLASS_NAME_LIST);
 			drop.appendChild(list);
 		} else {
 			list.innerHTML = '';
 		}
 
-		const optGroups = selector.querySelectorAll('optgroup');
+		const optGroups = Selectors.findAll('optgroup', selector);
 		const fragment = document.createDocumentFragment();
 
 		if (optGroups.length > 0) {
 			optGroups.forEach(optGroup => {
 				const ol = document.createElement('ol');
-				ol.classList.add(CLASS_NAME_OPTGROUP);
+				Classes.add(ol, CLASS_NAME_OPTGROUP);
 
 				const label = document.createElement('li');
 				label.textContent = optGroup.label.trim();
-				label.classList.add(CLASS_NAME_OPTGROUP_TITLE);
+				Classes.add(label, CLASS_NAME_OPTGROUP_TITLE);
 				ol.appendChild(label);
 
-				VGSelect._createListItems(optGroup.querySelectorAll('option'), ol, selector);
+				VGSelect._createListItems(Selectors.findAll('option', optGroup), ol, selector);
 				fragment.appendChild(ol);
 			});
 			list.appendChild(fragment);
@@ -671,40 +692,221 @@ class VGSelect extends BaseModule {
 	}
 
 	/**
+	 * Инициализирует кнопку "Загрузить ещё"
+	 * @private
+	 */
+	_initLoadMoreButton() {
+		if (!this._params.search?.pagination || !this._params.search.remote) return;
+
+		const list = this._element.querySelector(SELECTOR_LIST);
+		if (!list) return;
+
+		const btn = document.createElement('li');
+		btn.className = CLASS_NAME_LOAD_MORE;
+		btn.style.textAlign = 'center';
+		btn.style.padding = '8px';
+		btn.style.cursor = 'pointer';
+		btn.style.color = '#007bff';
+		btn.style.fontSize = '14px';
+		btn.style.fontWeight = '500';
+		btn.textContent = this._params.search.loadMoreText;
+
+		btn.addEventListener('click', () => {
+			if (!this._loading && (this._totalPages === null || this._currentPage < this._totalPages)) {
+				this._loadNextPage();
+			}
+		});
+
+		list.appendChild(btn);
+		this._hideLoadMoreButton(true); // скрыта до первого запроса
+	}
+
+	/**
+	 * Показывает или скрывает кнопку "Загрузить ещё"
+	 * @param {boolean} hide
+	 * @private
+	 */
+	_hideLoadMoreButton(hide) {
+		const btn = this._element.querySelector(SELECTOR_LOAD_MORE_BTN);
+		if (btn) {
+			btn.style.display = hide ? 'none' : 'block';
+		}
+	}
+
+	/**
+	 * Показывает или скрывает индикатор загрузки
+	 * @param {boolean} show
+	 * @private
+	 */
+	_showLoading(show) {
+		const list = this._element.querySelector(SELECTOR_LIST);
+		let loader = list.querySelector(`.${CLASS_NAME_LOADING}`);
+		if (show && !loader) {
+			loader = document.createElement('li');
+			loader.className = CLASS_NAME_LOADING;
+			loader.style.textAlign = 'center';
+			loader.style.padding = '8px';
+			loader.textContent = lang_messages(this._params.lang, NAME)['loading'];
+			list.appendChild(loader);
+		} else if (!show && loader) {
+			loader.remove();
+		}
+	}
+
+	/**
+	 * Загружает следующую страницу данных по клику
+	 * @private
+	 */
+	async _loadNextPage() {
+		const { route, pageParam = 'page', termParam = 'q', perPage = 20 } = this._params.search;
+		const nextPage = this._currentPage + 1;
+
+		const url = new URL(route, window.location.origin);
+		url.searchParams.set(termParam, this._searchTerm);
+		url.searchParams.set(pageParam, nextPage);
+		url.searchParams.set('per_page', perPage);
+
+		this._loading = true;
+		this._showLoading(true);
+		this._hideLoadMoreButton(true);
+
+		try {
+			const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+			const data = await res.json();
+
+			if (Array.isArray(data.results)) {
+				VGSelect.addOptions(this._element.previousElementSibling, data, { preserve: true });
+				this._currentPage = data.pagination?.current_page || nextPage;
+				this._totalPages = data.pagination?.total_pages || null;
+
+				// Показать кнопку снова, если есть следующая страница
+				if (this._totalPages === null || this._currentPage < this._totalPages) {
+					this._hideLoadMoreButton(false);
+				}
+
+				this._callCallback('onLoadNext', { page: this._currentPage, data });
+				this._triggerEvent(EVENT_KEY_LOAD_NEXT, { page: this._currentPage, term: this._searchTerm });
+			}
+		} catch (err) {
+			console.error('VGSelect: Failed to load next page', err);
+			this._triggerEvent(EVENT_KEY_ERROR, { error: 'Pagination fetch failed', term: this._searchTerm });
+			this._hideLoadMoreButton(false); // оставить кнопку при ошибке
+		} finally {
+			this._showLoading(false);
+			this._loading = false;
+		}
+	}
+
+	/**
+	 * Выполняет удалённый запрос для поиска
+	 * @param {string} term - Поисковый запрос
+	 * @private
+	 */
+	_fetchRemoteData(term) {
+		const { route, method = 'GET', pageParam = 'page', termParam = 'q', perPage = 20 } = this._params.search;
+		const url = new URL(route, window.location.origin);
+		url.searchParams.set(termParam, term);
+		url.searchParams.set(pageParam, 1);
+		url.searchParams.set('per_page', perPage);
+
+		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
+		const wasOpen = this._isShown();
+
+		this._searchTerm = term;
+		this._currentPage = 1;
+		this._totalPages = null;
+
+		this._showLoading(true);
+		this._hideLoadMoreButton(true);
+
+		fetch(url, {
+			method,
+			headers: { 'Content-Type': 'application/json' }
+		})
+			.then(res => res.json())
+			.then(data => {
+				const select = this._element.previousElementSibling;
+				if (!select) return;
+
+				// Очистка старых опций
+				[...select.querySelectorAll('option')].forEach(opt => {
+					if (!opt.hasAttribute('data-preserve') && !opt.closest('optgroup[data-preserve]')) {
+						opt.remove();
+					}
+				});
+
+				VGSelect.addOptions(select, data, { preserve: true });
+
+				this._callCallback('onSearch', { term, data });
+				this._triggerEvent(EVENT_KEY_REBUILD, { term, data });
+
+				if (data.pagination) {
+					this._currentPage = data.pagination.current_page || 1;
+					this._totalPages = data.pagination.total_pages || null;
+				}
+
+				// Показать кнопку "Загрузить ещё", если есть следующая страница
+				if (this._totalPages === null || this._currentPage < this._totalPages) {
+					this._hideLoadMoreButton(false);
+				}
+
+				if (wasOpen && searchInput) {
+					searchInput.value = term;
+					searchInput.focus();
+					this._element.classList.add(CLASS_NAME_SHOW, CLASS_NAME_ACTIVE);
+				}
+			})
+			.catch(err => {
+				console.error('VGSelect: Remote search error', err);
+				this._triggerEvent(EVENT_KEY_ERROR, { error: 'Search request failed', term });
+				this._hideLoadMoreButton(false);
+			})
+			.finally(() => {
+				this._showLoading(false);
+			});
+	}
+
+	/**
 	 * Добавляет опции в <select> и обновляет UI
 	 * @param {HTMLSelectElement} select - Исходный <select>
 	 * @param {Array|Object} data - Данные (массив или { results: [...] })
+	 * @param {Object} [options] - Опции
+	 * @param {boolean} [options.preserve] - Сохранить существующие опции
 	 */
-	static addOptions(select, data) {
+	static addOptions(select, data, options = {}) {
+		const { preserve = false } = options;
 		const container = select.nextElementSibling;
 		const isRebuild = container && container.classList.contains(CLASS_NAME_CONTAINER);
 		const instance = isRebuild ? VGSelect.getInstance(container) : null;
 
-		let options = data;
+		let optionsData = data;
 		if (data && data.results && Array.isArray(data.results)) {
-			options = data.results;
+			optionsData = data.results;
 		}
 
-		if (!Array.isArray(options)) {
+		if (!Array.isArray(optionsData)) {
 			instance?._triggerEvent(EVENT_KEY_ERROR, { error: 'Invalid data format: expected array' });
 			return;
 		}
 
-		[...select.querySelectorAll('option')].forEach(option => {
-			const parentOptGroup = option.closest('optgroup');
-			if (option.value === '') return;
-			if (option.hasAttribute('data-preserve')) return;
-			if (parentOptGroup && parentOptGroup.hasAttribute('data-preserve')) return;
-			option.remove();
-		});
+		if (!preserve) {
+			// Удаление только не помеченных как data-preserve
+			[...select.querySelectorAll('option')].forEach(option => {
+				const parentOptGroup = option.closest('optgroup');
+				if (option.value === '') return;
+				if (option.hasAttribute('data-preserve')) return;
+				if (parentOptGroup && parentOptGroup.hasAttribute('data-preserve')) return;
+				option.remove();
+			});
 
-		[...select.querySelectorAll('optgroup')].forEach(og => {
-			if (og.children.length === 0 && !og.hasAttribute('data-preserve')) {
-				og.remove();
-			}
-		});
+			[...select.querySelectorAll('optgroup')].forEach(og => {
+				if (og.children.length === 0 && !og.hasAttribute('data-preserve')) {
+					og.remove();
+				}
+			});
+		}
 
-		options.forEach(item => {
+		optionsData.forEach(item => {
 			if (item.children && Array.isArray(item.children)) {
 				const optgroup = document.createElement('optgroup');
 				optgroup.label = item.text || '';
@@ -749,52 +951,6 @@ class VGSelect extends BaseModule {
 		} else {
 			this.updateUI(select);
 		}
-	}
-
-	/**
-	 * Выполняет удалённый запрос для поиска
-	 * @param {string} term - Поисковый запрос
-	 * @private
-	 */
-	_fetchRemoteData(term) {
-		const { route, method = 'GET' } = this._params.search;
-		const url = route.replace('{query}', encodeURIComponent(term));
-
-		const options = {
-			method,
-			headers: { 'Content-Type': 'application/json' }
-		};
-
-		if (method.toUpperCase() !== 'GET') {
-			options.body = JSON.stringify({ query: term });
-		}
-
-		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
-		const wasOpen = this._isShown();
-
-		fetch(url, options)
-			.then(res => res.json())
-			.then(data => {
-				const select = this._element.previousElementSibling;
-				if (!select) return;
-
-				VGSelect.addOptions(select, data);
-				this._callCallback('onSearch', { term, data });
-
-				if (wasOpen && searchInput) {
-					searchInput.value = term;
-					searchInput.focus();
-					this._element.classList.add(CLASS_NAME_SHOW, CLASS_NAME_ACTIVE);
-				}
-			})
-			.catch(err => {
-				console.error('VGSelect: Remote search error', err);
-				this._triggerEvent(EVENT_KEY_ERROR, { error: 'Search request failed', term });
-
-				if (wasOpen && searchInput) {
-					searchInput.focus();
-				}
-			});
 	}
 
 	/**
