@@ -2,5 +2,8 @@
   "errors": {
     "title": "Ошибка",
     "titles": "Ошибки"
+  },
+  "select": {
+    "search": "Поиск..."
   }
 }

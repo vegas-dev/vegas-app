@@ -4,12 +4,12 @@ import {
 	isEmptyObj,
 	mergeDeepObject,
 	normalizeData,
-	transliterate
 } from "../../../utils/js/functions";
 import { Manipulator } from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
-import _vgSelectHandlers from "./handlers";
+import _handlersVGSelect from "./handlers";
+import {lang_titles} from "../../../utils/js/components/lang";
 
 const NAME = 'select';
 const NAME_KEY = 'vg.select';
@@ -53,7 +53,14 @@ class VGSelect extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
-			search: false,
+			lang: document.documentElement.lang || 'ru',
+			search: {
+				enabled: true,
+				route: '',
+				remote: false,
+				delay: 300,
+				minTerm: 1,
+			},
 			placeholder: '',
 			onInit: null,
 			onShow: null,
@@ -82,9 +89,14 @@ class VGSelect extends BaseModule {
 	}
 
 	static buildListOptions(selector, drop) {
-		const list = document.createElement('ul');
-		list.classList.add(CLASS_NAME_LIST);
-		drop.innerHTML = '';
+		let list = drop.querySelector(`.${CLASS_NAME_LIST}`);
+		if (!list) {
+			list = document.createElement('ul');
+			list.classList.add(CLASS_NAME_LIST);
+			drop.appendChild(list);
+		} else {
+			list.innerHTML = '';
+		}
 
 		const optGroups = selector.querySelectorAll('optgroup');
 		const fragment = document.createDocumentFragment();
@@ -102,14 +114,10 @@ class VGSelect extends BaseModule {
 				this._createListItems(optGroup.querySelectorAll('option'), ol, selector);
 				fragment.appendChild(ol);
 			});
+			list.appendChild(fragment);
 		} else {
 			this._createListItems(selector.options, list, selector);
 		}
-
-		if (optGroups.length > 0) {
-			list.appendChild(fragment);
-		}
-		drop.appendChild(list);
 
 		return list;
 	}
@@ -237,24 +245,48 @@ class VGSelect extends BaseModule {
 
 		this.buildListOptions(selector, dropdown);
 
-		if (selector.dataset.search !== undefined) {
-			const search = document.createElement('div');
-			search.classList.add(CLASS_NAME_SEARCH);
-			const input = document.createElement('input');
-			input.name = 'vg-select-search';
-			input.type = 'text';
-			input.placeholder = 'Поиск...';
-			input.autocomplete = 'off';
-			input.setAttribute('role', 'searchbox');
-			search.appendChild(input);
-			dropdown.insertBefore(search, dropdown.firstChild);
-		}
-
 		selector.insertAdjacentElement('afterend', container);
 		selector.dataset.inited = 'true';
 
 		this.getOrCreateInstance(container);
 		this.updateUI(selector);
+		const instance = VGSelect.getInstance(container);
+
+		let searchInput = null;
+		if (Manipulator.has(selector, 'data-search-enabled')) {
+			const search = document.createElement('div');
+			search.classList.add(CLASS_NAME_SEARCH);
+			searchInput = document.createElement('input');
+			searchInput.name = 'vg-select-search';
+			searchInput.type = 'text';
+			searchInput.placeholder = lang_titles(instance._params.lang, NAME)['search'];
+			searchInput.autocomplete = 'off';
+			searchInput.setAttribute('role', 'searchbox');
+			search.appendChild(searchInput);
+			dropdown.insertBefore(search, dropdown.firstChild);
+		}
+
+		if (searchInput && instance) {
+			let searchTimeout;
+
+			searchInput.addEventListener('input', (e) => {
+				const term = e.target.value.trim();
+				const params = instance._params;
+
+				instance._callCallback('onSearch', { term });
+
+				if (params.search.remote && params.search.route) {
+					if (term.length < (params.search.minTerm || 1)) return;
+
+					clearTimeout(searchTimeout);
+					searchTimeout = setTimeout(() => {
+						instance._fetchRemoteData(term);
+					}, params.search.delay || 300);
+				} else {
+					instance._filterLocalOptions(term);
+				}
+			});
+		}
 
 		return container;
 	}
@@ -283,7 +315,7 @@ class VGSelect extends BaseModule {
 			if (input) input.focus();
 		}
 
-		this._queueCallback(() => {
+		return this._queueCallback(() => {
 			this._element.classList.add(CLASS_NAME_ACTIVE);
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
 			this._triggerEvent(EVENT_KEY_OPEN);
@@ -507,14 +539,14 @@ class VGSelect extends BaseModule {
 
 		const targetIsToggle = event.target.closest(SELECTOR_DATA_TOGGLE);
 		if (targetIsToggle && targetIsToggle.closest(`.${CLASS_NAME_CONTAINER}`) === open) {
-			return; // клик по самому тоглу — не закрываем
+			return;
 		}
 
 		const targetInDropdown = event.composedPath().some(el =>
 			el.classList?.contains(CLASS_NAME_DROPDOWN)
 		);
 		if (targetInDropdown) {
-			return; // клик внутри выпадашки — не закрываем
+			return;
 		}
 
 		const instance = VGSelect.getInstance(open);
@@ -538,34 +570,129 @@ class VGSelect extends BaseModule {
 			return;
 		}
 
-		[...select.querySelectorAll('option:not([value=""])')].forEach(opt => {
-			if (!opt.hasAttribute('data-preserve')) opt.remove();
+		// Удаляем только динамические опции
+		[...select.querySelectorAll('option')].forEach(option => {
+			const parentOptGroup = option.closest('optgroup');
+			if (option.value === '') return; // не удаляем пустую
+			if (option.hasAttribute('data-preserve')) return;
+			if (parentOptGroup && parentOptGroup.hasAttribute('data-preserve')) return;
+
+			option.remove();
 		});
 
+		[...select.querySelectorAll('optgroup')].forEach(og => {
+			if (og.children.length === 0 && !og.hasAttribute('data-preserve')) {
+				og.remove();
+			}
+		});
+
+		// Добавляем новые
 		options.forEach(item => {
-			const option = document.createElement('option');
-			option.value = item.id || '';
-			option.textContent = item.text || '';
-			if (item.selected) option.selected = true;
-			if (item.disabled) option.disabled = true;
+			if (item.children && Array.isArray(item.children)) {
+				const optgroup = document.createElement('optgroup');
+				optgroup.label = item.text || '';
+				if (item.disabled) optgroup.disabled = true;
 
-			const dataAttrs = Object.keys(item).filter(k => !['id', 'text', 'selected', 'disabled'].includes(k));
-			dataAttrs.forEach(key => {
-				option.setAttribute(`data-${key}`, item[key]);
-			});
+				item.children.forEach(child => {
+					const option = document.createElement('option');
+					option.value = child.id || '';
+					option.textContent = child.text || '';
+					if (child.selected) option.selected = true;
+					if (child.disabled) option.disabled = true;
 
-			select.appendChild(option);
+					const dataAttrs = Object.keys(child).filter(k => !['id', 'text', 'selected', 'disabled'].includes(k));
+					dataAttrs.forEach(key => {
+						option.setAttribute(`data-${key}`, child[key]);
+					});
+
+					optgroup.appendChild(option);
+				});
+
+				select.appendChild(optgroup);
+			} else {
+				const option = document.createElement('option');
+				option.value = item.id || '';
+				option.textContent = item.text || '';
+				if (item.selected) option.selected = true;
+				if (item.disabled) option.disabled = true;
+
+				const dataAttrs = Object.keys(item).filter(k => !['id', 'text', 'selected', 'disabled'].includes(k));
+				dataAttrs.forEach(key => {
+					option.setAttribute(`data-${key}`, item[key]);
+				});
+
+				select.appendChild(option);
+			}
 		});
 
 		if (isRebuild) {
-			this.build(select, true);
+			const drop = container.querySelector(`.${CLASS_NAME_DROPDOWN}`);
+			VGSelect.buildListOptions(select, drop);
 			instance?._triggerEvent(EVENT_KEY_REBUILD);
 		} else {
 			this.updateUI(select);
 		}
 	}
+
+	_fetchRemoteData(term) {
+		const { route, method = 'GET' } = this._params.search;
+		const url = route.replace('{query}', encodeURIComponent(term));
+
+		const options = {
+			method,
+			headers: { 'Content-Type': 'application/json' }
+		};
+
+		if (method.toUpperCase() !== 'GET') {
+			options.body = JSON.stringify({ query: term });
+		}
+
+		const searchInput = this._element.querySelector(`.${CLASS_NAME_SEARCH} input`);
+		const wasOpen = this._isShown(); // Сохраняем состояние
+
+		fetch(url, options)
+			.then(res => res.json())
+			.then(data => {
+				const select = this._element.previousElementSibling;
+				if (!select) return;
+
+				VGSelect.addOptions(select, data);
+				this._callCallback('onSearch', { term, data });
+
+				if (wasOpen && searchInput) {
+					searchInput.value = term;
+					searchInput.focus();
+
+					this._element.classList.add(CLASS_NAME_SHOW, CLASS_NAME_ACTIVE);
+				}
+			})
+			.catch(err => {
+				console.error('VGSelect: Remote search error', err);
+				this._triggerEvent(EVENT_KEY_ERROR, { error: 'Search request failed', term });
+
+				if (wasOpen && searchInput) {
+					searchInput.focus();
+				}
+			});
+	}
+
+	_filterLocalOptions(term) {
+		const list = this._drop.querySelector(`.${CLASS_NAME_LIST}`);
+		const options = list.querySelectorAll(`.${CLASS_NAME_OPTION}`);
+
+		if (!term) {
+			options.forEach(el => el.hidden = false);
+			return;
+		}
+
+		term = term.toLowerCase();
+		options.forEach(el => {
+			const text = el.textContent.toLowerCase();
+			el.hidden = !text.includes(term);
+		});
+	}
 }
 
-_vgSelectHandlers()
+_handlersVGSelect();
 
 export default VGSelect;

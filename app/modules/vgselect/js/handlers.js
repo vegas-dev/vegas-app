@@ -2,6 +2,7 @@ import VGSelect from "./vgselect";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
+import {transliterate} from "../../../utils/js/functions";
 
 const NAME_KEY = 'vg.select';
 
@@ -31,7 +32,7 @@ const SELECTOR_SEARCH_TOGGLE    = '[name="vg-select-search"]';
 const SELECTOR_DROPDOWN         = `.${CLASS_NAME_DROPDOWN}`;
 const SELECTOR_MULTIPLE_INPUT   = `.vg-select-multiple-input`;
 
-const _vgSelectHandlers = () => {
+const _handlersVGSelect = () => {
 	EventHandler.on(document, EVENT_CLICK_DATA_API, e => VGSelect.clearDrops(e));
 
 	EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function(e) {
@@ -216,4 +217,4 @@ const _vgSelectHandlers = () => {
 
 }
 
-export default _vgSelectHandlers;
+export default _handlersVGSelect;
