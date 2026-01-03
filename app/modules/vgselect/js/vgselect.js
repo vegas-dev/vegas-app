@@ -9,6 +9,7 @@ import {
 import { Manipulator } from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
+import _vgSelectHandlers from "./handlers";
 
 const NAME = 'select';
 const NAME_KEY = 'vg.select';
@@ -28,18 +29,20 @@ const CLASS_NAME_TAGS           = 'vg-select-tags';
 const CLASS_NAME_TAG            = 'vg-select-tag';
 const CLASS_NAME_TAG_REMOVE     = 'vg-select-tag-remove';
 
-const EVENT_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
-const EVENT_KEY_UP_DATA_API     = `keyup.${NAME_KEY}.data.api`;
-const EVENT_RESET_DATA_API      = `reset.${NAME_KEY}.data.api`;
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
 const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN          = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW            = `${NAME_KEY}.show`;
 const EVENT_KEY_SHOWN           = `${NAME_KEY}.shown`;
+const EVENT_KEY_INIT            = `${NAME_KEY}.init`;
+const EVENT_KEY_REBUILD         = `${NAME_KEY}.rebuild`;
+const EVENT_KEY_OPEN            = `${NAME_KEY}.open`;
+const EVENT_KEY_CLOSE           = `${NAME_KEY}.close`;
+const EVENT_KEY_SELECT          = `${NAME_KEY}.select`;
+const EVENT_KEY_CLEAR           = `${NAME_KEY}.clear`;
+const EVENT_KEY_ERROR           = `${NAME_KEY}.error`;
 
 const SELECTOR_DATA_TOGGLE      = '[data-vg-toggle="select"]';
-const SELECTOR_OPTION_TOGGLE    = '[data-vg-toggle="select-option"]';
-const SELECTOR_SEARCH_TOGGLE    = '[name="vg-select-search"]';
 const SELECTOR_CURRENT          = `.${CLASS_NAME_CURRENT}`;
 const SELECTOR_DROPDOWN         = `.${CLASS_NAME_DROPDOWN}`;
 
@@ -52,11 +55,22 @@ class VGSelect extends BaseModule {
 		this._params = this._getParams(element, mergeDeepObject({
 			search: false,
 			placeholder: '',
+			onInit: null,
+			onShow: null,
+			onHide: null,
+			onChange: null,
+			onSearch: null,
+			onSelect: null,
+			onDeselect: null,
+			onClear: null,
 		}, params));
 
 		this._observer = null;
 		this._drop = Selectors.find(SELECTOR_DROPDOWN, this._element);
 		this._initObserver();
+
+		this._triggerEvent(EVENT_KEY_INIT);
+		this._callCallback('onInit');
 	}
 
 	static get NAME() {
@@ -204,23 +218,6 @@ class VGSelect extends BaseModule {
 				const inst = VGSelect.getInstance(input.closest(`.${CLASS_NAME_CONTAINER}`));
 				if (inst && !inst._isShown()) inst.show();
 			});
-
-			input.addEventListener('keydown', e => {
-				if (e.key === 'Backspace' && !e.target.value) {
-					const tags = input.parentElement.querySelectorAll(`.${CLASS_NAME_TAG}`);
-					if (tags.length) {
-						const last = tags[tags.length - 1];
-						const value = last.querySelector('svg')?.dataset.value;
-						const opt = selector.querySelector(`option[value="${CSS.escape(value)}"]`);
-						if (opt) {
-							opt.selected = false;
-							this.updateUI(selector);
-							selector.dispatchEvent(new Event('change', { bubbles: true }));
-							EventHandler.trigger(selector, EVENT_KEY_CHANGE, { data: { value } });
-						}
-					}
-				}
-			});
 		} else {
 			const index = selector.selectedIndex;
 			const option = index >= 0 ? selector.options[index] : null;
@@ -289,6 +286,8 @@ class VGSelect extends BaseModule {
 		this._queueCallback(() => {
 			this._element.classList.add(CLASS_NAME_ACTIVE);
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+			this._triggerEvent(EVENT_KEY_OPEN);
+			this._callCallback('onShow');
 		}, this._drop, true, 50);
 	}
 
@@ -307,6 +306,8 @@ class VGSelect extends BaseModule {
 		this._queueCallback(() => {
 			this._element.classList.remove(CLASS_NAME_SHOW);
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
+			this._triggerEvent(EVENT_KEY_CLOSE);
+			this._callCallback('onHide');
 		}, this._drop, true, 10);
 
 		if ('ontouchstart' in document.documentElement) {
@@ -326,14 +327,33 @@ class VGSelect extends BaseModule {
 		const select = this._element.previousElementSibling;
 		if (!select || select.tagName !== 'SELECT') return;
 
-		this._observer = new MutationObserver(() => {
+		this._observer = new MutationObserver((mutations) => {
+			console.debug('VGSelect: Mutation detected', mutations);
 			if (select.hasAttribute('data-updating')) return;
+
+			const shouldUpdate = mutations.some(mutation => {
+				if (mutation.type === 'attributes') {
+					return ['disabled', 'required', 'style', 'hidden'].includes(mutation.attributeName);
+				}
+				return mutation.type === 'childList' || mutation.type === 'characterData';
+			});
+
+			if (!shouldUpdate) return;
+
+			const wasShown = this._isShown();
+
 			clearTimeout(_observerTimeout);
 			_observerTimeout = setTimeout(() => {
-				if (this._element.previousElementSibling === select && !select.hasAttribute('data-updating')) {
-					this.constructor.build(select, true);
+				if (this._element.previousElementSibling !== select || select.hasAttribute('data-updating')) return;
+
+				this._updateFromMutation();
+
+				if (wasShown) {
+					requestAnimationFrame(() => {
+						this.show();
+					});
 				}
-			}, 0);
+			}, 100);
 		});
 
 		this._observer.observe(select, {
@@ -343,6 +363,22 @@ class VGSelect extends BaseModule {
 			subtree: true,
 			characterData: true
 		});
+	}
+
+	_updateFromMutation() {
+		const select = this._element.previousElementSibling;
+		if (!select) return;
+
+		if (isDisabled(select)) {
+			this._element.classList.add('disabled');
+		} else {
+			this._element.classList.remove('disabled');
+		}
+
+		const drop = this._element.querySelector(SELECTOR_DROPDOWN);
+		VGSelect.buildListOptions(select, drop);
+
+		VGSelect.updateUI(select);
 	}
 
 	dispose() {
@@ -368,14 +404,23 @@ class VGSelect extends BaseModule {
 		const current = container.querySelector(SELECTOR_CURRENT);
 		const placeholder = select.dataset.placeholder || '';
 		const isMultiple = select.multiple;
+		const instance = VGSelect.getInstance(container);
 
 		if (isMultiple) {
 			const tags = current.querySelector(`.${CLASS_NAME_TAGS}`);
 			const input = tags.querySelector('input');
+			const prevCount = tags.querySelectorAll(`.${CLASS_NAME_TAG}`).length;
 			tags.innerHTML = '';
 			tags.appendChild(input);
 
 			const selected = Array.from(select.selectedOptions);
+			const newCount = selected.length;
+
+			if (newCount === 0 && prevCount > 0) {
+				instance?._triggerEvent(EVENT_KEY_CLEAR);
+				instance?._callCallback('onClear');
+			}
+
 			if (selected.length === 0) {
 				input.placeholder = placeholder;
 			} else {
@@ -394,170 +439,133 @@ class VGSelect extends BaseModule {
 			const value = option?.value;
 			const showPlaceholder = placeholder && (!value || this.isPlaceholderValue(select, value) || !text);
 
-			current.innerHTML = showPlaceholder
-				? `<span class="${CLASS_NAME_PLACEHOLDER}">${placeholder}</span>`
-				: text || '-';
+			const oldText = current.textContent;
+			const newText = showPlaceholder ? placeholder : text || '-';
+
+			if (oldText !== newText) {
+				current.innerHTML = showPlaceholder
+					? `<span class="${CLASS_NAME_PLACEHOLDER}">${placeholder}</span>`
+					: newText;
+			}
 		}
 	}
 
 	static changeSelector(select, value, data = {}) {
+		const container = select.nextElementSibling;
+		const instance = container ? VGSelect.getInstance(container) : null;
+		const prevValue = select.value;
+
 		select.setAttribute('data-updating', 'true');
 		try {
-			[...select.options].forEach(opt => opt.selected = false);
 			const opt = select.querySelector(`option[value="${CSS.escape(normalizeData(value))}"]`);
-			if (opt) {
-				opt.selected = true;
-				select.value = opt.value;
-				this.updateUI(select);
-				const e = new Event('change', { bubbles: true, cancelable: true });
-				select.dispatchEvent(e);
+			if (!opt) {
+				instance?._triggerEvent(EVENT_KEY_ERROR, { error: 'Option not found', value });
+				return;
+			}
+
+			const oldValue = select.value;
+			const wasSelected = opt.selected;
+			const selectedText = opt.textContent.trim();
+
+			[...select.options].forEach(o => o.selected = false);
+			opt.selected = true;
+			select.value = opt.value;
+
+			this.updateUI(select);
+
+			const e = new Event('change', { bubbles: true, cancelable: true });
+			select.dispatchEvent(e);
+
+			if (!wasSelected) {
 				EventHandler.trigger(select, EVENT_KEY_CHANGE, { data });
+				instance?._triggerEvent(EVENT_KEY_SELECT, { value, text: selectedText, data });
+				instance?._callCallback('onSelect', { value, text: selectedText, data });
 			}
 		} finally {
 			select.removeAttribute('data-updating');
 		}
 	}
 
-	static hideOpenToggles(event) {
-		const toggles = Selectors.findAll(`.${CLASS_NAME_CONTAINER}.${CLASS_NAME_SHOW}:not(.disabled)`);
-		for (const el of toggles) {
-			const instance = this.getInstance(el);
-			if (!instance) continue;
-			if (event.target.closest(`.${CLASS_NAME_CONTAINER}`) === el) continue;
-			if (event.composedPath?.().includes(el)) continue;
-			instance._completeHide({ relatedTarget: el });
-		}
+	_triggerEvent(eventName, detail = {}) {
+		EventHandler.trigger(this._element, eventName, detail);
 	}
 
-	static clearDrops(event) {
-		if (event.button === 2 || (event.type === 'keyup' && event.key !== 'Tab')) return;
-		this.hideOpenToggles(event);
+	_callCallback(name, arg = null) {
+		const callback = this._params[name];
+		if (typeof callback === 'function') {
+			callback.call(this, this._element, arg);
+		}
 	}
 
 	static init(element, params = {}, isRebuild = false) {
 		this.build(element, isRebuild);
 	}
+
+	static clearDrops(event) {
+		const open = Selectors.find(`.${CLASS_NAME_CONTAINER}.${CLASS_NAME_SHOW}`);
+		if (!open) return;
+
+		const targetIsToggle = event.target.closest(SELECTOR_DATA_TOGGLE);
+		if (targetIsToggle && targetIsToggle.closest(`.${CLASS_NAME_CONTAINER}`) === open) {
+			return; // клик по самому тоглу — не закрываем
+		}
+
+		const targetInDropdown = event.composedPath().some(el =>
+			el.classList?.contains(CLASS_NAME_DROPDOWN)
+		);
+		if (targetInDropdown) {
+			return; // клик внутри выпадашки — не закрываем
+		}
+
+		const instance = VGSelect.getInstance(open);
+		if (instance) {
+			instance._completeHide({ relatedTarget: event.target });
+		}
+	}
+
+	static addOptions(select, data) {
+		const container = select.nextElementSibling;
+		const isRebuild = container && container.classList.contains(CLASS_NAME_CONTAINER);
+		const instance = isRebuild ? VGSelect.getInstance(container) : null;
+
+		let options = data;
+		if (data && data.results && Array.isArray(data.results)) {
+			options = data.results;
+		}
+
+		if (!Array.isArray(options)) {
+			instance?._triggerEvent(EVENT_KEY_ERROR, { error: 'Invalid data format: expected array' });
+			return;
+		}
+
+		[...select.querySelectorAll('option:not([value=""])')].forEach(opt => {
+			if (!opt.hasAttribute('data-preserve')) opt.remove();
+		});
+
+		options.forEach(item => {
+			const option = document.createElement('option');
+			option.value = item.id || '';
+			option.textContent = item.text || '';
+			if (item.selected) option.selected = true;
+			if (item.disabled) option.disabled = true;
+
+			const dataAttrs = Object.keys(item).filter(k => !['id', 'text', 'selected', 'disabled'].includes(k));
+			dataAttrs.forEach(key => {
+				option.setAttribute(`data-${key}`, item[key]);
+			});
+
+			select.appendChild(option);
+		});
+
+		if (isRebuild) {
+			this.build(select, true);
+			instance?._triggerEvent(EVENT_KEY_REBUILD);
+		} else {
+			this.updateUI(select);
+		}
+	}
 }
 
-EventHandler.on(document, EVENT_CLICK_DATA_API, e => VGSelect.clearDrops(e));
-EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function(e) {
-	const target = e.target;
-	if (target.closest(`.${CLASS_NAME_TAG}`) || target.closest(`.${CLASS_NAME_TAG_REMOVE}`)) {
-		e.stopPropagation();
-		return;
-	}
-	const container = this.closest(`.${CLASS_NAME_CONTAINER}`);
-	const instance = VGSelect.getOrCreateInstance(container);
-	const open = Selectors.find(`.${CLASS_NAME_CONTAINER}.${CLASS_NAME_SHOW}`);
-	if (open && open !== container) VGSelect.getInstance(open)?.hide();
-	instance.toggle(this);
-});
-EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_OPTION_TOGGLE, function(e) {
-	const option = e.target;
-	if (option.classList.contains('disabled')) return;
-	const container = option.closest(`.${CLASS_NAME_CONTAINER}`);
-	const select = container.previousElementSibling;
-	const isMultiple = select.multiple;
-	const value = option.dataset.value;
-	const realOpt = select.querySelector(`option[value="${CSS.escape(value)}"]`);
-	if (!realOpt) return;
-
-	if (isMultiple) {
-		realOpt.selected = !realOpt.selected;
-		option.classList.toggle('selected', realOpt.selected);
-		VGSelect.updateUI(select);
-		select.dispatchEvent(new Event('change', { bubbles: true }));
-		EventHandler.trigger(select, EVENT_KEY_CHANGE, {
-			data: { value, title: option.textContent, ...Manipulator.get(option) }
-		});
-	} else {
-		container.querySelectorAll(`.${CLASS_NAME_OPTION}`).forEach(o => o.classList.remove('selected'));
-		option.classList.add('selected');
-		VGSelect.changeSelector(select, value, {
-			value,
-			title: option.textContent,
-			...Manipulator.get(option)
-		});
-		VGSelect.getInstance(container)?.hide();
-	}
-});
-EventHandler.on(document, EVENT_KEY_UP_DATA_API, SELECTOR_SEARCH_TOGGLE, function(e) {
-	const input = e.target;
-	const dropdown = input.closest(SELECTOR_DROPDOWN);
-	const list = dropdown?.querySelector(`.${CLASS_NAME_LIST}`);
-	if (!list) return;
-
-	const options = list.querySelectorAll(`.${CLASS_NAME_OPTION}`);
-	const groups = list.querySelectorAll(`.${CLASS_NAME_OPTGROUP}`);
-	const value = input.value.trim().toLowerCase();
-	if (!value) {
-		options.forEach(el => { el.hidden = false; el.style.display = ''; });
-		groups.forEach(el => { el.hidden = false; el.style.display = ''; });
-		return;
-	}
-
-	const search = [value, transliterate(value), transliterate(value, true)];
-	options.forEach(el => { el.hidden = true; el.style.display = 'none'; });
-
-	groups.length ? groups.forEach(group => {
-		const items = group.querySelectorAll(`.${CLASS_NAME_OPTION}`);
-		const visible = Array.from(items).some(item => {
-			const t = item.textContent.toLowerCase();
-			return search.some(s => t.includes(s));
-		});
-		group.hidden = !visible;
-		group.style.display = visible ? '' : 'none';
-		items.forEach(item => {
-			const t = item.textContent.toLowerCase();
-			const match = search.some(s => t.includes(s));
-			item.hidden = !match;
-			item.style.display = match ? '' : 'none';
-		});
-	}) : options.forEach(option => {
-		const t = option.textContent.toLowerCase();
-		const match = search.some(s => t.includes(s));
-		option.hidden = !match;
-		option.style.display = match ? '' : 'none';
-	});
-});
-EventHandler.on(document, EVENT_RESET_DATA_API, 'form', function() {
-	Selectors.findAll('select[data-inited="true"]', this).forEach(select => VGSelect.build(select, true));
-});
-EventHandler.on(document, 'keydown', SELECTOR_DATA_TOGGLE, function(e) {
-	const inst = VGSelect.getInstance(this.closest(`.${CLASS_NAME_CONTAINER}`));
-	if (!inst) return;
-	switch (e.key) {
-		case 'Enter':
-		case ' ':
-			e.preventDefault();
-			inst.toggle();
-			break;
-		case 'Escape':
-			if (inst._isShown()) inst.hide();
-			break;
-		case 'ArrowDown':
-			e.preventDefault();
-			if (!inst._isShown()) inst.show();
-			break;
-	}
-});
-EventHandler.on(document, EVENT_CLICK_DATA_API, `.${CLASS_NAME_TAGS}`, function(e) {
-	const btn = e.target.closest(`.${CLASS_NAME_TAG_REMOVE}`);
-	if (!btn) return;
-	e.preventDefault();
-	e.stopPropagation();
-	const container = this.closest(`.${CLASS_NAME_CONTAINER}`);
-	const select = container.previousElementSibling;
-	const value = btn.dataset.value;
-	const opt = select.querySelector(`option[value="${CSS.escape(value)}"]`);
-	const item = container.querySelector(`.${CLASS_NAME_OPTION}[data-value="${CSS.escape(value)}"]`);
-	if (opt) {
-		opt.selected = false;
-		if (item) item.classList.remove('selected');
-		VGSelect.updateUI(select);
-		select.dispatchEvent(new Event('change', { bubbles: true }));
-		EventHandler.trigger(select, EVENT_KEY_CHANGE, { data: { value } });
-	}
-});
+_vgSelectHandlers()
 
 export default VGSelect;
