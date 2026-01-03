@@ -6,7 +6,7 @@ import {
 	normalizeData,
 	transliterate
 } from "../../../utils/js/functions";
-import {Manipulator} from "../../../utils/js/dom/manipulator";
+import { Manipulator } from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
@@ -68,7 +68,7 @@ class VGSelect extends BaseModule {
 		return NAME_KEY;
 	}
 
-	static buildListOptions(selector, drop, isPlaceholder) {
+	static buildListOptions(selector, drop) {
 		const options = selector.options;
 		const list = document.createElement('ul');
 		list.classList.add(CLASS_NAME_LIST);
@@ -132,6 +132,22 @@ class VGSelect extends BaseModule {
 		});
 	}
 
+	// ✅ Поддержка data-placeholder-value: значения, которые считаются "пустыми"
+	static isPlaceholderValue(select, value) {
+		const placeholderValueAttr = select.dataset.placeholderValue;
+		if (!placeholderValueAttr) return value == null || String(value).trim() === '';
+
+		const placeholderValues = placeholderValueAttr.split(',').map(v => v.trim());
+		return placeholderValues.includes(String(value));
+	}
+
+	static hasSelectedValidOption(select) {
+		const index = select.selectedIndex;
+		if (index === -1) return false;
+		const value = select.options[index]?.value;
+		return !this.isPlaceholderValue(select, value);
+	}
+
 	static build(selector, reBuild = false) {
 		if (reBuild || selector.dataset.inited === 'true') {
 			VGSelect.destroy(selector);
@@ -157,16 +173,25 @@ class VGSelect extends BaseModule {
 		}
 
 		const placeholder = selector.dataset.placeholder || '';
-		const isPlaceholder = !!placeholder;
-		const hasSelectedOption = [...selector.options].some(opt => opt.selected && opt.value);
+		const index = selector.selectedIndex;
+		const selectedOption = index >= 0 ? selector.options[index] : null;
+		const selectedValue = selectedOption?.value;
+		const selectedText = selectedOption?.textContent.trim();
+
+		const isPlaceholderValue = this.isPlaceholderValue(selector, selectedValue);
+		const isEmptyText = !selectedText;
+
+		// Показываем placeholder, если:
+		// - есть data-placeholder
+		// - и значение — placeholder (или пустое)
+		// - или текст опции пустой
+		const showPlaceholder = placeholder && (isPlaceholderValue || isEmptyText);
 
 		let displayText;
-		if (isPlaceholder && !hasSelectedOption) {
+		if (showPlaceholder) {
 			displayText = `<span class="${CLASS_NAME_PLACEHOLDER}">${placeholder}</span>`;
-			Manipulator.set(selector, 'disabled', '');
 		} else {
-			const index = selector.selectedIndex !== -1 ? selector.selectedIndex : 0;
-			displayText = selector.options[index]?.textContent || '-';
+			displayText = selectedText || '-';
 		}
 
 		const current = document.createElement('div');
@@ -182,7 +207,7 @@ class VGSelect extends BaseModule {
 		dropdown.classList.add(CLASS_NAME_DROPDOWN);
 		container.append(dropdown);
 
-		VGSelect.buildListOptions(selector, dropdown, isPlaceholder);
+		VGSelect.buildListOptions(selector, dropdown);
 
 		if (selector.dataset.search !== undefined) {
 			const searchContainer = document.createElement('div');
@@ -271,19 +296,28 @@ class VGSelect extends BaseModule {
 	_initObserver() {
 		if (this._observer) {
 			this._observer.disconnect();
+			this._observer = null;
 		}
 
 		const select = this._element.previousElementSibling;
 		if (!select || select.tagName !== 'SELECT') return;
 
 		this._observer = new MutationObserver((mutations) => {
-			// ✅ Если идёт внутреннее обновление — игнорируем
-			if (select.hasAttribute('data-updating')) {
-				return;
-			}
+			// Прямая проверка — select всё ещё доступна в замыкании
+			if (select.hasAttribute('data-updating')) return;
 
 			clearTimeout(_observerTimeout);
 			_observerTimeout = setTimeout(() => {
+				// ✅ Повторная проверка: существует ли select и она ли это
+				const currentSelect = this._element.previousElementSibling;
+				if (!currentSelect || currentSelect !== select) {
+					// Элемент был заменён — отключаем observer
+					this._observer?.disconnect();
+					this._observer = null;
+					return;
+				}
+
+				// ✅ Теперь безопасно используем select
 				if (!select.hasAttribute('data-updating')) {
 					VGSelect.build(select, true);
 				}
@@ -315,28 +349,34 @@ class VGSelect extends BaseModule {
 		}
 	}
 
-	// ✅ Новое: мгновенное обновление UI без пересборки
+	// ✅ Обновляем UI с учётом placeholder и data-placeholder-value
 	static updateUI(select) {
 		const container = select.nextElementSibling;
 		if (!container || !container.classList.contains(CLASS_NAME_CONTAINER)) return;
 
 		const current = container.querySelector(SELECTOR_CURRENT);
 		const placeholder = select.dataset.placeholder || '';
-		const hasSelectedOption = [...select.options].some(opt => opt.selected && opt.value);
+		const index = select.selectedIndex;
+		const selectedOption = index >= 0 ? select.options[index] : null;
+		const selectedValue = selectedOption?.value;
+		const selectedText = selectedOption?.textContent?.trim() || '';
 
-		if (hasSelectedOption) {
-			const selectedOption = select.options[select.selectedIndex];
-			current.textContent = selectedOption?.textContent || '';
-		} else if (placeholder) {
+		const isPlaceholderValue = this.isPlaceholderValue(select, selectedValue);
+		const isEmptyText = !selectedText;
+
+		const showPlaceholder = placeholder && (isPlaceholderValue || isEmptyText);
+
+		if (showPlaceholder) {
 			current.innerHTML = `<span class="${CLASS_NAME_PLACEHOLDER}">${placeholder}</span>`;
+		} else {
+			current.textContent = selectedText;
 		}
 	}
 
-	// ✅ Новое: безопасное изменение значения
+	// ✅ Безопасное изменение значения
 	static changeSelector(select, value, data = {}) {
 		const valueStr = normalizeData(value);
 
-		// ✅ Помечаем, что идёт внутреннее обновление
 		select.setAttribute('data-updating', 'true');
 
 		try {
@@ -371,9 +411,7 @@ class VGSelect extends BaseModule {
 			const instance = VGSelect.getInstance(toggle);
 			if (!instance) continue;
 
-			if (event.target.closest(`.${CLASS_NAME_CONTAINER}`) === toggle) {
-				continue;
-			}
+			if (event.target.closest(`.${CLASS_NAME_CONTAINER}`) === toggle) continue;
 
 			const path = event.composedPath?.() || [];
 			if (path.includes(toggle)) continue;
@@ -389,7 +427,7 @@ class VGSelect extends BaseModule {
 	}
 
 	static init(element, params = {}, isRebuild = false) {
-		this.build(element);
+		this.build(element, isRebuild);
 	}
 }
 
@@ -416,16 +454,13 @@ EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_OPTION_TOGGLE, function
 	const container = option.closest(`.${CLASS_NAME_CONTAINER}`);
 	if (!container) return;
 
-	// Обновляем состояние списка
 	const options = container.querySelectorAll(`.${CLASS_NAME_OPTION}`);
 	options.forEach(opt => opt.classList.remove('selected'));
 	option.classList.add('selected');
 
-	// Обновляем отображаемое значение
 	const current = container.querySelector(SELECTOR_CURRENT);
 	current.textContent = option.textContent;
 
-	// Обновляем нативный select
 	const select = container.previousElementSibling;
 	VGSelect.changeSelector(select, option.dataset.value, {
 		value: option.dataset.value,
