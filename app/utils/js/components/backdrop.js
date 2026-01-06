@@ -13,7 +13,10 @@ const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 const backdropDelay = 150; // Уменьшено для более плавного UX
 
 class Backdrop {
-	static _rootEl = document.body;
+	static get _rootEl() {
+		return document.body;
+	}
+
 	static _scrollbar = new ScrollBarHelper();
 	static _backdrop = null;
 
