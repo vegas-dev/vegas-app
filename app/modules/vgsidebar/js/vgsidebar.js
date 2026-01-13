@@ -137,6 +137,7 @@ class VGSidebar extends BaseModule {
 	toggle(relatedTarget) {
 		return this._isShown() ? this.hide() : this.show(relatedTarget);
 	}
+	_showPopstateHandler = null;
 
 	/**
 	 * Открывает сайдбар.
@@ -151,7 +152,6 @@ class VGSidebar extends BaseModule {
 			this._params = this._getParams(relatedTarget, this._params);
 		}
 
-		// Событие загрузки (может использоваться для AJAX)
 		this._route((status, data) => {
 			EventHandler.trigger(this._element, EVENT_KEYS.LOADED, { stats: status, data });
 		});
@@ -168,8 +168,14 @@ class VGSidebar extends BaseModule {
 		}
 
 		if (this._params.hash) {
-			window.history.pushState(null, '', `#${this._element.id}`);
-			EventHandler.on(window, EVENT_KEYS.POPSTATE_DATA_API, () => this.hide());
+			history.pushState(null, '', `#${this._element.id}`);
+
+			if (this._showPopstateHandler) {
+				EventHandler.off(window, EVENT_KEYS.POPSTATE_DATA_API, this._showPopstateHandler);
+			}
+
+			this._showPopstateHandler = () => this.hide();
+			EventHandler.on(window, EVENT_KEYS.POPSTATE_DATA_API, this._showPopstateHandler);
 		}
 
 		this._element.classList.add(CLASS_NAME_SHOW);
@@ -216,8 +222,17 @@ class VGSidebar extends BaseModule {
 						this._scrollBar.reset();
 					}
 
-					if (this._params.hash) {
-						history.replaceState('', document.title, window.location.pathname + window.location.search);
+					if (this._params.hash && window.location.hash === `#${this._element.id}`) {
+						history.replaceState(
+							'',
+							document.title,
+							window.location.pathname + window.location.search
+						);
+					}
+
+					if (this._showPopstateHandler) {
+						EventHandler.off(window, EVENT_KEYS.POPSTATE_DATA_API, this._showPopstateHandler);
+						this._showPopstateHandler = null;
 					}
 
 					EventHandler.trigger(this._element, EVENT_KEYS.HIDDEN);
@@ -235,7 +250,9 @@ class VGSidebar extends BaseModule {
 	dispose() {
 		super.dispose();
 		EventHandler.off(this._element, EVENT_KEYS.HIDE);
-		EventHandler.off(window, EVENT_KEYS.POPSTATE_DATA_API);
+		if (this._showPopstateHandler) {
+			EventHandler.off(window, EVENT_KEYS.POPSTATE_DATA_API, this._showPopstateHandler);
+		}
 		this._scrollBar.reset();
 	}
 
@@ -326,7 +343,10 @@ EventHandler.on(document, EVENT_KEYS.DOM_LOADED_DATA_API, function () {
 	const target = Selectors.find(`#${hash}`);
 	if (target && target.classList.contains('vg-sidebar') && !isDisabled(target)) {
 		const instance = VGSidebar.getOrCreateInstance(target);
-		instance.toggle();
+
+		if (instance._params.hash) {
+			instance.toggle();
+		}
 	}
 });
 
