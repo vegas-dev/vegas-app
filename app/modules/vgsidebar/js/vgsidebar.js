@@ -280,24 +280,6 @@ class VGSidebar extends BaseModule {
 			}
 		});
 	}
-
-	/**
-	 * Инициализирует поведение закрытия по клику вне (через `dismissTrigger`).
-	 * @private
-	 */
-	_dismissElement() {
-		dismissTrigger(this);
-	}
-
-	/**
-	 * Заглушка для возможной AJAX-логики. Может быть переопределена.
-	 * @param {Function} callback - Колбэк после загрузки.
-	 * @private
-	 */
-	_route(callback) {
-		// Здесь может быть реализация AJAX-загрузки
-		callback(true, null);
-	}
 }
 
 // Автоматическая инициализация по data-атрибутам
