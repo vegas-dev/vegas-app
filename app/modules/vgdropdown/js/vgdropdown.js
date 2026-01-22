@@ -1,7 +1,7 @@
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
-import {isDisabled, mergeDeepObject, noop} from "../../../utils/js/functions";
+import {isDisabled, isMobileDevice, mergeDeepObject, noop} from "../../../utils/js/functions";
 import Placement from "../../../utils/js/components/placement";
 
 /**
@@ -299,7 +299,7 @@ class VGDropdown extends BaseModule {
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);
 
-		if (instance._params.hover && !instance.isMobileDevice()) {
+		if (instance._params.hover && !isMobileDevice()) {
 			let currentElem = null;
 
 			EventHandler.on(instance._parent, EVENT_MOUSEOVER_DATA_API, (event) => {

@@ -10,7 +10,7 @@ const CLASS_NAME_FADE = 'fade';
 const CLASS_NAME_SHOW = 'show';
 const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 
-const backdropDelay = 150; // Уменьшено для более плавного UX
+const backdropDelay = 150;
 
 class Backdrop {
 	static get _rootEl() {

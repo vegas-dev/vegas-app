@@ -10,7 +10,7 @@
 
 import { Manipulator } from "../dom/manipulator";
 import Selectors from "../dom/selectors";
-import { isElement } from "../functions";
+import {isElement, isMobileDevice} from "../functions";
 
 /**
  * Константы
@@ -50,14 +50,16 @@ class ScrollBarHelper {
 	 * Скрывает скроллбар и корректирует макет
 	 */
 	hide() {
-		const width = this.getWidth();
-		if (width === 0) return;
+		if (this.isOverflowing && !isMobileDevice()) {
+			const width = this.getWidth();
+			this._disableOverflow();
 
-		this._disableOverflow();
-
-		this._setStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING, width, (value) => value + width);
-		this._setStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN, width, (value) => value - width);
-		this._setStyle(this._element, PROPERTY_PADDING, width, (value) => value + width);
+			this._setStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING, width, (value) => value + width);
+			this._setStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN, width, (value) => value - width);
+			this._setStyle(this._element, PROPERTY_PADDING, width, (value) => value + width);
+		} else if (isMobileDevice()) {
+			this._disableOverflow();
+		}
 	}
 
 	/**
@@ -69,8 +71,6 @@ class ScrollBarHelper {
 		this._resetStyle(SELECTOR_FIXED_CONTENT, PROPERTY_PADDING);
 		this._resetStyle(SELECTOR_STICKY_CONTENT, PROPERTY_MARGIN);
 	}
-
-	// === Приватные методы ===
 
 	/**
 	 * Блокирует overflow у body

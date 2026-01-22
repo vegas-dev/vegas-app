@@ -1,7 +1,15 @@
 import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
-import {execute, isDisabled, isVisible, mergeDeepObject, noop, normalizeData} from "../../../utils/js/functions";
+import {
+	execute,
+	isDisabled,
+	isMobileDevice,
+	isVisible,
+	mergeDeepObject,
+	noop,
+	normalizeData
+} from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import Placement from "../../../utils/js/components/placement";
@@ -332,7 +340,7 @@ class VGNav extends BaseModule {
 
 		let drops = Selectors.findAll('.dropdown', instance.navigation);
 
-		if (instance._params.hover && !instance.isMobileDevice()) {
+		if (instance._params.hover && !isMobileDevice()) {
 			[...drops].forEach(function (el) {
 				let currentElem = null;
 
@@ -431,7 +439,7 @@ EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (
 		execute(instance._params.callbacks.afterClick, [instance, event, this]);
 	}
 
-	if (instance._params.hover && !instance.isMobileDevice()) return;
+	if (instance._params.hover && !isMobileDevice()) return;
 
 	event.preventDefault();
 
