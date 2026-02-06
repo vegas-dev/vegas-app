@@ -10,6 +10,7 @@ import {lang_buttons, lang_messages} from "../../../utils/js/components/lang";
 import VGAlert from "../../vgalert";
 import VGToast from "../../vgtoast";
 import VGFilesTemplateRender from "./render";
+import VGFilesSortable from "./sortable";
 
 const NAME = 'files';
 const NAME_KEY = 'vg.files';
@@ -168,11 +169,7 @@ class VGFiles extends VGFilesBase {
 
         // Если нужно — запустить sortable
         if (this._params.sortable?.enabled && this._params.sortable.route && !this._sortable) {
-            import('./sortable.js').then(module => {
-                this._sortable = new module.default(this, this._params.sortable);
-            }).catch(err => {
-                console.error('Ошибка загрузки VGFilesSortable:', err);
-            });
+            this._sortable = new VGFilesSortable(this, this._params.sortable)
         }
 
         // Триггерим изменение
