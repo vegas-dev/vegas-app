@@ -142,7 +142,7 @@ class ScrollBarHelper {
 		// Важно: сохраняем даже пустую строку (если inline-стиля не было)
 		// чтобы reset() мог корректно восстановить "как было".
 		if (value !== null) {
-			Manipulator.set(element, property, value);
+			//Manipulator.set(element, property, value);
 		}
 	}
 
