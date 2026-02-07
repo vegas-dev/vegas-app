@@ -731,11 +731,19 @@ EventHandler.on(document, `DOMContentLoaded.${NAME_KEY}.data.api`, () => {
 });
 
 EventHandler.on(document, `click.${NAME_KEY}.data.api`, SELECTOR_DATA_DISMISS, function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
     const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (target) VGFiles.getOrCreateInstance(target).removeFile(e.target.closest(SELECTOR_DATA_DISMISS));
 });
 
 EventHandler.on(document, `click.${NAME_KEY}.data.api`, SELECTOR_DATA_RELOAD, function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
     const target = e.target.closest(`.${CLASS_NAME_CONTAINER}`);
     if (target) VGFiles.getOrCreateInstance(target).reload(e.target.closest(SELECTOR_DATA_RELOAD));
 });

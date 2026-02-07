@@ -25,23 +25,15 @@ class Backdrop {
 	 * @param {Function} callback - вызывается после отображения
 	 */
 	static show(callback) {
-		// Проверяем, существует ли бэкдроп в DOM, даже если _backdrop === null
 		if (!this._backdrop) {
 			this._backdrop = this._rootEl.querySelector(`.${CLASS_NAME}`);
 		}
 
-		// Если найден в DOM — используем его
 		if (this._backdrop) {
-			// Убеждаемся, что классы корректны
-			Classes.add(this._backdrop, CLASS_NAME_SHOW);
-			setTimeout(() => {
-				Classes.add(this._backdrop, CLASS_NAME_FADE);
-			}, backdropDelay);
-		} else {
-			// Создаём новый, если не найден
-			this._append();
+			this._backdrop.remove();
 		}
 
+		this._append();
 		execute(callback);
 	}
 
