@@ -168,6 +168,11 @@ const MILLISECONDS_MULTIPLIER = 1000;
  * @param {number} [timeoutMs]
  */
 const executeAfterTransition = (callback, element, waitForTransition = true, timeoutMs) => {
+	if (!element) {
+		execute(callback);
+		return;
+	}
+
 	if (!waitForTransition) {
 		execute(callback);
 		return;
@@ -213,6 +218,7 @@ const getTransitionDurationFromElement = (element) => {
  * @param {Element} element
  */
 const triggerTransitionEnd = (element) => {
+	if (!element) return;
 	element.dispatchEvent(new Event(TRANSITION_END));
 };
 

@@ -54,12 +54,17 @@ const _handlersVGSelect = () => {
 		const container = option.closest(`.${CLASS_NAME_CONTAINER}`);
 		const select = container.previousElementSibling;
 		const isMultiple = select.multiple;
-		const value = option.dataset.value;
-		const realOpt = select.querySelector(`option[value="${CSS.escape(value)}"]`);
+
+		// value у option может отсутствовать/быть пустым -> работаем по индексу
+		const indexStr = option.dataset.index;
+		const idx = Number.isFinite(Number(indexStr)) ? parseInt(indexStr, 10) : NaN;
+		const realOpt = Number.isInteger(idx) ? select.options[idx] : null;
 		if (!realOpt) return;
 
 		const instance = VGSelect.getInstance(container);
 		const wasSelected = realOpt.selected;
+
+		const value = realOpt.value;
 
 		if (isMultiple) {
 			realOpt.selected = !realOpt.selected;
@@ -87,7 +92,9 @@ const _handlersVGSelect = () => {
 				title: option.textContent,
 				...Manipulator.get(option)
 			});
-			instance?.hide();
+
+			const closeOnSelect = instance?._params?.close !== false;
+			if (closeOnSelect) instance?.hide();
 		}
 	});
 
@@ -171,9 +178,14 @@ const _handlersVGSelect = () => {
 		e.stopPropagation();
 		const container = this.closest(`.${CLASS_NAME_CONTAINER}`);
 		const select = container.previousElementSibling;
-		const value = btn.dataset.value;
-		const opt = select.querySelector(`option[value="${CSS.escape(value)}"]`);
-		const item = container.querySelector(`.${CLASS_NAME_OPTION}[data-value="${CSS.escape(value)}"]`);
+
+		const indexStr = btn.dataset.index;
+		const idx = Number.isFinite(Number(indexStr)) ? parseInt(indexStr, 10) : NaN;
+		const opt = Number.isInteger(idx) ? select.options[idx] : null;
+		const item = Number.isInteger(idx)
+			? container.querySelector(`.${CLASS_NAME_OPTION}[data-index="${idx}"]`)
+			: null;
+
 		const instance = VGSelect.getInstance(container);
 
 		if (opt) {
@@ -181,10 +193,10 @@ const _handlersVGSelect = () => {
 			if (item) item.classList.remove('selected');
 			VGSelect.updateUI(select);
 			select.dispatchEvent(new Event('change', { bubbles: true }));
-			EventHandler.trigger(select, EVENT_KEY_CHANGE, { data: { value } });
+			EventHandler.trigger(select, EVENT_KEY_CHANGE, { data: { value: opt.value } });
 
-			instance?._triggerEvent(EVENT_KEY_DESELECT, { value });
-			instance?._callCallback('onDeselect', { value });
+			instance?._triggerEvent(EVENT_KEY_DESELECT, { value: opt.value });
+			instance?._callCallback('onDeselect', { value: opt.value });
 		}
 	});
 
@@ -195,10 +207,16 @@ const _handlersVGSelect = () => {
 			const tags = tagsContainer.querySelectorAll(`.${CLASS_NAME_TAG}`);
 			if (tags.length > 0) {
 				const lastTag = tags[tags.length - 1];
-				const value = lastTag.querySelector('svg')?.dataset.value;
+				const svg = lastTag.querySelector('svg');
+				const indexStr = svg?.dataset.index;
+				const idx = Number.isFinite(Number(indexStr)) ? parseInt(indexStr, 10) : NaN;
+
 				const select = input.closest(`.${CLASS_NAME_CONTAINER}`).previousElementSibling;
-				const option = select.querySelector(`option[value="${CSS.escape(value)}"]`);
-				const listItem = select.closest(`.${CLASS_NAME_CONTAINER}`).querySelector(`.${CLASS_NAME_OPTION}[data-value="${CSS.escape(value)}"]`);
+				const option = Number.isInteger(idx) ? select.options[idx] : null;
+				const listItem = Number.isInteger(idx)
+					? input.closest(`.${CLASS_NAME_CONTAINER}`).querySelector(`.${CLASS_NAME_OPTION}[data-index="${idx}"]`)
+					: null;
+
 				const instance = VGSelect.getInstance(input.closest(`.${CLASS_NAME_CONTAINER}`));
 
 				if (option) {
@@ -206,15 +224,14 @@ const _handlersVGSelect = () => {
 					if (listItem) listItem.classList.remove('selected');
 					VGSelect.updateUI(select);
 					select.dispatchEvent(new Event('change', { bubbles: true }));
-					EventHandler.trigger(select, EVENT_KEY_CHANGE, { data: { value } });
+					EventHandler.trigger(select, EVENT_KEY_CHANGE, { data: { value: option.value } });
 
-					instance?._triggerEvent(EVENT_KEY_DESELECT, { value });
-					instance?._callCallback('onDeselect', { value });
+					instance?._triggerEvent(EVENT_KEY_DESELECT, { value: option.value });
+					instance?._callCallback('onDeselect', { value: option.value });
 				}
 			}
 		}
 	});
-
 }
 
 export default _handlersVGSelect;

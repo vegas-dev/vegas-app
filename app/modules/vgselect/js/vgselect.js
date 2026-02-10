@@ -80,6 +80,7 @@ class VGSelect extends BaseModule {
 				perPage: 20,
 				loadMoreText: 'Загрузить ещё',
 			},
+			close: true,
 			placeholder: '',
 			onInit: null,
 			onShow: null,
@@ -102,6 +103,9 @@ class VGSelect extends BaseModule {
 		if (typeof params.search === 'object') {
 			this._params.search.loadMoreText = lang_buttons(this._params.lang, NAME)['load-more'] || 'Загрузить еще'
 		}
+
+		this._remoteSearchRequestId = 0;
+		this._remoteSearchAbortController = null;
 
 		this._initObserver();
 		this._initLoadMoreButton();
@@ -176,21 +180,26 @@ class VGSelect extends BaseModule {
 	static _createListItems(options, parent, selector) {
 		const frag = document.createDocumentFragment();
 		const selectedIndex = selector.selectedIndex;
+		const hasExplicitSelected = VGSelect.hasExplicitSelectedOption(selector);
 
-		[...options].forEach((option, i) => {
+		[...options].forEach((option) => {
 			if (option.hidden) return;
 
-			const value = option.value || '';
+			// value атрибута может не быть или он может быть пустым -> для маппинга используем индекс
+			const rawValueAttr = option.getAttribute('value'); // null если атрибута нет
+			const value = rawValueAttr == null ? '' : rawValueAttr;
 			const text = option.textContent.trim();
 			const isEmptyOption = value === '' && text === '';
 
 			const li = document.createElement('li');
 			li.textContent = text;
+			li.dataset.index = String(option.index);
 			li.dataset.value = value;
 			li.classList.add(CLASS_NAME_OPTION);
 			Manipulator.set(li, 'data-vg-toggle', 'select-option');
 
-			if (i === selectedIndex) {
+			// Если нет явно выбранных option — ничего не подсвечиваем при открытии списка
+			if (hasExplicitSelected && option.index === selectedIndex) {
 				li.classList.add('selected');
 			}
 
@@ -226,6 +235,15 @@ class VGSelect extends BaseModule {
 		const attr = select.dataset.placeholderValue;
 		if (!attr) return value == null || String(value).trim() === '';
 		return attr.split(',').map(v => v.trim()).includes(String(value));
+	}
+
+	/**
+	 * Есть ли в <select> явно отмеченные selected (именно атрибутом selected, а не браузерным дефолтом)
+	 * @param {HTMLSelectElement} select
+	 * @returns {boolean}
+	 */
+	static hasExplicitSelectedOption(select) {
+		return Array.from(select.options).some(opt => opt.hasAttribute('selected'));
 	}
 
 	/**
@@ -298,7 +316,8 @@ class VGSelect extends BaseModule {
 			const index = selector.selectedIndex;
 			const option = index >= 0 ? selector.options[index] : null;
 			const text = option?.textContent.trim() || '';
-			const showPlaceholder = placeholder && !this.hasSelectedValidOption(selector);
+			const hasExplicitSelected = this.hasExplicitSelectedOption(selector);
+			const showPlaceholder = placeholder && (!hasExplicitSelected || !this.hasSelectedValidOption(selector));
 
 			current.innerHTML = showPlaceholder
 				? `<span class="${CLASS_NAME_PLACEHOLDER}">${placeholder}</span>`
@@ -568,7 +587,8 @@ class VGSelect extends BaseModule {
 				selected.forEach(opt => {
 					const tag = document.createElement('div');
 					tag.classList.add(CLASS_NAME_TAG);
-					tag.innerHTML = `<span>${opt.textContent}</span><svg class="${CLASS_NAME_TAG_REMOVE}" data-value="${opt.value}" width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="2" x2="12" y2="12" stroke="currentColor"/><line x1="12" y1="2" x2="2" y2="12" stroke="currentColor"/></svg>`;
+					// data-index — основной ключ (работает даже если у option нет value атрибута)
+					tag.innerHTML = `<span>${opt.textContent}</span><svg class="${CLASS_NAME_TAG_REMOVE}" data-index="${opt.index}" data-value="${opt.getAttribute('value') ?? ''}" width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="2" x2="12" y2="12" stroke="currentColor"/><line x1="12" y1="2" x2="2" y2="12" stroke="currentColor"/></svg>`;
 					tags.insertBefore(tag, input);
 				});
 			}
@@ -577,7 +597,9 @@ class VGSelect extends BaseModule {
 			const option = index >= 0 ? select.options[index] : null;
 			const text = option?.textContent.trim() || '';
 			const value = option?.value;
-			const showPlaceholder = placeholder && (!value || this.isPlaceholderValue(select, value) || !text);
+
+			const hasExplicitSelected = this.hasExplicitSelectedOption(select);
+			const showPlaceholder = placeholder && (!hasExplicitSelected || !value || this.isPlaceholderValue(select, value) || !text);
 
 			const oldText = current.textContent;
 			const newText = showPlaceholder ? placeholder : text || '-';
@@ -812,19 +834,38 @@ class VGSelect extends BaseModule {
 		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
 		const wasOpen = this._isShown();
 
+		// Обновляем текущее "желательное" состояние
 		this._searchTerm = term;
 		this._currentPage = 1;
 		this._totalPages = null;
+
+		// Отменяем предыдущий запрос (если ещё летит)
+		if (this._remoteSearchAbortController) {
+			this._remoteSearchAbortController.abort();
+		}
+		this._remoteSearchAbortController = new AbortController();
+
+		// Метим этот запрос как "последний"
+		const requestId = ++this._remoteSearchRequestId;
+		const signal = this._remoteSearchAbortController.signal;
 
 		this._showLoading(true);
 		this._hideLoadMoreButton(true);
 
 		fetch(url, {
 			method,
-			headers: { 'Content-Type': 'application/json' }
+			headers: { 'Content-Type': 'application/json' },
+			signal
 		})
 			.then(res => res.json())
 			.then(data => {
+				// Если прилетел не самый свежий ответ — игнорируем
+				if (requestId !== this._remoteSearchRequestId) return;
+
+				// Если пользователь уже ввёл другой текст — тоже игнорируем
+				const liveTerm = searchInput ? searchInput.value.trim() : '';
+				if (liveTerm !== term) return;
+
 				const select = this._element.previousElementSibling;
 				if (!select) return;
 
@@ -850,19 +891,25 @@ class VGSelect extends BaseModule {
 					this._hideLoadMoreButton(false);
 				}
 
+				// Важно: НЕ перетираем searchInput.value "term"-ом — это и вызывает глюк при гонках.
 				if (wasOpen && searchInput) {
-					searchInput.value = term;
 					searchInput.focus();
 					this._element.classList.add(CLASS_NAME_SHOW, CLASS_NAME_ACTIVE);
 				}
 			})
 			.catch(err => {
+				// Abort — нормальная ситуация при быстром вводе
+				if (err && (err.name === 'AbortError')) return;
+
 				console.error('VGSelect: Remote search error', err);
 				this._triggerEvent(EVENT_KEY_ERROR, { error: 'Search request failed', term });
 				this._hideLoadMoreButton(false);
 			})
 			.finally(() => {
-				this._showLoading(false);
+				// Лоадер убираем только для последнего актуального запроса
+				if (requestId === this._remoteSearchRequestId) {
+					this._showLoading(false);
+				}
 			});
 	}
 
