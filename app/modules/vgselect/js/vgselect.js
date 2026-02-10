@@ -73,11 +73,11 @@ class VGSelect extends BaseModule {
 				route: '',
 				remote: false,
 				delay: 300,
-				minTerm: 1,
+				minterm: 1,
 				pagination: false,
 				pageParam: 'page',
 				termParam: 'q',
-				perPage: 20,
+				perpage: 20,
 				loadMoreText: 'Загрузить ещё',
 			},
 			close: true,
@@ -198,8 +198,10 @@ class VGSelect extends BaseModule {
 			li.classList.add(CLASS_NAME_OPTION);
 			Manipulator.set(li, 'data-vg-toggle', 'select-option');
 
-			// Если нет явно выбранных option — ничего не подсвечиваем при открытии списка
-			if (hasExplicitSelected && option.index === selectedIndex) {
+			// Раньше подсветка зависела от "явно выбранных" option (атрибут selected),
+			// из-за этого UI мог показывать placeholder, но DOM считал, что выбрана 1-я опция.
+			// Подсвечиваем по фактическому состоянию option.selected.
+			if (option.selected) {
 				li.classList.add('selected');
 			}
 
@@ -316,8 +318,9 @@ class VGSelect extends BaseModule {
 			const index = selector.selectedIndex;
 			const option = index >= 0 ? selector.options[index] : null;
 			const text = option?.textContent.trim() || '';
-			const hasExplicitSelected = this.hasExplicitSelectedOption(selector);
-			const showPlaceholder = placeholder && (!hasExplicitSelected || !this.hasSelectedValidOption(selector));
+
+			// Placeholder показываем только если реально нет валидно выбранной опции
+			const showPlaceholder = placeholder && !this.hasSelectedValidOption(selector);
 
 			current.innerHTML = showPlaceholder
 				? `<span class="${CLASS_NAME_PLACEHOLDER}">${placeholder}</span>`
@@ -363,7 +366,7 @@ class VGSelect extends BaseModule {
 				instance._callCallback('onSearch', { term });
 
 				if (params.search.remote && params.search.route) {
-					if (term.length < (params.search.minTerm || 1)) return;
+					if (term.length < (params.search.minterm || 1)) return;
 
 					clearTimeout(searchTimeout);
 					searchTimeout = setTimeout(() => {
@@ -596,10 +599,9 @@ class VGSelect extends BaseModule {
 			const index = select.selectedIndex;
 			const option = index >= 0 ? select.options[index] : null;
 			const text = option?.textContent.trim() || '';
-			const value = option?.value;
 
-			const hasExplicitSelected = this.hasExplicitSelectedOption(select);
-			const showPlaceholder = placeholder && (!hasExplicitSelected || !value || this.isPlaceholderValue(select, value) || !text);
+			// Placeholder показываем только если реально нет валидно выбранной опции
+			const showPlaceholder = placeholder && !this.hasSelectedValidOption(select);
 
 			const oldText = current.textContent;
 			const newText = showPlaceholder ? placeholder : text || '-';
@@ -780,13 +782,13 @@ class VGSelect extends BaseModule {
 	 * @private
 	 */
 	async _loadNextPage() {
-		const { route, pageParam = 'page', termParam = 'q', perPage = 20 } = this._params.search;
+		const { route, pageParam = 'page', termParam = 'q', perpage = 20 } = this._params.search;
 		const nextPage = this._currentPage + 1;
 
 		const url = new URL(route, window.location.origin);
 		url.searchParams.set(termParam, this._searchTerm);
 		url.searchParams.set(pageParam, nextPage);
-		url.searchParams.set('per_page', perPage);
+		url.searchParams.set('per_page', perpage);
 
 		this._loading = true;
 		this._showLoading(true);
@@ -825,11 +827,11 @@ class VGSelect extends BaseModule {
 	 * @private
 	 */
 	_fetchRemoteData(term) {
-		const { route, method = 'GET', pageParam = 'page', termParam = 'q', perPage = 20 } = this._params.search;
+		const { route, method = 'GET', pageParam = 'page', termParam = 'q', perpage = 20 } = this._params.search;
 		const url = new URL(route, window.location.origin);
 		url.searchParams.set(termParam, term);
 		url.searchParams.set(pageParam, 1);
-		url.searchParams.set('per_page', perPage);
+		url.searchParams.set('per_page', perpage);
 
 		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
 		const wasOpen = this._isShown();
@@ -871,6 +873,18 @@ class VGSelect extends BaseModule {
 
 				// Очистка старых опций
 				[...select.querySelectorAll('option')].forEach(opt => {
+					// Оставляем первый пустой скрытый placeholder:
+					// <option value="" selected hidden></option>
+					const isFirst = opt === select.options[0];
+					const isEmptyValue = (opt.getAttribute('value') ?? '') === '';
+					const isEmptyText = (opt.textContent || '').trim() === '';
+					const isHidden = opt.hidden === true || opt.hasAttribute('hidden');
+					const isSelectedAttr = opt.hasAttribute('selected');
+
+					if (isFirst && isEmptyValue && isEmptyText && isHidden && isSelectedAttr) {
+						return;
+					}
+
 					if (!opt.hasAttribute('data-preserve') && !opt.closest('optgroup[data-preserve]')) {
 						opt.remove();
 					}
