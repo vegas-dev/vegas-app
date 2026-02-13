@@ -61,6 +61,27 @@ class VGFilesBase extends BaseModule {
 
 		const filesArray = Array.from(incomingFiles);
 
+		const shouldReplaceOnSingle =
+			!this._params.ajax &&
+			Boolean(this._params?.replace) &&
+			Number(this._params?.limits?.count) === 1;
+
+		if (shouldReplaceOnSingle) {
+			if (this._files.length > 0) {
+				this._errors.clear();
+				this._errors.add('is-count');
+				this._renderErrors();
+				this._resetFileInput();
+				return;
+			}
+
+			this.clear();
+			this.append(filesArray, true);
+			this.build();
+			return;
+		}
+
+
 		if (!this._params.allowed) {
 			this.append(filesArray, false);
 			this.build();

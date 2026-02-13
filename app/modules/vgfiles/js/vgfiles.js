@@ -41,6 +41,7 @@ class VGFiles extends VGFilesBase {
             types: [],
             ajax: false,
             prepend: true,
+            replace: true,
             uploads: {
                 mode: 'sequential',
                 route: '',
