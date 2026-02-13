@@ -61,6 +61,27 @@ class VGFilesBase extends BaseModule {
 
 		const filesArray = Array.from(incomingFiles);
 
+		const shouldReplaceOnSingle =
+			!this._params.ajax &&
+			Boolean(this._params?.replace) &&
+			Number(this._params?.limits?.count) === 1;
+
+		if (shouldReplaceOnSingle) {
+			if (this._files.length > 0) {
+				this._errors.clear();
+				this._errors.add('is-count');
+				this._renderErrors();
+				this._resetFileInput();
+				return;
+			}
+
+			this.clear();
+			this.append(filesArray, true);
+			this.build();
+			return;
+		}
+
+
 		if (!this._params.allowed) {
 			this.append(filesArray, false);
 			this.build();
@@ -262,7 +283,7 @@ class VGFilesBase extends BaseModule {
 		const fragment = document.createDocumentFragment();
 
 		files.forEach((file) => {
-			let classes = $itemsTemplateClasses;;
+			let classes = $itemsTemplateClasses;
 
 			if (this._params.detach) classes.push('with-remove')
 			if (this._params.sortable.enabled) classes.push('with-sortable')
@@ -415,12 +436,21 @@ class VGFilesBase extends BaseModule {
 	_generateHiddenInputs(files) {
 		this._cleanupFakeInputs();
 		const fragment = document.createDocumentFragment();
-		const name = this._element.querySelector('[data-vg-toggle]')?.name || 'files[]';
+		const idInput = this._element.querySelector('label').getAttribute('for') || '';
+		const name = this._element.querySelector('#' + idInput)?.name || this._element.querySelector('#' + idInput)?.dataset.originalName || 'files[]';
+
+		// если name уже "files[]" — убираем скобки, чтобы дальше корректно собрать имя
+		const baseName = name.endsWith('[]') ? name.slice(0, -2) : name;
+		const isSingle = Number(this._params?.limits?.count) === 1;
 
 		files.forEach((file, index) => {
 			const input = document.createElement('input');
 			input.type = 'file';
-			input.name = `${name.replace('[]', '')}[${index}]`;
+
+			// count=1 => name без массива (без [] и без [0])
+			// иначе => name как массив: baseName[index]
+			input.name = isSingle ? baseName : `${baseName}[${index}]`;
+
 			input.dataset.vgFiles = 'generated';
 			Manipulator.hide(input);
 

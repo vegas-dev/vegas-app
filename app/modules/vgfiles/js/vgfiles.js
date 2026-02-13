@@ -41,6 +41,7 @@ class VGFiles extends VGFilesBase {
             types: [],
             ajax: false,
             prepend: true,
+            replace: true,
             uploads: {
                 mode: 'sequential',
                 route: '',
@@ -98,13 +99,15 @@ class VGFiles extends VGFilesBase {
 
         if (this._params.ajax) {
             this._params.allowed = false;
-
-            if (this.isRenderNonInit) return;
-            this.isRenderNonInit = this._render.init();
-            if (this._render.parsedFiles.length) {
-                this._addExternalFiles(this._render.parsedFiles);
-            }
         }
+
+        if (this.isRenderNonInit) return;
+        this.isRenderNonInit = this._render.init();
+
+        if (this._render.parsedFiles.length) {
+            this._addExternalFiles(this._render.parsedFiles);
+        }
+
         if (this._params.allowed && !this._params.ajax) this._params.detach = false;
         if (this._nodes.drop) {
             this._params.image = true;
@@ -186,8 +189,11 @@ class VGFiles extends VGFilesBase {
 
     _handleChange(e) {
         if (this._params.ajax) this.uploadAll(this._files);
-        this._triggerCallback('onChange', { files: this._files, input: e?.target || e?.src || '' });
-        EventHandler.trigger(this._element, `${NAME_KEY}.change`, { files: this._files });
+
+        const payload = { files: this._files, input: e?.target || e?.src || '' };
+
+        this._triggerCallback('onChange', payload);
+        this._triggerEvent('change', { files: this._files, input: payload.input });
     }
 
     async uploadAll(files) {
@@ -229,6 +235,10 @@ class VGFiles extends VGFilesBase {
         };
 
         this._triggerCallback('onUploadStart', {
+            files: notUploadedFiles,
+            total: notUploadedFiles.length
+        });
+        this._triggerEvent('upload.start', {
             files: notUploadedFiles,
             total: notUploadedFiles.length
         });
@@ -322,12 +332,15 @@ class VGFiles extends VGFilesBase {
                 }
             }
 
-            this._triggerCallback('onUploadProgress', {
+            const payload = {
                 file: uploadData.file,
                 progress: uploadData.progress,
                 bytesSent: uploadData.bytesSent,
                 totalBytes: uploadData.totalBytes
-            });
+            };
+
+            this._triggerCallback('onUploadProgress', payload);
+            this._triggerEvent('upload.progress', payload);
         });
 
         this._uploader.onComplete((uploadData) => {
@@ -372,12 +385,15 @@ class VGFiles extends VGFilesBase {
             this._setStatItem('completed', this._uploadedKeys.size);
             this._setStatItem('pending', this._pendingUploadedKeys.size);
 
-            this._triggerCallback('onUploadComplete', {
+            const payload = {
                 file: uploadData.file,
                 response: uploadData.result?.response,
                 status: uploadData.result?.status,
                 id: file.id
-            });
+            };
+
+            this._triggerCallback('onUploadComplete', payload);
+            this._triggerEvent('upload.complete', payload);
         });
 
         this._uploader.onError((uploadData) => {
@@ -413,13 +429,14 @@ class VGFiles extends VGFilesBase {
                 }
             }
 
-            this._triggerCallback('onUploadError', {
-                file: uploadData.file
-            });
+            const payload = { file: uploadData.file };
+
+            this._triggerCallback('onUploadError', payload);
+            this._triggerEvent('upload.error', payload);
         });
 
         this._uploader.onAllComplete(() => {
-            EventHandler.trigger(this._element, `${NAME_KEY}.upload.allComplete`);
+            this._triggerEvent('upload.allComplete');
             this._updateStat(false);
 
             if (!this._failingUploadedKeys.size) {
@@ -436,11 +453,13 @@ class VGFiles extends VGFilesBase {
                 }
             }
 
-            this._triggerCallback('onUploadAllComplete', {
+            const payload = {
                 uploaded: this._uploadedKeys.size,
                 failed: this._failingUploadedKeys.size,
                 total: this._files.length
-            });
+            };
+
+            this._triggerCallback('onUploadAllComplete', payload);
         });
     }
 
@@ -467,10 +486,13 @@ class VGFiles extends VGFilesBase {
         this._setStatItem('failing', this._failingUploadedKeys.size);
         this._setStatItem('pending', this._pendingUploadedKeys.size);
 
-        this._triggerCallback('onReload', {
+        const payload = {
             button: button,
             file: fileToRetry
-        });
+        };
+
+        this._triggerCallback('onReload', payload);
+        this._triggerEvent('reload', payload);
 
         this.upload(fileToRetry);
     }
@@ -567,13 +589,16 @@ class VGFiles extends VGFilesBase {
 
         this._resetFileInput();
 
-        this._triggerCallback('onRemoveFile', {
+        const payload = {
             button: button,
             name: name,
             size: size,
             id: id,
             remaining: this._files.length
-        });
+        };
+
+        this._triggerCallback('onRemoveFile', payload);
+        this._triggerEvent('remove', payload);
     }
 
     _updateStatsAfterRemove() {
@@ -705,6 +730,10 @@ class VGFiles extends VGFilesBase {
         if (typeof cb === 'function') {
             try { cb.call(this, data, this); } catch (e) { console.error(`${name} callback error:`, e); }
         }
+    }
+
+    _triggerEvent(suffix, payload = {}) {
+        EventHandler.trigger(this._element, `${NAME_KEY}.${suffix}`, payload);
     }
 
     _getUploadedIds() {

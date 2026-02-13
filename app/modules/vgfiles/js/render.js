@@ -6,7 +6,7 @@ import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
 class VGFilesTemplateRender {
 	constructor(vgFilesInstance, element, params = {}) {
 		this.module = vgFilesInstance;
-		this.element = isElement(element);
+		this.element = isElement(element) ? element : null;
 
 		if (!this.element) {
 			console.error('Invalid element provided:', element);
