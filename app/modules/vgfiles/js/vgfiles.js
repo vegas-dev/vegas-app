@@ -98,13 +98,15 @@ class VGFiles extends VGFilesBase {
 
         if (this._params.ajax) {
             this._params.allowed = false;
-
-            if (this.isRenderNonInit) return;
-            this.isRenderNonInit = this._render.init();
-            if (this._render.parsedFiles.length) {
-                this._addExternalFiles(this._render.parsedFiles);
-            }
         }
+
+        if (this.isRenderNonInit) return;
+        this.isRenderNonInit = this._render.init();
+
+        if (this._render.parsedFiles.length) {
+            this._addExternalFiles(this._render.parsedFiles);
+        }
+
         if (this._params.allowed && !this._params.ajax) this._params.detach = false;
         if (this._nodes.drop) {
             this._params.image = true;

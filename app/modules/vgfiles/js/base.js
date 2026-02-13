@@ -262,7 +262,7 @@ class VGFilesBase extends BaseModule {
 		const fragment = document.createDocumentFragment();
 
 		files.forEach((file) => {
-			let classes = $itemsTemplateClasses;;
+			let classes = $itemsTemplateClasses;
 
 			if (this._params.detach) classes.push('with-remove')
 			if (this._params.sortable.enabled) classes.push('with-sortable')
