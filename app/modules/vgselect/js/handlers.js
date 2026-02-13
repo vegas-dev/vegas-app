@@ -87,7 +87,9 @@ const _handlersVGSelect = () => {
 
 			container.querySelectorAll(`.${CLASS_NAME_OPTION}`).forEach(o => o.classList.remove('selected'));
 			option.classList.add('selected');
-			VGSelect.changeSelector(select, value, {
+
+			VGSelect.changeSelectorByIndex(select, idx, {
+				index: idx,
 				value,
 				title: option.textContent,
 				...Manipulator.get(option)

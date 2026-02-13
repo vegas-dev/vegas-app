@@ -657,6 +657,47 @@ class VGSelect extends BaseModule {
 	}
 
 	/**
+	 * Программно устанавливает выбор <select> по индексу option (надёжно даже при пустом/отсутствующем value)
+	 * @param {HTMLSelectElement} select
+	 * @param {number} index
+	 * @param {Object} [data]
+	 */
+	static changeSelectorByIndex(select, index, data = {}) {
+		const container = select.nextElementSibling;
+		const instance = container ? VGSelect.getInstance(container) : null;
+
+		select.setAttribute('data-updating', 'true');
+		try {
+			const opt = Number.isInteger(index) ? select.options[index] : null;
+			if (!opt) {
+				instance?._triggerEvent(EVENT_KEY_ERROR, { error: 'Option not found by index', index });
+				return;
+			}
+
+			const wasSelected = opt.selected;
+			const selectedText = opt.textContent.trim();
+			const value = opt.value;
+
+			[...select.options].forEach(o => o.selected = false);
+			opt.selected = true;
+			select.value = opt.value;
+
+			this.updateUI(select);
+
+			const e = new Event('change', { bubbles: true, cancelable: true });
+			select.dispatchEvent(e);
+
+			if (!wasSelected) {
+				EventHandler.trigger(select, EVENT_KEY_CHANGE, { data });
+				instance?._triggerEvent(EVENT_KEY_SELECT, { value, text: selectedText, data });
+				instance?._callCallback('onSelect', { value, text: selectedText, data });
+			}
+		} finally {
+			select.removeAttribute('data-updating');
+		}
+	}
+
+	/**
 	 * Вызывает кастомное событие
 	 * @param {string} eventName - Имя события
 	 * @param {Object} [detail] - Данные события
