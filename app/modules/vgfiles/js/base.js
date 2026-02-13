@@ -415,7 +415,8 @@ class VGFilesBase extends BaseModule {
 	_generateHiddenInputs(files) {
 		this._cleanupFakeInputs();
 		const fragment = document.createDocumentFragment();
-		const name = this._element.querySelector('[data-vg-toggle]')?.name || 'files[]';
+		const idInput = this._element.querySelector('label').getAttribute('for') || '';
+		const name = this._element.querySelector('#' + idInput)?.name || this._element.querySelector('#' + idInput)?.dataset.originalName || 'files[]';
 
 		files.forEach((file, index) => {
 			const input = document.createElement('input');
