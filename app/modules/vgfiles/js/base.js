@@ -418,10 +418,18 @@ class VGFilesBase extends BaseModule {
 		const idInput = this._element.querySelector('label').getAttribute('for') || '';
 		const name = this._element.querySelector('#' + idInput)?.name || this._element.querySelector('#' + idInput)?.dataset.originalName || 'files[]';
 
+		// если name уже "files[]" — убираем скобки, чтобы дальше корректно собрать имя
+		const baseName = name.endsWith('[]') ? name.slice(0, -2) : name;
+		const isSingle = Number(this._params?.limits?.count) === 1;
+
 		files.forEach((file, index) => {
 			const input = document.createElement('input');
 			input.type = 'file';
-			input.name = `${name.replace('[]', '')}[${index}]`;
+
+			// count=1 => name без массива (без [] и без [0])
+			// иначе => name как массив: baseName[index]
+			input.name = isSingle ? baseName : `${baseName}[${index}]`;
+
 			input.dataset.vgFiles = 'generated';
 			Manipulator.hide(input);
 
