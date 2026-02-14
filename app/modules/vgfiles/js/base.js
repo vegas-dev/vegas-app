@@ -31,6 +31,8 @@ class VGFilesBase extends BaseModule {
 		};
 
 		this.template = '<li data-file="" class="file"><div class="file-image"></div><div class="file-info"></div><div class="file-remove"></div></li>';
+		this._onNativeInputChange = (e) => this.change(e?.target);
+
 		this._init();
 	}
 
@@ -51,7 +53,15 @@ class VGFilesBase extends BaseModule {
 	_init() {
 		if (!this._isInitialized) return;
 
-		this._preventOriginalInputFromSubmit();
+		const isSingle = Number(this._params?.limits?.count) === 1;
+
+		if (isSingle) {
+			this._preventOriginalInputFromSubmit(true);
+			this._cleanupFakeInputs();
+		} else {
+			this._preventOriginalInputFromSubmit();
+		}
+
 		this._addEventListener();
 	}
 
@@ -61,13 +71,19 @@ class VGFilesBase extends BaseModule {
 
 		const filesArray = Array.from(incomingFiles);
 
+		const isSingle = Number(this._params?.limits?.count) === 1;
 		const shouldReplaceOnSingle =
 			Boolean(this._params?.replace) &&
-			Number(this._params?.limits?.count) === 1;
+			isSingle;
 
 		if (shouldReplaceOnSingle) {
-			this.clear();
-			this.append(filesArray, true);
+			this._revokeUrls();
+			this._cleanupFakeInputs();
+			this._cleanupErrors();
+
+			this._files = this._filterFiles(filesArray);
+			if (this._params.prepend) this._files.reverse();
+
 			this.build();
 			return;
 		}
@@ -94,7 +110,13 @@ class VGFilesBase extends BaseModule {
 			this._renderUI(this._files);
 		} else {
 			this._renderUI(this._files);
-			this._generateHiddenInputs(this._files);
+
+			const isSingle = Number(this._params?.limits?.count) === 1;
+			if (!isSingle) {
+				this._generateHiddenInputs(this._files);
+			} else {
+				this._cleanupFakeInputs();
+			}
 		}
 	}
 
@@ -426,21 +448,18 @@ class VGFilesBase extends BaseModule {
 	_generateHiddenInputs(files) {
 		this._cleanupFakeInputs();
 		const fragment = document.createDocumentFragment();
-		const idInput = this._element.querySelector('label').getAttribute('for') || '';
-		const name = this._element.querySelector('#' + idInput)?.name || this._element.querySelector('#' + idInput)?.dataset.originalName || 'files[]';
+		const idInput =  Manipulator.get(Selectors.find('label', this._element), 'for') || '';
+		const name = Selectors.findID(idInput, this._element)?.name || Selectors.findID(idInput, this._element)?.dataset.originalName || 'files[]';
 
-		// если name уже "files[]" — убираем скобки, чтобы дальше корректно собрать имя
 		const baseName = name.endsWith('[]') ? name.slice(0, -2) : name;
 		const isSingle = Number(this._params?.limits?.count) === 1;
+
+		if (isSingle) return;
 
 		files.forEach((file, index) => {
 			const input = document.createElement('input');
 			input.type = 'file';
-
-			// count=1 => name без массива (без [] и без [0])
-			// иначе => name как массив: baseName[index]
-			input.name = isSingle ? baseName : `${baseName}[${index}]`;
-
+			input.name = `${baseName}[${index}]`;
 			input.dataset.vgFiles = 'generated';
 			Manipulator.hide(input);
 
@@ -506,7 +525,8 @@ class VGFilesBase extends BaseModule {
 
 	_addEventListener() {
 		Selectors.findAll('[data-vg-toggle="files"]', this._element).forEach(el => {
-			el.addEventListener('change', () => this.change(el));
+			el.removeEventListener('change', this._onNativeInputChange);
+			el.addEventListener('change', this._onNativeInputChange);
 		});
 	}
 

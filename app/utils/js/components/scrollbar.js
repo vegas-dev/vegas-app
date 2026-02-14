@@ -26,7 +26,12 @@ const PROPERTY_MARGIN = 'margin-right';
  */
 class ScrollBarHelper {
 	constructor() {
-		this._element = document.body;
+		// Не кэшируем body: при Turbo/partial navigation DOM может меняться.
+		// Актуальный body берём через геттер.
+	}
+
+	get _element() {
+		return document.body;
 	}
 
 	/**
@@ -50,7 +55,7 @@ class ScrollBarHelper {
 	 * Скрывает скроллбар и корректирует макет
 	 */
 	hide() {
-		if (this.isOverflowing && !isMobileDevice()) {
+		if (this.isOverflowing() && !isMobileDevice()) {
 			const width = this.getWidth();
 			this._disableOverflow();
 
@@ -137,13 +142,15 @@ class ScrollBarHelper {
 	 * @private
 	 */
 	_saveInitialStyle(element, property) {
+		// Сохраняем только один раз, чтобы "оригинал" не перетирался
+		// при повторных открытиях/закрытиях.
+		if (Manipulator.get(element, property) !== null) return;
+
 		const value = element.style.getPropertyValue(property);
 
-		// Важно: сохраняем даже пустую строку (если inline-стиля не было)
+		// Важно: сохраняем даже пустую строку (если inline-стиля не было),
 		// чтобы reset() мог корректно восстановить "как было".
-		if (value !== null) {
-			//Manipulator.set(element, property, value);
-		}
+		Manipulator.set(element, property, value);
 	}
 
 	/**
