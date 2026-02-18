@@ -182,12 +182,18 @@ class VGFiles extends VGFilesBase {
 
     _addEventListenerExtended() {
         Selectors.findAll(SELECTOR_DATA_TOGGLE, this._element).forEach(el => {
-            el.removeEventListener('change', this.change.bind(this));
-            el.addEventListener('change', e => this._handleChange(e));
+            if (this._onNativeInputChange) {
+                el.removeEventListener('change', this._onNativeInputChange);
+            }
+
+            el.addEventListener('change', (e) => this._handleChange(e));
         });
     }
 
     _handleChange(e) {
+        const input = e?.target;
+        this.change(input);
+
         if (this._params.ajax) this.uploadAll(this._files);
 
         const payload = { files: this._files, input: e?.target || e?.src || '' };

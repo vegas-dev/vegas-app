@@ -69,10 +69,33 @@ const Selectors = {
 	 * @param {Element} [container=document]
 	 * @returns {Element|null}
 	 */
+	/**
+	 * Находит элемент по ID с экранированием
+	 * @param {string} id
+	 * @param {Document|Element} [container=document]
+	 * @returns {Element|null}
+	 */
 	findID(id, container = document) {
 		try {
+			if (typeof id !== 'string' || id.trim() === '') return null;
+
+			const doc = container && container.nodeType === 9
+				? container
+				: (container?.ownerDocument || document);
+
+			const byId = doc.getElementById(id);
+			if (byId) {
+				if (container && container.nodeType !== 9) {
+					return container.contains(byId) ? byId : null;
+				}
+				return byId;
+			}
+
+			const scope = (container && container.nodeType === 9) ? container.documentElement : container;
+			if (!scope || typeof scope.querySelector !== 'function') return null;
+
 			const escaped = escapeId(id);
-			return container.getElementById(escaped) || container.querySelector(`#${escaped}`);
+			return scope.querySelector(`#${escaped}`);
 		} catch (e) {
 			console.warn('Invalid ID in findID:', id, e);
 			return null;
