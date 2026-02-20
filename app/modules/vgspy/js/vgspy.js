@@ -80,7 +80,7 @@ class VGSpy extends BaseModule {
 		 * Корневой элемент для IntersectionObserver (если скролл не окно)
 		 * @type {HTMLElement|null}
 		 */
-		this._rootElement = getComputedStyle(this._element).overflowY === 'visible' ? null : this._element;
+		this._rootElement = null;
 
 		/**
 		 * Текущая активная секция
@@ -127,13 +127,11 @@ class VGSpy extends BaseModule {
 	 */
 	refresh() {
 		this._initializeTargetsAndObservables();
+		this._updateRootElement();
 		this._maybeEnableSmoothScroll();
 
-		if (this._observer) {
-			this._observer.disconnect();
-		} else {
-			this._observer = this._getNewObserver();
-		}
+		if (this._observer) this._observer.disconnect();
+		this._observer = this._getNewObserver();
 
 		// Подписываемся на наблюдение за секциями
 		for (const section of this._observableSections.values()) {
@@ -144,6 +142,58 @@ class VGSpy extends BaseModule {
 	/**
 	 * Очищает ресурсы (отключает observer)
 	 */
+	_updateRootElement() {
+		this._rootElement = this._normalizeScrollRoot(this._params.target);
+
+		if (!this._rootElement && this._isScrollable(this._element)) {
+			this._rootElement = this._element;
+		}
+
+		if (!this._rootElement) {
+			const firstSection = this._observableSections.values().next().value || null;
+			this._rootElement = firstSection ? this._getScrollParent(firstSection) : null;
+		}
+
+		this._previousScrollData.parentScrollTop = this._getParentScrollTop();
+		this._previousScrollData.visibleEntryTop = 0;
+	}
+
+	_normalizeScrollRoot(element) {
+		const root = getElement(element);
+		if (!root) return null;
+		if (root === document.body || root === document.documentElement) return null;
+		return this._isScrollable(root) ? root : null;
+	}
+
+	_isScrollable(element) {
+		if (!(element instanceof HTMLElement)) return false;
+		const overflowY = getComputedStyle(element).overflowY;
+		if (!/(auto|scroll|overlay)/.test(overflowY)) return false;
+		return element.scrollHeight > element.clientHeight;
+	}
+
+	_getScrollParent(element) {
+		for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+			if (this._isScrollable(parent)) return parent;
+		}
+		return null;
+	}
+
+	_getSectionTop(section) {
+		if (this._rootElement) {
+			const rootRect = this._rootElement.getBoundingClientRect();
+			const rect = section.getBoundingClientRect();
+			return this._rootElement.scrollTop + (rect.top - rootRect.top);
+		}
+
+		return (window.scrollY || document.documentElement.scrollTop || 0) + section.getBoundingClientRect().top;
+	}
+
+	_getParentScrollTop() {
+		if (this._rootElement) return this._rootElement.scrollTop;
+		return window.scrollY || document.documentElement.scrollTop || 0;
+	}
+
 	dispose() {
 		if (this._observer) {
 			this._observer.disconnect();
@@ -182,9 +232,10 @@ class VGSpy extends BaseModule {
 	_maybeEnableSmoothScroll() {
 		if (!this._params.smoothScroll) return;
 
-		EventHandler.off(this._params.target, EVENT_CLICK);
-		EventHandler.on(this._params.target, EVENT_CLICK, SELECTOR_TARGET_LINKS, (event) => {
-			const hash = event.target.hash;
+		EventHandler.off(this._element, EVENT_CLICK);
+		EventHandler.on(this._element, EVENT_CLICK, SELECTOR_TARGET_LINKS, (event) => {
+			const link = event.delegateTarget || event.target;
+			const hash = decodeURI(link.hash || '');
 			if (!hash) return;
 
 			const section = this._observableSections.get(hash);
@@ -192,13 +243,22 @@ class VGSpy extends BaseModule {
 
 			event.preventDefault();
 
-			const root = this._rootElement || window;
-			const scrollTop = section.offsetTop - this._element.offsetTop;
+			const scrollTop = this._getSectionTop(section);
+			const root = this._rootElement;
 
-			if (root.scrollTo) {
-				root.scrollTo({ top: scrollTop, behavior: 'smooth' });
+			if (root) {
+				if (root.scrollTo) {
+					root.scrollTo({ top: scrollTop, behavior: 'smooth' });
+				} else {
+					root.scrollTop = scrollTop;
+				}
+				return;
+			}
+
+			if (window.scrollTo) {
+				window.scrollTo({ top: scrollTop, behavior: 'smooth' });
 			} else {
-				root.scrollTop = scrollTop;
+				document.documentElement.scrollTop = scrollTop;
 			}
 		});
 	}
@@ -225,7 +285,7 @@ class VGSpy extends BaseModule {
 	 */
 	_observerCallback(entries) {
 		const getTargetLink = (entry) => this._targetLinks.get(`#${entry.target.id}`);
-		const parentScrollTop = (this._rootElement || document.documentElement).scrollTop;
+		const parentScrollTop = this._getParentScrollTop();
 		const userScrollsDown = parentScrollTop >= this._previousScrollData.parentScrollTop;
 		this._previousScrollData.parentScrollTop = parentScrollTop;
 
@@ -235,12 +295,13 @@ class VGSpy extends BaseModule {
 				continue;
 			}
 
-			const isEntryBelow = entry.target.offsetTop >= this._previousScrollData.visibleEntryTop;
+			const entryTop = this._getSectionTop(entry.target);
+			const isEntryBelow = entryTop >= this._previousScrollData.visibleEntryTop;
 			const shouldActivate =
 				(userScrollsDown && isEntryBelow) || (!userScrollsDown && !isEntryBelow);
 
 			if (shouldActivate) {
-				this._previousScrollData.visibleEntryTop = entry.target.offsetTop;
+				this._previousScrollData.visibleEntryTop = entryTop;
 				this._process(getTargetLink(entry));
 			}
 		}
@@ -254,14 +315,14 @@ class VGSpy extends BaseModule {
 		this._targetLinks.clear();
 		this._observableSections.clear();
 
-		const links = Selectors.findAll(SELECTOR_TARGET_LINKS, this._params.target);
+		const links = Selectors.findAll(SELECTOR_TARGET_LINKS, this._element);
 		for (const link of links) {
-			const hash = link.hash;
+			const hash = decodeURI(link.hash || '');
 			if (!hash || isDisabled(link)) continue;
 
-			const section = Selectors.find(decodeURI(hash));
+			const section = Selectors.find(hash);
 			if (isVisible(section)) {
-				this._targetLinks.set(decodeURI(hash), link);
+				this._targetLinks.set(hash, link);
 				this._observableSections.set(hash, section);
 			}
 		}

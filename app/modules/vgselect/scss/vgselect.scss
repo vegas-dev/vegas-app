@@ -138,6 +138,17 @@ select {
 		margin-top: .25rem;
 	}
 
+	&.drop-up {
+		.vg-select-dropdown {
+			top: auto;
+			bottom: 100%;
+			margin-top: 0;
+			margin-bottom: .25rem;
+			transform-origin: 50% 100%;
+			transform: scale(0.75) translateY(11px);
+		}
+	}
+
 	&-list {
 		margin: 0;
 		padding: 0;
