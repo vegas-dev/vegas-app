@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import { mergeDeepObject, getElement, isDisabled, isVisible } from "../../../utils/js/functions";
+import { mergeDeepObject, getElement, isDisabled } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
@@ -19,7 +19,7 @@ const CLASS_NAME_DROPDOWN_ITEM = 'vg-dropdown-item';
 const CLASS_NAME_ACTIVE = 'active';
 
 const SELECTOR_DATA_SPY = '[data-vg-toggle="spy"]';
-const SELECTOR_TARGET_LINKS = '[href]';
+const SELECTOR_TARGET_LINKS = '[href], [data-vg-target]';
 const SELECTOR_NAV_LIST_GROUP = '.nav, .list-group';
 const SELECTOR_NAV_LINKS = '.nav-link';
 const SELECTOR_NAV_ITEMS = '.nav-item';
@@ -142,6 +142,15 @@ class VGSpy extends BaseModule {
 	/**
 	 * Очищает ресурсы (отключает observer)
 	 */
+	_rebuildObserver() {
+		if (this._observer) this._observer.disconnect();
+		this._observer = this._getNewObserver();
+
+		for (const section of this._observableSections.values()) {
+			this._observer.observe(section);
+		}
+	}
+
 	_updateRootElement() {
 		this._rootElement = this._normalizeScrollRoot(this._params.target);
 
@@ -250,13 +259,29 @@ class VGSpy extends BaseModule {
 		EventHandler.off(this._element, EVENT_CLICK);
 		EventHandler.on(this._element, EVENT_CLICK, SELECTOR_TARGET_LINKS, (event) => {
 			const link = event.delegateTarget || event.target;
-			const hash = decodeURI(link.hash || '');
-			if (!hash) return;
+			const id = this._getTargetIdFromTrigger(link);
+			if (!id) return;
 
-			const section = this._observableSections.get(hash);
+			let section = this._observableSections.get(id);
+			if (!section) {
+				section = Selectors.findID(id);
+				if (section) {
+					this._targetLinks.set(section.id, link);
+					this._observableSections.set(section.id, section);
+				}
+			}
 			if (!section) return;
 
 			event.preventDefault();
+
+			const prevRootElement = this._rootElement;
+			this._updateRootElement();
+			if (this._rootElement !== prevRootElement) {
+				this._rebuildObserver();
+			} else if (this._observer) {
+				// Ensure dynamically added sections are observed.
+				this._observer.observe(section);
+			}
 
 			const scrollTop = this._getSectionTop(section);
 			const root = this._rootElement;
@@ -267,6 +292,7 @@ class VGSpy extends BaseModule {
 				} else {
 					root.scrollTop = scrollTop;
 				}
+				this._process(link);
 				return;
 			}
 
@@ -275,6 +301,8 @@ class VGSpy extends BaseModule {
 			} else {
 				document.documentElement.scrollTop = scrollTop;
 			}
+
+			this._process(link);
 		});
 	}
 
@@ -299,7 +327,7 @@ class VGSpy extends BaseModule {
 	 * @private
 	 */
 	_observerCallback(entries) {
-		const getTargetLink = (entry) => this._targetLinks.get(`#${entry.target.id}`);
+		const getTargetLink = (entry) => this._targetLinks.get(entry.target.id);
 		const parentScrollTop = this._getParentScrollTop();
 		const userScrollsDown = parentScrollTop >= this._previousScrollData.parentScrollTop;
 		this._previousScrollData.parentScrollTop = parentScrollTop;
@@ -332,13 +360,15 @@ class VGSpy extends BaseModule {
 
 		const links = Selectors.findAll(SELECTOR_TARGET_LINKS, this._element);
 		for (const link of links) {
-			const hash = decodeURI(link.hash || '');
-			if (!hash || isDisabled(link)) continue;
+			if (isDisabled(link)) continue;
 
-			const section = Selectors.find(hash);
-			if (isVisible(section)) {
-				this._targetLinks.set(hash, link);
-				this._observableSections.set(hash, section);
+			const id = this._getTargetIdFromTrigger(link);
+			if (!id) continue;
+
+			const section = Selectors.findID(id);
+			if (section) {
+				this._targetLinks.set(section.id, link);
+				this._observableSections.set(section.id, section);
 			}
 		}
 	}
@@ -351,7 +381,8 @@ class VGSpy extends BaseModule {
 	_process(target) {
 		if (this._activeTarget === target) return;
 
-		this._clearActiveClass(this._params.target);
+		// Clear only within this spy navigation to avoid cross-interference between multiple instances.
+		this._clearActiveClass(this._element);
 		this._activeTarget = target;
 
 		if (target) {
@@ -387,11 +418,47 @@ class VGSpy extends BaseModule {
 	 * @private
 	 */
 	_clearActiveClass(parent) {
+		if (!parent) return;
 		parent.classList.remove(CLASS_NAME_ACTIVE);
 
-		const activeLinks = Selectors.findAll(`${SELECTOR_TARGET_LINKS}.${CLASS_NAME_ACTIVE}`, parent);
+		const activeLinks = Selectors.findAll(
+			`[href].${CLASS_NAME_ACTIVE}, [data-vg-target].${CLASS_NAME_ACTIVE}`,
+			parent
+		);
 		for (const link of activeLinks) {
 			link.classList.remove(CLASS_NAME_ACTIVE);
+		}
+	}
+
+	_getTargetIdFromTrigger(trigger) {
+		if (!trigger || typeof trigger.getAttribute !== 'function') return null;
+
+		const dataTarget = (trigger.getAttribute('data-vg-target') || '').trim();
+		const href = (trigger.getAttribute('href') || '').trim();
+
+		const selector = (dataTarget && dataTarget !== '#')
+			? dataTarget
+			: (
+				(href && (href.includes('#') || href.startsWith('#')))
+					? (href.includes('#') && !href.startsWith('#') ? `#${href.split('#')[1]}` : href)
+					: null
+			);
+
+		if (!selector || selector === '#' || !selector.startsWith('#')) return null;
+
+		const decoded = this._safeDecode(selector);
+		return decoded && decoded.startsWith('#') && decoded.length > 1 ? decoded.slice(1) : null;
+	}
+
+	_safeDecode(value) {
+		try {
+			return decodeURIComponent(value);
+		} catch {
+			try {
+				return decodeURI(value);
+			} catch {
+				return value;
+			}
 		}
 	}
 }
@@ -399,10 +466,26 @@ class VGSpy extends BaseModule {
 /**
  * Инициализация через data-атрибуты при загрузке DOM
  */
-EventHandler.on(window, EVENT_LOAD_DATA_API, () => {
-	for (const spy of Selectors.findAll(SELECTOR_DATA_SPY)) {
-		VGSpy.getOrCreateInstance(spy);
+(() => {
+	let isInitialized = false;
+
+	const init = () => {
+		if (isInitialized) return;
+		isInitialized = true;
+
+		for (const spy of Selectors.findAll(SELECTOR_DATA_SPY)) {
+			VGSpy.getOrCreateInstance(spy);
+		}
+	};
+
+	// If this module is loaded after `load`, ensure initialization still happens.
+	if (document.readyState === 'loading') {
+		EventHandler.on(document, `DOMContentLoaded${EVENT_KEY}${DATA_API_KEY}`, init);
+	} else {
+		init();
 	}
-});
+
+	EventHandler.on(window, EVENT_LOAD_DATA_API, init);
+})();
 
 export default VGSpy;
