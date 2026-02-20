@@ -145,13 +145,19 @@ class VGSpy extends BaseModule {
 	_updateRootElement() {
 		this._rootElement = this._normalizeScrollRoot(this._params.target);
 
-		if (!this._rootElement && this._isScrollable(this._element)) {
+		if (!this._rootElement && this._isScrollableSelf(this._element)) {
 			this._rootElement = this._element;
 		}
 
 		if (!this._rootElement) {
 			const firstSection = this._observableSections.values().next().value || null;
-			this._rootElement = firstSection ? this._getScrollParent(firstSection) : null;
+
+			// Если секции лежат внутри overflow-контейнера — он обычно родитель секции
+			if (firstSection && this._isScrollable(firstSection)) {
+				this._rootElement = firstSection.parentElement;
+			} else {
+				this._rootElement = firstSection ? this._getScrollParent(firstSection) : null;
+			}
 		}
 
 		this._previousScrollData.parentScrollTop = this._getParentScrollTop();
@@ -162,10 +168,19 @@ class VGSpy extends BaseModule {
 		const root = getElement(element);
 		if (!root) return null;
 		if (root === document.body || root === document.documentElement) return null;
-		return this._isScrollable(root) ? root : null;
+		return this._isScrollableSelf(root) ? root : null;
 	}
 
+	// Проверяет: "родитель element является скролл-контейнером?"
 	_isScrollable(element) {
+		if (!(element instanceof HTMLElement)) return false;
+		const parent = element.parentElement;
+		if (!parent) return false;
+		return this._isScrollableSelf(parent);
+	}
+
+	// Проверяет: "сам element является скролл-контейнером?"
+	_isScrollableSelf(element) {
 		if (!(element instanceof HTMLElement)) return false;
 		const overflowY = getComputedStyle(element).overflowY;
 		if (!/(auto|scroll|overlay)/.test(overflowY)) return false;
@@ -174,7 +189,7 @@ class VGSpy extends BaseModule {
 
 	_getScrollParent(element) {
 		for (let parent = element.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
-			if (this._isScrollable(parent)) return parent;
+			if (this._isScrollableSelf(parent)) return parent;
 		}
 		return null;
 	}

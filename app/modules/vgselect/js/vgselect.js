@@ -273,9 +273,10 @@ class VGSelect extends BaseModule {
 	 * Строит кастомный UI для <select>
 	 * @param {HTMLSelectElement} selector - Исходный <select>
 	 * @param {boolean} [reBuild=false] - Пересоздать, если уже инициализирован
+	 * @param params
 	 * @returns {HTMLElement} - Обёртка (.vg-select)
 	 */
-	static build(selector, reBuild = false) {
+	static build(selector, reBuild = false, params = {}) {
 		if (reBuild || selector.dataset.inited === 'true') {
 			this.destroy(selector);
 		}
@@ -348,7 +349,7 @@ class VGSelect extends BaseModule {
 		selector.insertAdjacentElement('afterend', container);
 		selector.dataset.inited = 'true';
 
-		this.getOrCreateInstance(container);
+		this.getOrCreateInstance(container, params);
 		this.updateUI(selector);
 		const instance = VGSelect.getInstance(container);
 
@@ -847,7 +848,7 @@ class VGSelect extends BaseModule {
 	 * @param {boolean} [isRebuild=false] - Пересоздать
 	 */
 	static init(element, params = {}, isRebuild = false) {
-		this.build(element, isRebuild);
+		this.build(element, isRebuild, params);
 	}
 
 	/**
