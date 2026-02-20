@@ -77,7 +77,7 @@ const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
  */
 const defaultParams = {
 	static: true,
-	placement: 'top center',
+	placement: 'bottom center',
 	autohide: false,
 	delay: 3000,
 	enableClickToast: true,
@@ -404,10 +404,11 @@ class VGToast extends BaseModule {
 			style.top = '';
 			style.bottom = '';
 			style.transform = '';
+			style.translate = ''; // <-- важно: сбрасываем translate отдельно
 
 			if (isCenter) {
 				style.left = '50%';
-				style.transform = 'translateX(-50%)';
+				style.translate = '-50% 0'; // <-- вместо transform: translateX(-50%)
 			} else if (isLeft) {
 				style.left = '0';
 			} else if (isRight) {
@@ -415,7 +416,7 @@ class VGToast extends BaseModule {
 			} else {
 				// по умолчанию: центрирование
 				style.left = '50%';
-				style.transform = 'translateX(-50%)';
+				style.translate = '-50% 0';
 			}
 
 			if (isTop) {
