@@ -77,7 +77,7 @@ const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
  */
 const defaultParams = {
 	static: true,
-	placement: 'bottom center',
+	placement: 'top center',
 	autohide: false,
 	delay: 3000,
 	enableClickToast: true,

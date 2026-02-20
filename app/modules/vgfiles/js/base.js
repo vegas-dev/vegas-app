@@ -50,6 +50,67 @@ class VGFilesBase extends BaseModule {
 		return map[name] || '';
 	}
 
+	_applyRenameToIncomingFiles(files) {
+		const rename = this._params?.rename;
+
+		if (!rename) return files;
+		if (!Array.isArray(files) || !files.length) return files;
+
+		return files.map((file, index) => {
+			if (!file) return file;
+
+			let newName = null;
+
+			if (typeof rename === 'function') {
+				newName = rename(file, index);
+			} else if (rename === true) {
+				newName = this._generateRenamedFileName(file?.name || 'file', index);
+			}
+
+			if (!newName || typeof newName !== 'string' || newName.trim() === '') return file;
+			if (file.name === newName) return file;
+
+			try {
+				const renamed = new File([file], newName, {
+					type: file.type || "application/octet-stream",
+					lastModified: file.lastModified || Date.now()
+				});
+
+				// переносим «кастомные» поля, которые используются в проекте
+				['id', 'src', 'image'].forEach((prop) => {
+					if (file[prop] !== undefined) {
+						Object.defineProperty(renamed, prop, {
+							value: file[prop],
+							writable: true,
+							enumerable: true
+						});
+					}
+				});
+
+				return renamed;
+			} catch (e) {
+				// если браузер/окружение не позволило создать File — оставляем как есть
+				return file;
+			}
+		});
+	}
+
+	_generateRenamedFileName(originalName, index) {
+		const safeOriginal = String(originalName || 'file');
+
+		const dotIndex = safeOriginal.lastIndexOf('.');
+		const hasExt = dotIndex > 0 && dotIndex < safeOriginal.length - 1;
+
+		const base = hasExt ? safeOriginal.slice(0, dotIndex) : safeOriginal;
+		const ext = hasExt ? safeOriginal.slice(dotIndex + 1) : '';
+
+		const stamp = Date.now();
+		const seq = index + 1;
+
+		const normalizedBase = base.trim() || 'file';
+		return ext ? `${normalizedBase}_${stamp}_${seq}.${ext}` : `${normalizedBase}_${stamp}_${seq}`;
+	}
+
 	_init() {
 		if (!this._isInitialized) return;
 
@@ -69,7 +130,7 @@ class VGFilesBase extends BaseModule {
 		const incomingFiles = input?.files;
 		if (!incomingFiles?.length) return;
 
-		const filesArray = Array.from(incomingFiles);
+		const filesArray = this._applyRenameToIncomingFiles(Array.from(incomingFiles));
 
 		const isSingle = Number(this._params?.limits?.count) === 1;
 		const shouldReplaceOnSingle =
@@ -121,7 +182,7 @@ class VGFilesBase extends BaseModule {
 	}
 
 	append(values, replace = true) {
-		const incoming = Array.from(values);
+		const incoming = this._applyRenameToIncomingFiles(Array.from(values));
 		let filesToProcess;
 
 		if (replace) {
