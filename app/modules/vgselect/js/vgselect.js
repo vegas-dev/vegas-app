@@ -30,6 +30,7 @@ const CLASS_NAME_TAG            = 'vg-select-tag';
 const CLASS_NAME_TAG_REMOVE     = 'vg-select-tag-remove';
 const CLASS_NAME_LOAD_MORE      = 'vg-select-load-more';
 const CLASS_NAME_LOADING        = 'vg-select-loading';
+const CLASS_NAME_DROP_UP        = 'drop-up';
 
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
 const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
@@ -68,6 +69,12 @@ class VGSelect extends BaseModule {
 
 		this._params = this._getParams(element, mergeDeepObject({
 			lang: document.documentElement.lang || 'ru',
+			// Dropdown placement behavior:
+			// - none: default CSS positioning (no JS)
+			// - auto: choose top/bottom based on available space in overflow ancestor/viewport
+			// - top: force open upwards
+			// - bottom: force open downwards
+			position: 'none',
 			search: {
 				enabled: true,
 				route: '',
@@ -106,6 +113,9 @@ class VGSelect extends BaseModule {
 
 		this._remoteSearchRequestId = 0;
 		this._remoteSearchAbortController = null;
+
+		this._positioningScrollParent = null;
+		this._boundUpdateDropdownPlacement = () => this._updateDropdownPlacement();
 
 		this._initObserver();
 		this._initLoadMoreButton();
@@ -400,6 +410,12 @@ class VGSelect extends BaseModule {
 		if (e.defaultPrevented) return;
 
 		this._element.classList.add(CLASS_NAME_SHOW);
+		if (this._getPositionMode() !== 'none') {
+			this._setupDropdownPlacement();
+		} else {
+			// Ensure no leftovers if the instance had JS positioning before.
+			this._teardownDropdownPlacement();
+		}
 
 		if ('ontouchstart' in document.documentElement) {
 			document.body.style.pointerEvents = 'none';
@@ -415,6 +431,7 @@ class VGSelect extends BaseModule {
 
 		return this._queueCallback(() => {
 			this._element.classList.add(CLASS_NAME_ACTIVE);
+			this._updateDropdownPlacement();
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
 			this._triggerEvent(EVENT_KEY_OPEN);
 			this._callCallback('onShow');
@@ -437,6 +454,8 @@ class VGSelect extends BaseModule {
 	_completeHide(relatedTarget = {}) {
 		const e = EventHandler.trigger(this._element, EVENT_KEY_HIDE, relatedTarget);
 		if (e.defaultPrevented) return;
+
+		this._teardownDropdownPlacement();
 
 		this._element.classList.remove(CLASS_NAME_ACTIVE);
 		this._element.querySelector(SELECTOR_DATA_TOGGLE).setAttribute('aria-expanded', 'false');
@@ -541,7 +560,108 @@ class VGSelect extends BaseModule {
 		}
 		clearTimeout(this._observerTimeout);
 		this._observerTimeout = null;
+		this._teardownDropdownPlacement();
 		super.dispose();
+	}
+
+	_setupDropdownPlacement() {
+		if (this._getPositionMode() === 'none') return;
+
+		this._teardownDropdownPlacement();
+		this._positioningScrollParent = this._getOverflowAncestor(this._element);
+
+		// Update position on viewport scroll/resize, and on the nearest scroll/overflow parent.
+		window.addEventListener('resize', this._boundUpdateDropdownPlacement, { passive: true });
+		window.addEventListener('scroll', this._boundUpdateDropdownPlacement, { passive: true });
+
+		if (this._positioningScrollParent) {
+			this._positioningScrollParent.addEventListener('scroll', this._boundUpdateDropdownPlacement, { passive: true });
+		}
+
+		this._updateDropdownPlacement();
+	}
+
+	_teardownDropdownPlacement() {
+		window.removeEventListener('resize', this._boundUpdateDropdownPlacement);
+		window.removeEventListener('scroll', this._boundUpdateDropdownPlacement);
+
+		if (this._positioningScrollParent) {
+			this._positioningScrollParent.removeEventListener('scroll', this._boundUpdateDropdownPlacement);
+		}
+		this._positioningScrollParent = null;
+
+		// Reset to stylesheet defaults.
+		this._element.classList.remove(CLASS_NAME_DROP_UP);
+		this._element.style.removeProperty('--vg-select-list-max-height');
+	}
+
+	_getPositionMode() {
+		const raw = this._params?.position;
+		const mode = raw == null ? 'none' : String(raw).trim().toLowerCase();
+		if (mode === 'auto' || mode === 'top' || mode === 'bottom' || mode === 'none') return mode;
+		return 'none';
+	}
+
+	_getOverflowAncestor(startEl) {
+		let el = startEl?.parentElement;
+		while (el && el !== document.body && el !== document.documentElement) {
+			const style = window.getComputedStyle(el);
+			const overflowX = style.overflowX || style.overflow || 'visible';
+			const overflowY = style.overflowY || style.overflow || 'visible';
+			const clipsX = overflowX !== 'visible';
+			const clipsY = overflowY !== 'visible';
+
+			if (clipsX || clipsY) {
+				return el;
+			}
+
+			el = el.parentElement;
+		}
+		return null;
+	}
+
+	_getClipRect() {
+		const viewport = {
+			top: 0,
+			left: 0,
+			right: window.innerWidth,
+			bottom: window.innerHeight
+		};
+
+		const parent = this._positioningScrollParent;
+		if (!parent) return viewport;
+
+		const r = parent.getBoundingClientRect();
+		return {
+			top: Math.max(viewport.top, r.top),
+			left: Math.max(viewport.left, r.left),
+			right: Math.min(viewport.right, r.right),
+			bottom: Math.min(viewport.bottom, r.bottom),
+		};
+	}
+
+	_updateDropdownPlacement() {
+		if (!this._isShown()) return;
+
+		const mode = this._getPositionMode();
+		if (mode === 'none') return;
+
+		const clip = this._getClipRect();
+		const containerRect = this._element.getBoundingClientRect();
+
+		const spaceBelow = clip.bottom - containerRect.bottom;
+		const spaceAbove = containerRect.top - clip.top;
+
+		const openUp = mode === 'top' ? true : mode === 'bottom' ? false : spaceAbove > spaceBelow;
+		this._element.classList.toggle(CLASS_NAME_DROP_UP, openUp);
+
+		const available = openUp ? spaceAbove : spaceBelow;
+
+		// Give the dropdown some breathing room (borders/margins) and clamp.
+		const listMax = Math.max(80, Math.floor(available - 12));
+		if (Number.isFinite(listMax) && listMax > 0) {
+			this._element.style.setProperty('--vg-select-list-max-height', `${listMax}px`);
+		}
 	}
 
 	/**

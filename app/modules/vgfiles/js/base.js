@@ -138,6 +138,8 @@ class VGFilesBase extends BaseModule {
 			isSingle;
 
 		if (shouldReplaceOnSingle) {
+			this.clear();
+			this.append(filesArray, true);
 			this._revokeUrls();
 			this._cleanupFakeInputs();
 			this._cleanupErrors();
