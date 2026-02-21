@@ -68,7 +68,13 @@
 				border: 1px solid var(--vg-nav-drop-border-color);
 				border-radius: var(--vg-nav-drop-border-radius);
 				background-color: var(--vg-nav-drop-bg);
-				max-height: var(--vg-nav-drop-max-height);
+				overflow: visible;
+
+				> .vg-nav-drop-list {
+					max-height: var(--vg-nav-drop-max-height);
+					overflow-y: var(--vg-nav-drop-overflow-y);
+					overflow-x: var(--vg-nav-drop-overflow-x);
+				}
 
 				&:not(.show) {
 					display: none;

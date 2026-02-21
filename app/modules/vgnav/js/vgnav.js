@@ -1,6 +1,5 @@
 import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
-import {getSVG} from "../../module-fn";
 import {
 	execute,
 	isDisabled,
@@ -8,7 +7,6 @@ import {
 	isVisible,
 	mergeDeepObject,
 	noop,
-	normalizeData
 } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
@@ -147,6 +145,7 @@ class VGNav extends BaseModule {
 			let isHamburger = !!Selectors.find('.' + classes.hamburger, this._element);
 
 			if (!isHamburger) {
+				const targetSelector = params.hamburger.target || '#sidebar-nav';
 				let mobileNavTitle = '',
 					hamburger = '<span class="' + classes.hamburger + '--lines"><span></span><span></span><span></span></span>';
 
@@ -161,7 +160,7 @@ class VGNav extends BaseModule {
 				let a = document.createElement('a');
 				a.classList.add(classes.hamburger);
 				Manipulator.set(a, 'data-vg-toggle', 'sidebar');
-				Manipulator.set(a, 'href', '#sidebar-nav');
+				Manipulator.set(a, 'href', targetSelector);
 				a.innerHTML = mobileNavTitle + hamburger;
 
 				this._element.append(a);
@@ -378,7 +377,7 @@ class VGNav extends BaseModule {
 			});
 		}
 
-		const vgNavSidebar = document.getElementById('sidebar-nav');
+		const vgNavSidebar = document.querySelector(instance._params.hamburger.target || '#sidebar-nav');
 		let hamburger = instance._element.querySelector('.' + instance._classes.hamburger);
 
 		if (vgNavSidebar && hamburger) {
@@ -446,7 +445,7 @@ EventHandler.on(document, EVENT_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (
 	let drop = this.parentNode;
 	if (!drop) return;
 
-	if (isDisabled(drop) && !isVisible(drop)) {
+	if (isDisabled(drop) || !isVisible(drop)) {
 		return;
 	}
 

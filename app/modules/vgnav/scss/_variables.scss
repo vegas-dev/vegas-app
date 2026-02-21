@@ -21,11 +21,13 @@ $nav-drop-map: (
 		z-index: 10,
 		transition: map-get($nav-map, transition),
 		width: 200px,
-		max-height: initial,
+		max-height: 650px,
 		border-color: $border-color,
 		border-radius: 0,
 		padding: 0,
-		bg: $bg-color
+		bg: $bg-color,
+		overflow-y: auto,
+		overflow-x: visible,
 );
 
 $nav-drop-mega-map: (
@@ -37,7 +39,7 @@ $nav-drop-mega-map: (
 		padding: 1rem,
 		z-index: 10,
 		transition: map-get($nav-map, transition),
-		max-height: initial,
+		max-height: 600px,
 );
 
 $nav-drop-item-map: (
