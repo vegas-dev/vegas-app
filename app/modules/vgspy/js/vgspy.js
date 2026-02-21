@@ -1,5 +1,5 @@
 import BaseModule from "../../base-module";
-import { mergeDeepObject, getElement, isDisabled } from "../../../utils/js/functions";
+import { mergeDeepObject, getElement, isDisabled, isVisible } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
@@ -95,6 +95,18 @@ class VGSpy extends BaseModule {
 		this._observer = null;
 
 		/**
+		 * Экземпляр Smooth Scrollbar (если используется вместо нативного scrollTop).
+		 * @type {Object|null}
+		 */
+		this._scrollbar = null;
+
+		/**
+		 * Listener для Smooth Scrollbar.
+		 * @type {Function|null}
+		 */
+		this._scrollbarListener = null;
+
+		/**
 		 * Данные о предыдущей прокрутке для определения направления
 		 * @type {{visibleEntryTop: number, parentScrollTop: number}}
 		 */
@@ -130,18 +142,135 @@ class VGSpy extends BaseModule {
 		this._updateRootElement();
 		this._maybeEnableSmoothScroll();
 
-		if (this._observer) this._observer.disconnect();
-		this._observer = this._getNewObserver();
+		this._setupTracking();
 
 		// Подписываемся на наблюдение за секциями
-		for (const section of this._observableSections.values()) {
-			this._observer.observe(section);
-		}
 	}
 
 	/**
 	 * Очищает ресурсы (отключает observer)
 	 */
+	_setupTracking() {
+		this._updateSmoothScrollbar();
+
+		if (this._scrollbar) {
+			this._setupScrollbarTracking();
+			return;
+		}
+
+		this._teardownScrollbarTracking();
+		this._rebuildObserver();
+
+		// Smooth Scrollbar can be initialized after the spy; retry once on the next tick.
+		if (this._rootElement && !this._isScrollableSelf(this._rootElement) && window.Scrollbar) {
+			setTimeout(() => {
+				if (this._scrollbar) return;
+				this._updateSmoothScrollbar();
+				if (this._scrollbar) this._setupScrollbarTracking();
+			}, 0);
+		}
+	}
+
+	_updateSmoothScrollbar() {
+		const root = this._rootElement;
+		const Scrollbar = window.Scrollbar;
+
+		let instance = null;
+		if (root) {
+			instance = root.scrollbar || null;
+
+			if (!instance && Scrollbar && typeof Scrollbar.get === 'function') {
+				instance = Scrollbar.get(root) || null;
+			}
+		}
+
+		if (instance === this._scrollbar) return;
+
+		this._teardownScrollbarTracking();
+		this._scrollbar = instance;
+	}
+
+	_setupScrollbarTracking() {
+		if (!this._scrollbar || typeof this._scrollbar.addListener !== 'function') return;
+
+		// Smooth Scrollbar is virtual (content is transformed), so IntersectionObserver won't be reliable.
+		if (this._observer) this._observer.disconnect();
+
+		if (this._scrollbarListener && typeof this._scrollbar.removeListener === 'function') {
+			this._scrollbar.removeListener(this._scrollbarListener);
+		}
+
+		this._scrollbarListener = (status) => this._onScrollbarScroll(status);
+		this._scrollbar.addListener(this._scrollbarListener);
+
+		this._onScrollbarScroll(null);
+	}
+
+	_teardownScrollbarTracking() {
+		if (this._scrollbar && this._scrollbarListener && typeof this._scrollbar.removeListener === 'function') {
+			this._scrollbar.removeListener(this._scrollbarListener);
+		}
+		this._scrollbarListener = null;
+	}
+
+	_onScrollbarScroll(status) {
+		const scrollTop = status?.offset?.y ?? this._getParentScrollTop();
+		const userScrollsDown = scrollTop >= this._previousScrollData.parentScrollTop;
+		this._previousScrollData.parentScrollTop = scrollTop;
+
+		const activationLine = this._getActivationLine(scrollTop);
+
+		const items = [];
+		for (const [id, section] of this._observableSections.entries()) {
+			if (!section || !isVisible(section)) continue;
+			const link = this._targetLinks.get(id);
+			if (!link) continue;
+
+			items.push({ top: this._getSectionTop(section), link });
+		}
+
+		items.sort((a, b) => a.top - b.top);
+
+		let activeLink = null;
+		for (const item of items) {
+			if (item.top <= activationLine) {
+				activeLink = item.link;
+			} else if (!userScrollsDown) {
+				break;
+			}
+		}
+
+		this._process(activeLink);
+	}
+
+	_getActivationLine(scrollTop) {
+		const rootHeight = this._rootElement
+			? this._rootElement.clientHeight
+			: (window.innerHeight || document.documentElement.clientHeight || 0);
+
+		const margin = (this._params.rootMargin || '').trim();
+		const parts = margin ? margin.split(/\s+/) : [];
+		const bottom = parts.length === 1
+			? parts[0]
+			: parts.length === 2
+				? parts[0]
+				: parts.length >= 3
+					? parts[2]
+					: null;
+
+		if (bottom && bottom.endsWith('%')) {
+			const pct = Number.parseFloat(bottom);
+			if (!Number.isNaN(pct)) return scrollTop + rootHeight * (1 + pct / 100);
+		}
+
+		if (bottom && bottom.endsWith('px')) {
+			const px = Number.parseFloat(bottom);
+			if (!Number.isNaN(px)) return scrollTop + rootHeight + px;
+		}
+
+		return scrollTop + rootHeight * 0.75;
+	}
+
 	_rebuildObserver() {
 		if (this._observer) this._observer.disconnect();
 		this._observer = this._getNewObserver();
@@ -169,6 +298,7 @@ class VGSpy extends BaseModule {
 			}
 		}
 
+		this._updateSmoothScrollbar();
 		this._previousScrollData.parentScrollTop = this._getParentScrollTop();
 		this._previousScrollData.visibleEntryTop = 0;
 	}
@@ -177,7 +307,13 @@ class VGSpy extends BaseModule {
 		const root = getElement(element);
 		if (!root) return null;
 		if (root === document.body || root === document.documentElement) return null;
-		return this._isScrollableSelf(root) ? root : null;
+
+		if (this._isScrollableSelf(root)) return root;
+
+		// Smooth Scrollbar containers are often overflow-hidden, but still act as a scroll root.
+		const Scrollbar = window.Scrollbar;
+		const hasSmoothScrollbar = !!(root.scrollbar || (Scrollbar && typeof Scrollbar.get === 'function' && Scrollbar.get(root)));
+		return hasSmoothScrollbar ? root : null;
 	}
 
 	// Проверяет: "родитель element является скролл-контейнером?"
@@ -207,13 +343,15 @@ class VGSpy extends BaseModule {
 		if (this._rootElement) {
 			const rootRect = this._rootElement.getBoundingClientRect();
 			const rect = section.getBoundingClientRect();
-			return this._rootElement.scrollTop + (rect.top - rootRect.top);
+			const scrollTop = this._scrollbar?.offset?.y ?? this._rootElement.scrollTop;
+			return scrollTop + (rect.top - rootRect.top);
 		}
 
 		return (window.scrollY || document.documentElement.scrollTop || 0) + section.getBoundingClientRect().top;
 	}
 
 	_getParentScrollTop() {
+		if (this._scrollbar) return this._scrollbar.offset?.y ?? 0;
 		if (this._rootElement) return this._rootElement.scrollTop;
 		return window.scrollY || document.documentElement.scrollTop || 0;
 	}
@@ -222,6 +360,8 @@ class VGSpy extends BaseModule {
 		if (this._observer) {
 			this._observer.disconnect();
 		}
+		this._teardownScrollbarTracking();
+		this._scrollbar = null;
 		super.dispose();
 	}
 
@@ -272,19 +412,52 @@ class VGSpy extends BaseModule {
 			}
 			if (!section) return;
 
+			// If the target section is currently hidden (tabs/collapses/lazy layout),
+			// don't hijack the click; allow UI to reveal it, then retry.
+			if (!isVisible(section)) {
+				setTimeout(() => {
+					const revealed = Selectors.findID(id);
+					if (!revealed || !isVisible(revealed)) return;
+
+					this._targetLinks.set(revealed.id, link);
+					this._observableSections.set(revealed.id, revealed);
+
+					this._updateRootElement();
+					this._setupTracking();
+
+					const top = this._getSectionTop(revealed);
+					if (this._scrollbar && typeof this._scrollbar.scrollTo === 'function') {
+						this._scrollbar.scrollTo(0, top, 600);
+					} else if (this._rootElement) {
+						if (this._rootElement.scrollTo) {
+							this._rootElement.scrollTo({ top, behavior: 'smooth' });
+						} else {
+							this._rootElement.scrollTop = top;
+						}
+					} else if (window.scrollTo) {
+						window.scrollTo({ top, behavior: 'smooth' });
+					} else {
+						document.documentElement.scrollTop = top;
+					}
+
+					this._process(link);
+				}, 0);
+				return;
+			}
+
 			event.preventDefault();
 
-			const prevRootElement = this._rootElement;
 			this._updateRootElement();
-			if (this._rootElement !== prevRootElement) {
-				this._rebuildObserver();
-			} else if (this._observer) {
-				// Ensure dynamically added sections are observed.
-				this._observer.observe(section);
-			}
+			this._setupTracking();
 
 			const scrollTop = this._getSectionTop(section);
 			const root = this._rootElement;
+
+			if (this._scrollbar && typeof this._scrollbar.scrollTo === 'function') {
+				this._scrollbar.scrollTo(0, scrollTop, 600);
+				this._process(link);
+				return;
+			}
 
 			if (root) {
 				if (root.scrollTo) {

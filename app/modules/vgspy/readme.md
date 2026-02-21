@@ -49,6 +49,7 @@
 | `rootMargin` | `string` | `'0px 0px -25%'` | Отступы для `IntersectionObserver`. Управляет, насколько "внутрь" должна зайти секция, чтобы стать активной. |
 | `smoothScroll` | `boolean` | `true` | Включить плавную прокрутку при клике на якорные ссылки. |
 | `target` | `HTMLElement \| string` | элемент с `data-vg-toggle="spy"` | Контейнер, внутри которого происходит прокрутка. Если не указан — используется `window`. |
+| `scrollbar` | `Object \| null` | `null` | Инстанс `smooth-scrollbar` или Scrollbar API (если `smooth-scrollbar` импортирован как модуль и не лежит в `window.Scrollbar`). |
 | `threshold` | `number[] \| string` | `[0.1, 0.5, 1]` | Пороги видимости (от 0 до 1), при которых срабатывает активация. Можно передать строку: `'0.1, 0.5, 1'`. |
 
 ---
@@ -90,6 +91,22 @@
 - Убедитесь, что все целевые секции имеют `id`, соответствующий `href` ссылки.
 - Секции должны быть видимы (`display: block`, `visibility: visible`).
 - Работает с динамически добавленным контентом, но требует вызова `refresh()` после вставки.
+- Если прокрутка виртуальная (например, `smooth-scrollbar`), передайте `target` как контейнер, на который был инициализирован `smooth-scrollbar`, и при модульном импорте также передайте `scrollbar`.
+
+Пример (модульный импорт `smooth-scrollbar`):
+
+```js
+import Scrollbar from 'smooth-scrollbar';
+import VGSpy from './app/modules/vgspy';
+
+const scrollRoot = document.querySelector('.my-scroll-root');
+Scrollbar.init(scrollRoot);
+
+VGSpy.getOrCreateInstance(document.querySelector('[data-vg-toggle="spy"]'), {
+  target: scrollRoot,
+  scrollbar: Scrollbar,
+});
+```
 
 ---
 
