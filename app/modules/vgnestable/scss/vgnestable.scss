@@ -1,0 +1,162 @@
+/**
+*--------------------------------------------------------------------------
+* Module: VGNestable
+* Author: Vegas DEV
+* License: see LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-nestable {
+	@include mix-vars('nestable', $nestable-map);
+
+	&-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		transition: var(--vg-nestable-list-transition);
+
+		&.is-drop-target {
+			background: var(--vg-nestable-list-drop-target-bg);
+			outline: var(--vg-nestable-list-drop-target-outline);
+			outline-offset: var(--vg-nestable-list-drop-target-outline-offset);
+		}
+
+		&.is-drop-denied {
+			background: var(--vg-nestable-list-drop-denied-bg);
+			outline: var(--vg-nestable-list-drop-denied-outline);
+			outline-offset: var(--vg-nestable-list-drop-denied-outline-offset);
+		}
+
+		.vg-nestable-list {
+			margin-top: var(--vg-nestable-list-nested-margin-top);
+			padding-left: var(--vg-nestable-list-nested-padding-left);
+			border-left: var(--vg-nestable-list-nested-border-left);
+		}
+	}
+
+	&-item {
+		margin: var(--vg-nestable-item-margin);
+		position: relative;
+		transition: var(--vg-nestable-item-transition);
+
+		&.is-dragging {
+			opacity: var(--vg-nestable-item-dragging-opacity);
+		}
+
+		&.is-drag-ghost {
+			opacity: var(--vg-nestable-item-ghost-opacity);
+		}
+	}
+
+	&-inner {
+		display: flex;
+		align-items: center;
+		gap: var(--vg-nestable-inner-gap);
+		min-height: var(--vg-nestable-inner-min-height);
+		padding: var(--vg-nestable-inner-padding);
+		border: var(--vg-nestable-inner-border);
+		background: var(--vg-nestable-inner-bg);
+		border-radius: var(--vg-nestable-inner-border-radius);
+	}
+
+	&-handle {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: var(--vg-nestable-handle-size);
+		min-height: var(--vg-nestable-handle-size);
+		padding: 0;
+		border: var(--vg-nestable-handle-border);
+		background: var(--vg-nestable-handle-bg);
+		border-radius: var(--vg-nestable-handle-border-radius);
+		cursor: var(--vg-nestable-handle-cursor);
+		user-select: none;
+
+		&:active {
+			cursor: var(--vg-nestable-handle-active-cursor);
+		}
+	}
+
+	&-collapse-toggle {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: var(--vg-nestable-toggle-size);
+		min-height: var(--vg-nestable-toggle-size);
+		padding: 0;
+		border: var(--vg-nestable-toggle-border);
+		background: var(--vg-nestable-toggle-bg);
+		border-radius: var(--vg-nestable-toggle-border-radius);
+		cursor: pointer;
+		color: var(--vg-nestable-toggle-color);
+		font-weight: var(--vg-nestable-toggle-font-weight);
+		line-height: var(--vg-nestable-toggle-line-height);
+
+		&:hover {
+			background: var(--vg-nestable-toggle-hover-bg);
+		}
+
+		svg {
+			width: var(--vg-nestable-toggle-svg-size);
+			height: var(--vg-nestable-toggle-svg-size);
+			transition: var(--vg-nestable-toggle-svg-transition);
+
+			path {
+				fill: currentColor;
+			}
+		}
+
+		&[aria-expanded="true"] {
+			svg {
+				transform: var(--vg-nestable-toggle-svg-open-transform);
+			}
+		}
+	}
+
+	&-handle-icon {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: var(--vg-nestable-handle-icon-min-width);
+		color: var(--vg-nestable-handle-icon-color);
+		font-weight: var(--vg-nestable-handle-icon-font-weight);
+		line-height: var(--vg-nestable-handle-icon-line-height);
+		letter-spacing: var(--vg-nestable-handle-icon-letter-spacing);
+	}
+
+	&-content {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	&-placeholder {
+		list-style: none;
+		border: var(--vg-nestable-placeholder-border);
+		background: var(--vg-nestable-placeholder-bg);
+		border-radius: var(--vg-nestable-placeholder-border-radius);
+		margin: var(--vg-nestable-placeholder-margin);
+		min-height: var(--vg-nestable-placeholder-min-height);
+	}
+
+	&-placeholder-hidden {
+		border: 0;
+		background: transparent;
+		margin: 0;
+		min-height: 0;
+		height: 0 !important;
+	}
+
+	&-drag-element {
+		opacity: var(--vg-nestable-drag-element-opacity);
+		transform: var(--vg-nestable-drag-element-transform);
+		box-shadow: var(--vg-nestable-drag-element-shadow);
+	}
+}
