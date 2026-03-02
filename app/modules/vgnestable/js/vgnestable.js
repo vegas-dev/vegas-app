@@ -54,6 +54,7 @@ class VGNestable extends BaseModule {
 			handleicon: '', // иконка для хендлера
 			indent: 50, // X offset (px), after which item moves into child level.
 			maxdepth: 6, // Maximum nesting depth.
+			moveaxis: "default", // Drag direction: default | vertical | horizontal.
 			hoverthreshold: 0, // Vertical threshold (0..0.5) around hovered item center.
 			neighborchangethreshold: 0, // Percentage (0..49) of entering adjacent item before position changes.
 			showplaceholder: true, // Show placeholder during drag.
@@ -301,6 +302,7 @@ class VGNestable extends BaseModule {
 		}
 
 		const inner = this._getDirectChildBySelector(item, `.${CLASS_INNER}`);
+		const handle = inner ? this._getDirectChildBySelector(inner, `.${CLASS_HANDLE}`) : null;
 		const childList = this._getDirectChildBySelector(item, this._params.listselector);
 		let toggle = inner ? this._getDirectChildBySelector(inner, `.${CLASS_COLLAPSE_TOGGLE}`) : null;
 
@@ -326,7 +328,13 @@ class VGNestable extends BaseModule {
 			toggle = document.createElement("button");
 			toggle.type = "button";
 			toggle.className = CLASS_COLLAPSE_TOGGLE;
-			inner.insertBefore(toggle, inner.firstChild);
+			if (handle) {
+				inner.insertBefore(toggle, handle.nextSibling);
+			} else {
+				inner.insertBefore(toggle, inner.firstChild);
+			}
+		} else if (handle && toggle.previousElementSibling !== handle) {
+			inner.insertBefore(toggle, handle.nextSibling);
 		}
 
 		toggle.setAttribute("data-vg-toggle", "collapse");
@@ -723,20 +731,35 @@ class VGNestable extends BaseModule {
 
 		let moved = false;
 		let moveAnnouncement = "";
+		const moveAxis = this._getMoveAxis();
+		const allowVertical = moveAxis !== "horizontal";
+		const allowHorizontal = moveAxis !== "vertical";
 
 		if (key === "ArrowUp") {
+			if (!allowVertical) {
+				return;
+			}
 			event.preventDefault();
 			moved = this._moveKeyboardUp(this._keyboardDraggedItem);
 			moveAnnouncement = "Moved up.";
 		} else if (key === "ArrowDown") {
+			if (!allowVertical) {
+				return;
+			}
 			event.preventDefault();
 			moved = this._moveKeyboardDown(this._keyboardDraggedItem);
 			moveAnnouncement = "Moved down.";
 		} else if (key === "ArrowRight") {
+			if (!allowHorizontal) {
+				return;
+			}
 			event.preventDefault();
 			moved = this._indentKeyboard(this._keyboardDraggedItem);
 			moveAnnouncement = "Nested into previous item.";
 		} else if (key === "ArrowLeft") {
+			if (!allowHorizontal) {
+				return;
+			}
 			event.preventDefault();
 			moved = this._outdentKeyboard(this._keyboardDraggedItem);
 			moveAnnouncement = "Moved out one level.";
@@ -789,7 +812,7 @@ class VGNestable extends BaseModule {
 			payload: this.serialize(),
 			keyboard: true
 		});
-		this._announce("Picked up item. Use arrow keys to move, Enter or Space to drop, Escape to cancel.");
+		this._announce(this._getKeyboardDragInstructions());
 	}
 
 	_finishKeyboardDrag(options = {}) {
@@ -904,6 +927,25 @@ class VGNestable extends BaseModule {
 
 		targetList.insertBefore(item, parentItem.nextSibling);
 		return true;
+	}
+
+	_getMoveAxis(params = this._params) {
+		const rawAxis = String(params?.moveaxis || "default").trim().toLowerCase();
+		if (rawAxis === "vertical" || rawAxis === "horizontal") {
+			return rawAxis;
+		}
+		return "default";
+	}
+
+	_getKeyboardDragInstructions() {
+		const moveAxis = this._getMoveAxis();
+		if (moveAxis === "vertical") {
+			return "Picked up item. Use Up/Down arrows to move, Enter or Space to drop, Escape to cancel.";
+		}
+		if (moveAxis === "horizontal") {
+			return "Picked up item. Use Left/Right arrows to move, Enter or Space to drop, Escape to cancel.";
+		}
+		return "Picked up item. Use arrow keys to move, Enter or Space to drop, Escape to cancel.";
 	}
 
 	_startInteraction(target, clientX, clientY, event) {
@@ -1306,6 +1348,9 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 	const offsetX = pointerX - baseX;
 	const indentValue = parseFloat(params.indent);
 	const indent = Number.isFinite(indentValue) ? indentValue : 0;
+	const moveAxis = this._getMoveAxis(params);
+	const allowVertical = moveAxis !== "horizontal";
+	const allowHorizontal = moveAxis !== "vertical";
 	const neighborThresholdPercent = Math.max(
 		0,
 		Math.min(49, Number(params.neighborchangethreshold || 0))
@@ -1316,15 +1361,15 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		const topBorder = rect.height * edgeRatio;
 		const bottomBorder = rect.height * (1 - edgeRatio);
 
-		if (offsetX > indent) {
+		if (allowHorizontal && offsetX > indent) {
 			return "child";
 		}
 
-		if (offsetY <= topBorder) {
+		if (allowVertical && offsetY <= topBorder) {
 			return "before";
 		}
 
-		if (offsetY >= bottomBorder) {
+		if (allowVertical && offsetY >= bottomBorder) {
 			return "after";
 		}
 
@@ -1336,15 +1381,15 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		Math.max(0.05, Number(params.hoverthreshold || 0.18))
 	);
 
-	if (offsetX > indent) {
+	if (allowHorizontal && offsetX > indent) {
 		return "child";
 	}
 
-	if (offsetY < rect.height * (0.5 - threshold)) {
+	if (allowVertical && offsetY < rect.height * (0.5 - threshold)) {
 		return "before";
 	}
 
-	if (offsetY > rect.height * (0.5 + threshold)) {
+	if (allowVertical && offsetY > rect.height * (0.5 + threshold)) {
 		return "after";
 	}
 
