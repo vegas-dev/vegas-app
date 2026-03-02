@@ -112,8 +112,8 @@ class VGNestable extends BaseModule {
 			collapse: {
 				enabled: true,
 				open: true,
-				showtext: getSVG("chevron"),
-				hidetext: getSVG("chevron")
+				showtext: getSVG("plus"),
+				hidetext: getSVG("minus")
 			},
 			callbacks: {
 				init: null,
