@@ -4,6 +4,7 @@ import { mergeDeepObject, normalizeData } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
+import Ajax from "../../../utils/js/components/ajax";
 
 const NAME = "nestable";
 const NAME_KEY = "vg.nestable";
@@ -21,6 +22,58 @@ const CLASS_HANDLE_ICON = "vg-nestable-handle-icon";
 const CLASS_COLLAPSE_TOGGLE = "vg-nestable-collapse-toggle";
 const CLASS_DROP_TARGET = "is-drop-target";
 const CLASS_DROP_DENIED = "is-drop-denied";
+const CLASS_LIVE_REGION = "vg-nestable-live";
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const ALLOWED_SVG_TAGS = new Set([
+	"svg",
+	"g",
+	"path",
+	"line",
+	"polyline",
+	"polygon",
+	"circle",
+	"ellipse",
+	"rect",
+	"defs",
+	"symbol",
+	"title",
+	"use"
+]);
+const ALLOWED_SVG_ATTRS = new Set([
+	"xmlns",
+	"viewbox",
+	"width",
+	"height",
+	"fill",
+	"stroke",
+	"stroke-width",
+	"stroke-linecap",
+	"stroke-linejoin",
+	"stroke-miterlimit",
+	"stroke-dasharray",
+	"stroke-dashoffset",
+	"opacity",
+	"transform",
+	"class",
+	"x",
+	"y",
+	"x1",
+	"y1",
+	"x2",
+	"y2",
+	"cx",
+	"cy",
+	"r",
+	"rx",
+	"ry",
+	"points",
+	"d",
+	"role",
+	"focusable",
+	"aria-hidden",
+	"href",
+	"xlink:href"
+]);
 
 const EVENT_KEY_START = `${NAME_KEY}.start`;
 const EVENT_KEY_CHANGE = `${NAME_KEY}.change`;
@@ -110,6 +163,21 @@ class VGNestable extends BaseModule {
 		this._boundOnMouseDown = this._onMouseDown.bind(this);
 		this._boundOnMouseMove = this._onMouseMove.bind(this);
 		this._boundOnMouseUp = this._onMouseUp.bind(this);
+		this._boundOnPointerDown = this._onPointerDown.bind(this);
+		this._boundOnPointerMove = this._onPointerMove.bind(this);
+		this._boundOnPointerUp = this._onPointerUp.bind(this);
+		this._boundOnPointerCancel = this._onPointerCancel.bind(this);
+		this._boundOnTouchStart = this._onTouchStart.bind(this);
+		this._boundOnTouchMove = this._onTouchMove.bind(this);
+		this._boundOnTouchEnd = this._onTouchEnd.bind(this);
+		this._boundOnTouchCancel = this._onTouchCancel.bind(this);
+		this._boundOnKeyDown = this._onKeyDown.bind(this);
+		this._supportsPointerEvents = typeof window !== "undefined" && "PointerEvent" in window;
+		this._activePointerId = null;
+		this._activeTouchId = null;
+		this._keyboardDraggedItem = null;
+		this._keyboardStartSnapshot = "";
+		this._liveRegion = null;
 
 		if (!this._rootList) {
 			return;
@@ -117,6 +185,7 @@ class VGNestable extends BaseModule {
 
 		this._registerGroup();
 		this.refresh();
+		this._ensureLiveRegion();
 		this._bindEvents();
 		this._emit("init", {
 			payload: this.serialize()
@@ -248,6 +317,17 @@ class VGNestable extends BaseModule {
 			if (handle) {
 				handle.style.cursor = "grab";
 				handle.style.userSelect = "none";
+				handle.style.touchAction = "none";
+
+				if (!["BUTTON", "A", "INPUT"].includes(handle.tagName)) {
+					handle.setAttribute("role", "button");
+				}
+				if (!handle.hasAttribute("tabindex")) {
+					handle.setAttribute("tabindex", "0");
+				}
+				if (!handle.hasAttribute("aria-label")) {
+					handle.setAttribute("aria-label", "Drag item");
+				}
 			}
 
 			this._syncItemCollapse(item);
@@ -295,14 +375,14 @@ class VGNestable extends BaseModule {
 		toggle.setAttribute("data-vg-toggle", "collapse");
 		toggle.setAttribute("data-vg-target", `#${childList.id}`);
 		toggle.setAttribute("aria-controls", childList.id);
-		toggle.setAttribute("data-show-text", this._params.collapse.showtext || getSVG("chevron"));
-		toggle.setAttribute("data-hide-text", this._params.collapse.hidetext || getSVG("chevron"));
+		const safeShowText = this._toSafeHtmlString(this._params.collapse.showtext || getSVG("chevron"));
+		const safeHideText = this._toSafeHtmlString(this._params.collapse.hidetext || getSVG("chevron"));
+		toggle.setAttribute("data-show-text", safeShowText);
+		toggle.setAttribute("data-hide-text", safeHideText);
 
 		const isOpen = childList.classList.contains("show");
 		toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-		toggle.innerHTML = isOpen
-			? (this._params.collapse.hidetext || getSVG("chevron"))
-			: (this._params.collapse.showtext || getSVG("chevron"));
+		toggle.innerHTML = isOpen ? safeHideText : safeShowText;
 
 		VGCollapse.getOrCreateInstance(childList, { toggle: false });
 	}
@@ -342,7 +422,7 @@ class VGNestable extends BaseModule {
 			const icon = document.createElement("span");
 			icon.className = CLASS_HANDLE_ICON;
 			icon.setAttribute("aria-hidden", "true");
-			icon.innerHTML = this._params.handleicon || getSVG('dots-six-vertical') || ":::";
+			icon.innerHTML = this._toSafeHtmlString(this._params.handleicon || getSVG("dots-six-vertical") || ":::");
 			handle.prepend(icon);
 		}
 
@@ -403,60 +483,90 @@ class VGNestable extends BaseModule {
 		this._emit("save", { payload, status: "start" });
 
 		return new Promise((resolve, reject) => {
-			const prevAjax = this._params.ajax || {};
-			const field = this._params.ajax?.field || "items";
-			const method = this._params.ajax?.method || "post";
-
-			this._params.ajax = mergeDeepObject(prevAjax, {
-				route,
-				method,
-				once: false,
-				output: false,
-				data: mergeDeepObject(prevAjax.data || {}, {
-					[field]: payload
-				})
+			const ajaxParams = this._params.ajax || {};
+			const field = ajaxParams.field || "items";
+			const method = String(ajaxParams.method || "post").toLowerCase();
+			const timeout = Number(ajaxParams.timeout || 0);
+			const data = mergeDeepObject(ajaxParams.data || {}, {
+				[field]: payload
 			});
-
-			this._route((status, response) => {
-				this._params.ajax = prevAjax;
-
-				if (status === "success") {
+			const ajax = new Ajax();
+			const callbacks = {
+				onSuccess: (response) => {
 					this._emit("save", {
 						payload,
 						status: "success",
 						response
 					});
 					resolve(response);
-					return;
+				},
+				onError: (error) => {
+					this._emit("save", {
+						payload,
+						status: "error",
+						error
+					});
+					reject(error);
 				}
+			};
 
-				const error = response;
-				this._emit("save", {
-					payload,
-					status: "error",
-					error
-				});
-				reject(error);
-			});
+			setTimeout(() => {
+				switch (method) {
+				case "get":
+					ajax.get(route, callbacks);
+					break;
+				case "delete":
+					ajax.delete(route, callbacks);
+					break;
+				default:
+					ajax.post(route, data, callbacks);
+					break;
+				}
+			}, timeout);
 		});
 	}
 
 	dispose() {
 		if (this._rootList) {
-			this._rootList.removeEventListener("mousedown", this._boundOnMouseDown);
+			if (this._supportsPointerEvents) {
+				this._rootList.removeEventListener("pointerdown", this._boundOnPointerDown);
+			} else {
+				this._rootList.removeEventListener("mousedown", this._boundOnMouseDown);
+				this._rootList.removeEventListener("touchstart", this._boundOnTouchStart);
+			}
+			this._rootList.removeEventListener("keydown", this._boundOnKeyDown);
 		}
 
 		document.removeEventListener("mousemove", this._boundOnMouseMove);
 		document.removeEventListener("mouseup", this._boundOnMouseUp);
+		document.removeEventListener("pointermove", this._boundOnPointerMove);
+		document.removeEventListener("pointerup", this._boundOnPointerUp);
+		document.removeEventListener("pointercancel", this._boundOnPointerCancel);
+		document.removeEventListener("touchmove", this._boundOnTouchMove);
+		document.removeEventListener("touchend", this._boundOnTouchEnd);
+		document.removeEventListener("touchcancel", this._boundOnTouchCancel);
 
 		this._clearDragState();
+		this._clearKeyboardDragState();
+		if (this._liveRegion?.parentElement) {
+			this._liveRegion.remove();
+		}
+		this._liveRegion = null;
 		this._unregisterGroup();
 		this._emit("destroy");
 		super.dispose();
 	}
 
 	_bindEvents() {
+		this._rootList.addEventListener("keydown", this._boundOnKeyDown);
+
+		if (this._supportsPointerEvents) {
+			this._rootList.addEventListener("pointerdown", this._boundOnPointerDown);
+			return;
+		}
+
 		this._rootList.addEventListener("mousedown", this._boundOnMouseDown);
+		this._rootList.addEventListener("touchstart", this._boundOnTouchStart, { passive: false });
 	}
 
 	_resolveRootList() {
@@ -484,14 +594,374 @@ class VGNestable extends BaseModule {
 			return;
 		}
 
-		const item = event.target.closest(this._params.itemselector);
+		this._startInteraction(event.target, event.clientX, event.clientY, event);
+		if (!this._draggedItem) {
+			return;
+		}
+
+		document.addEventListener("mousemove", this._boundOnMouseMove);
+		document.addEventListener("mouseup", this._boundOnMouseUp);
+	}
+
+	_onMouseMove(event) {
+		this._processDragMove(event.clientX, event.clientY, event);
+	}
+
+	_onMouseUp() {
+		document.removeEventListener("mousemove", this._boundOnMouseMove);
+		document.removeEventListener("mouseup", this._boundOnMouseUp);
+		this._finishDrag();
+	}
+
+	_onPointerDown(event) {
+		if (event.pointerType === "mouse" && event.button !== 0) {
+			return;
+		}
+
+		this._startInteraction(event.target, event.clientX, event.clientY, event);
+		if (!this._draggedItem) {
+			return;
+		}
+
+		this._activePointerId = event.pointerId;
+		document.addEventListener("pointermove", this._boundOnPointerMove);
+		document.addEventListener("pointerup", this._boundOnPointerUp);
+		document.addEventListener("pointercancel", this._boundOnPointerCancel);
+	}
+
+	_onPointerMove(event) {
+		if (!this._draggedItem || event.pointerId !== this._activePointerId) {
+			return;
+		}
+
+		this._processDragMove(event.clientX, event.clientY, event);
+	}
+
+	_onPointerUp(event) {
+		if (event.pointerId !== this._activePointerId) {
+			return;
+		}
+
+		this._activePointerId = null;
+		document.removeEventListener("pointermove", this._boundOnPointerMove);
+		document.removeEventListener("pointerup", this._boundOnPointerUp);
+		document.removeEventListener("pointercancel", this._boundOnPointerCancel);
+		this._finishDrag();
+	}
+
+	_onPointerCancel(event) {
+		if (event.pointerId !== this._activePointerId) {
+			return;
+		}
+
+		this._activePointerId = null;
+		document.removeEventListener("pointermove", this._boundOnPointerMove);
+		document.removeEventListener("pointerup", this._boundOnPointerUp);
+		document.removeEventListener("pointercancel", this._boundOnPointerCancel);
+		this._cancelDrag();
+	}
+
+	_onTouchStart(event) {
+		if (this._activeTouchId !== null || !event.changedTouches?.length) {
+			return;
+		}
+
+		const touch = event.changedTouches[0];
+		this._startInteraction(touch.target, touch.clientX, touch.clientY, event);
+		if (!this._draggedItem) {
+			return;
+		}
+
+		this._activeTouchId = touch.identifier;
+		document.addEventListener("touchmove", this._boundOnTouchMove, { passive: false });
+		document.addEventListener("touchend", this._boundOnTouchEnd);
+		document.addEventListener("touchcancel", this._boundOnTouchCancel);
+	}
+
+	_onTouchMove(event) {
+		if (!this._draggedItem || this._activeTouchId === null) {
+			return;
+		}
+
+		const touch = this._findTouchById(event.changedTouches, this._activeTouchId)
+			|| this._findTouchById(event.touches, this._activeTouchId);
+		if (!touch) {
+			return;
+		}
+
+		this._processDragMove(touch.clientX, touch.clientY, event);
+	}
+
+	_onTouchEnd(event) {
+		if (this._activeTouchId === null) {
+			return;
+		}
+
+		const touch = this._findTouchById(event.changedTouches, this._activeTouchId);
+		if (!touch) {
+			return;
+		}
+
+		this._activeTouchId = null;
+		document.removeEventListener("touchmove", this._boundOnTouchMove);
+		document.removeEventListener("touchend", this._boundOnTouchEnd);
+		document.removeEventListener("touchcancel", this._boundOnTouchCancel);
+		this._finishDrag();
+	}
+
+	_onTouchCancel() {
+		if (this._activeTouchId === null) {
+			return;
+		}
+
+		this._activeTouchId = null;
+		document.removeEventListener("touchmove", this._boundOnTouchMove);
+		document.removeEventListener("touchend", this._boundOnTouchEnd);
+		document.removeEventListener("touchcancel", this._boundOnTouchCancel);
+		this._cancelDrag();
+	}
+
+	_onKeyDown(event) {
+		if (this._isDragging || this._draggedItem) {
+			return;
+		}
+
+		const item = event.target?.closest?.(this._params.itemselector);
+		if (!item || !this._rootList.contains(item)) {
+			return;
+		}
+
+		const key = event.key;
+		const isToggleKey = key === " " || key === "Enter";
+
+		if (isToggleKey && !this._keyboardDraggedItem) {
+			if (!this._isKeyboardDragHandle(event.target, item)) {
+				return;
+			}
+
+			event.preventDefault();
+			this._startKeyboardDrag(item);
+			return;
+		}
+
+		if (!this._keyboardDraggedItem) {
+			return;
+		}
+
+		if (item !== this._keyboardDraggedItem && !this._keyboardDraggedItem.contains(item)) {
+			return;
+		}
+
+		if (isToggleKey) {
+			event.preventDefault();
+			this._finishKeyboardDrag();
+			return;
+		}
+
+		if (key === "Escape") {
+			event.preventDefault();
+			this._finishKeyboardDrag({ cancelled: true });
+			return;
+		}
+
+		let moved = false;
+		let moveAnnouncement = "";
+
+		if (key === "ArrowUp") {
+			event.preventDefault();
+			moved = this._moveKeyboardUp(this._keyboardDraggedItem);
+			moveAnnouncement = "Moved up.";
+		} else if (key === "ArrowDown") {
+			event.preventDefault();
+			moved = this._moveKeyboardDown(this._keyboardDraggedItem);
+			moveAnnouncement = "Moved down.";
+		} else if (key === "ArrowRight") {
+			event.preventDefault();
+			moved = this._indentKeyboard(this._keyboardDraggedItem);
+			moveAnnouncement = "Nested into previous item.";
+		} else if (key === "ArrowLeft") {
+			event.preventDefault();
+			moved = this._outdentKeyboard(this._keyboardDraggedItem);
+			moveAnnouncement = "Moved out one level.";
+		}
+
+		if (!moved) {
+			return;
+		}
+
+		this._cleanupEmptyLists();
+		this.refresh();
+		this._keyboardDraggedItem.focus?.();
+		this._emit("move", {
+			item: this._keyboardDraggedItem,
+			targetInstance: this,
+			keyboard: true,
+			mouse: null
+		});
+		if (moveAnnouncement) {
+			this._announce(moveAnnouncement);
+		}
+	}
+
+	_isKeyboardDragHandle(target, item) {
+		if (!target || !item) {
+			return false;
+		}
+
+		const handleSelector = this._params.handleselector;
+		if (!handleSelector) {
+			return true;
+		}
+
+		const handle = target.closest(handleSelector);
+		return !!(handle && item.contains(handle));
+	}
+
+	_startKeyboardDrag(item) {
+		if (!item || this._keyboardDraggedItem) {
+			return;
+		}
+
+		this._keyboardDraggedItem = item;
+		this._keyboardStartSnapshot = JSON.stringify(this.serialize());
+		item.classList.add(CLASS_ITEM_DRAGGING);
+		item.setAttribute("aria-grabbed", "true");
+
+		this._emit("start", {
+			item,
+			payload: this.serialize(),
+			keyboard: true
+		});
+		this._announce("Picked up item. Use arrow keys to move, Enter or Space to drop, Escape to cancel.");
+	}
+
+	_finishKeyboardDrag(options = {}) {
+		if (!this._keyboardDraggedItem) {
+			return;
+		}
+
+		const draggedItem = this._keyboardDraggedItem;
+		const previousPayload = this._keyboardStartSnapshot ? JSON.parse(this._keyboardStartSnapshot) : [];
+		const payload = this.serialize();
+		const changed = this._keyboardStartSnapshot !== JSON.stringify(payload);
+
+		this._emit("drop", {
+			item: draggedItem,
+			payload,
+			previousPayload,
+			changed,
+			targetInstance: this,
+			keyboard: true,
+			cancelled: !!options.cancelled
+		});
+
+		if (changed) {
+			this._emit("change", { payload, previousPayload, keyboard: true });
+		}
+
+		this._emit("end", {
+			payload,
+			changed,
+			keyboard: true,
+			cancelled: !!options.cancelled
+		});
+		if (options.cancelled) {
+			this._announce("Move cancelled.");
+		} else if (changed) {
+			this._announce("Item dropped.");
+		} else {
+			this._announce("Item position unchanged.");
+		}
+
+		if (changed && this._params.ajax?.route) {
+			this.save();
+		}
+
+		this._clearKeyboardDragState();
+	}
+
+	_clearKeyboardDragState() {
+		if (this._keyboardDraggedItem) {
+			this._keyboardDraggedItem.classList.remove(CLASS_ITEM_DRAGGING);
+			this._keyboardDraggedItem.removeAttribute("aria-grabbed");
+		}
+
+		this._keyboardDraggedItem = null;
+		this._keyboardStartSnapshot = "";
+	}
+
+	_moveKeyboardUp(item) {
+		const prev = this._getPreviousItem(item);
+		if (!prev) {
+			this._announce("Cannot move up.");
+			return false;
+		}
+
+		const list = item.parentElement;
+		list.insertBefore(item, prev);
+		return true;
+	}
+
+	_moveKeyboardDown(item) {
+		const next = this._getNextItem(item);
+		if (!next) {
+			this._announce("Cannot move down.");
+			return false;
+		}
+
+		const list = item.parentElement;
+		list.insertBefore(item, next.nextSibling);
+		return true;
+	}
+
+	_indentKeyboard(item) {
+		const parentCandidate = this._getPreviousItem(item);
+		if (!parentCandidate || parentCandidate === item || item.contains(parentCandidate)) {
+			this._announce("Cannot nest here.");
+			return false;
+		}
+
+		const childList = this._getOrCreateChildList(parentCandidate);
+		if (this._isDepthExceeded(childList, item)) {
+			this._announce("Maximum nesting depth reached.");
+			return false;
+		}
+
+		childList.append(item);
+		return true;
+	}
+
+	_outdentKeyboard(item) {
+		const currentList = item.parentElement;
+		const parentItem = currentList?.closest(this._params.itemselector);
+		if (!parentItem) {
+			this._announce("Cannot move left.");
+			return false;
+		}
+
+		const targetList = parentItem.parentElement;
+		if (!targetList) {
+			this._announce("Cannot move left.");
+			return false;
+		}
+
+		targetList.insertBefore(item, parentItem.nextSibling);
+		return true;
+	}
+
+	_startInteraction(target, clientX, clientY, event) {
+		if (this._keyboardDraggedItem) {
+			this._clearKeyboardDragState();
+		}
+
+		const item = target?.closest?.(this._params.itemselector);
 		if (!item || !this._rootList.contains(item)) {
 			return;
 		}
 
 		const handleSelector = this._params.handleselector;
 		if (handleSelector) {
-			const handle = event.target.closest(handleSelector);
+			const handle = target.closest(handleSelector);
 			if (!handle || !item.contains(handle)) {
 				return;
 			}
@@ -500,10 +970,10 @@ class VGNestable extends BaseModule {
 		event.preventDefault();
 
 		this._draggedItem = item;
-		this._mouse.startX = event.clientX;
-		this._mouse.startY = event.clientY;
-		this._mouse.x = event.clientX;
-		this._mouse.y = event.clientY;
+		this._mouse.startX = clientX;
+		this._mouse.startY = clientY;
+		this._mouse.x = clientX;
+		this._mouse.y = clientY;
 		this._isDragging = false;
 		this._startSnapshot = "";
 		this._emit("pointerdown", {
@@ -513,18 +983,15 @@ class VGNestable extends BaseModule {
 				y: this._mouse.y
 			}
 		});
-
-		document.addEventListener("mousemove", this._boundOnMouseMove);
-		document.addEventListener("mouseup", this._boundOnMouseUp);
 	}
 
-	_onMouseMove(event) {
+	_processDragMove(clientX, clientY, event) {
 		if (!this._draggedItem) {
 			return;
 		}
 
-		this._mouse.x = event.clientX;
-		this._mouse.y = event.clientY;
+		this._mouse.x = clientX;
+		this._mouse.y = clientY;
 
 		if (!this._isDragging) {
 			const deltaX = Math.abs(this._mouse.x - this._mouse.startX);
@@ -591,7 +1058,7 @@ class VGNestable extends BaseModule {
 			}
 
 			const childList = targetInstance._getOrCreateChildList(parentCandidate);
-			if (targetInstance._isDepthExceeded(childList)) {
+			if (targetInstance._isDepthExceeded(childList, this._draggedItem)) {
 				this._setDropListState(childList, true);
 				return;
 			}
@@ -610,7 +1077,7 @@ class VGNestable extends BaseModule {
 			}
 
 			const targetList = hoveredItem.parentElement;
-			if (targetInstance._isDepthExceeded(targetList)) {
+			if (targetInstance._isDepthExceeded(targetList, this._draggedItem)) {
 				this._setDropListState(targetList, true);
 				return;
 			}
@@ -632,10 +1099,7 @@ class VGNestable extends BaseModule {
 		this._lastDropInstance = targetInstance;
 	}
 
-	_onMouseUp() {
-		document.removeEventListener("mousemove", this._boundOnMouseMove);
-		document.removeEventListener("mouseup", this._boundOnMouseUp);
-
+	_finishDrag() {
 		if (!this._draggedItem) {
 			return;
 		}
@@ -717,6 +1181,37 @@ class VGNestable extends BaseModule {
 				targetInstance.save();
 			}
 		}
+	}
+
+	_cancelDrag() {
+		if (!this._draggedItem) {
+			return;
+		}
+
+		const hadDrag = this._isDragging;
+		this._clearDragState();
+
+		if (hadDrag) {
+			this._emit("end", {
+				payload: this.serialize(),
+				changed: false,
+				cancelled: true
+			});
+		}
+	}
+
+	_findTouchById(touchList, id) {
+		if (!touchList || id === null || id === undefined) {
+			return null;
+		}
+
+		for (let index = 0; index < touchList.length; index += 1) {
+			if (touchList[index].identifier === id) {
+				return touchList[index];
+			}
+		}
+
+		return null;
 	}
 
 	_startDrag() {
@@ -862,6 +1357,14 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		return sibling;
 	}
 
+	_getNextItem(item) {
+		let sibling = item?.nextElementSibling || null;
+		while (sibling && !sibling.matches(this._params.itemselector)) {
+			sibling = sibling.nextElementSibling;
+		}
+		return sibling;
+	}
+
 	_getOrCreateChildList(item) {
 		let list = item.querySelector(`:scope > ${this._params.listselector}`);
 		if (list) {
@@ -881,9 +1384,11 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		return list;
 	}
 
-	_isDepthExceeded(list) {
+	_isDepthExceeded(list, draggedItem = this._draggedItem) {
 		const listDepth = this._getListDepth(list);
-		return listDepth > Number(this._params.maxdepth || 1);
+		const maxDepth = Number(this._params.maxdepth || 1);
+		const subtreeDepth = this._getItemSubtreeDepth(draggedItem);
+		return (listDepth + subtreeDepth - 1) > maxDepth;
 	}
 
 	_getListDepth(list) {
@@ -904,6 +1409,29 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		}
 
 		return depth;
+	}
+
+	_getItemSubtreeDepth(item) {
+		if (!item) {
+			return 1;
+		}
+
+		const childList = this._getDirectChildBySelector(item, this._params.listselector);
+		if (!childList) {
+			return 1;
+		}
+
+		const childItems = Array.from(childList.children).filter((child) => child.matches(this._params.itemselector));
+		if (!childItems.length) {
+			return 1;
+		}
+
+		const maxChildDepth = childItems.reduce(
+			(depth, childItem) => Math.max(depth, this._getItemSubtreeDepth(childItem)),
+			1
+		);
+
+		return maxChildDepth + 1;
 	}
 
 	_cleanupEmptyLists() {
@@ -958,7 +1486,7 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 	}
 
 	_placePlaceholderWhenExplicitlyNeeded(list, pointerY, targetInstance = this) {
-		if (!list || targetInstance._isDepthExceeded(list)) {
+		if (!list || targetInstance._isDepthExceeded(list, this._draggedItem)) {
 			return;
 		}
 
@@ -1022,6 +1550,137 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		this._isDragging = false;
 		this._currentTargetInstance = this;
 		this._lastDropInstance = this;
+		this._activePointerId = null;
+		this._activeTouchId = null;
+	}
+
+	_ensureLiveRegion() {
+		if (!this._element || this._liveRegion) {
+			return;
+		}
+
+		const live = document.createElement("div");
+		live.className = CLASS_LIVE_REGION;
+		live.setAttribute("aria-live", "polite");
+		live.setAttribute("aria-atomic", "true");
+		live.style.position = "absolute";
+		live.style.width = "1px";
+		live.style.height = "1px";
+		live.style.margin = "-1px";
+		live.style.border = "0";
+		live.style.padding = "0";
+		live.style.clip = "rect(0 0 0 0)";
+		live.style.clipPath = "inset(50%)";
+		live.style.overflow = "hidden";
+		live.style.whiteSpace = "nowrap";
+		this._element.append(live);
+		this._liveRegion = live;
+	}
+
+	_announce(message) {
+		if (!message) {
+			return;
+		}
+
+		this._ensureLiveRegion();
+		if (!this._liveRegion) {
+			return;
+		}
+
+		this._liveRegion.textContent = "";
+		requestAnimationFrame(() => {
+			if (this._liveRegion) {
+				this._liveRegion.textContent = message;
+			}
+		});
+	}
+
+	_toSafeHtmlString(value) {
+		if (value === null || value === undefined) {
+			return "";
+		}
+
+		const content = String(value).trim();
+		if (!content) {
+			return "";
+		}
+
+		if (!content.includes("<")) {
+			return this._escapeHtml(content);
+		}
+
+		const template = document.createElement("template");
+		template.innerHTML = content;
+
+		const sanitizedParts = Array.from(template.content.childNodes)
+			.map((node) => this._sanitizeSvgNode(node))
+			.filter(Boolean)
+			.map((node) => {
+				if (node.nodeType === Node.TEXT_NODE) {
+					return this._escapeHtml(node.textContent || "");
+				}
+				if (node.nodeType === Node.ELEMENT_NODE) {
+					return node.outerHTML;
+				}
+				return "";
+			});
+
+		const sanitized = sanitizedParts.join("");
+		return sanitized || this._escapeHtml(content);
+	}
+
+	_sanitizeSvgNode(node) {
+		if (!node) {
+			return null;
+		}
+
+		if (node.nodeType === Node.TEXT_NODE) {
+			return document.createTextNode(node.textContent || "");
+		}
+
+		if (node.nodeType !== Node.ELEMENT_NODE) {
+			return null;
+		}
+
+		const tagName = node.tagName.toLowerCase();
+		if (!ALLOWED_SVG_TAGS.has(tagName)) {
+			return null;
+		}
+
+		const safeNode = document.createElementNS(SVG_NAMESPACE, tagName);
+
+		Array.from(node.attributes || []).forEach((attr) => {
+			const name = attr.name.toLowerCase();
+			const attrValue = attr.value || "";
+
+			if (!ALLOWED_SVG_ATTRS.has(name) || name.startsWith("on")) {
+				return;
+			}
+
+			if ((name === "href" || name === "xlink:href") && attrValue && !attrValue.startsWith("#")) {
+				return;
+			}
+
+			safeNode.setAttribute(name, attrValue);
+		});
+
+		Array.from(node.childNodes || []).forEach((child) => {
+			const safeChild = this._sanitizeSvgNode(child);
+			if (safeChild) {
+				safeNode.append(safeChild);
+			}
+		});
+
+		return safeNode;
+	}
+
+	_escapeHtml(value) {
+		return String(value)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
 	}
 
 	_serializeList(list) {

@@ -107,6 +107,7 @@
 			width: var(--vg-nestable-toggle-svg-size);
 			height: var(--vg-nestable-toggle-svg-size);
 			transition: var(--vg-nestable-toggle-svg-transition);
+			transform: var(--vg-nestable-toggle-svg-closed-transform);
 
 			path {
 				fill: currentColor;
