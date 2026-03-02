@@ -5,6 +5,7 @@ import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
 import Ajax from "../../../utils/js/components/ajax";
+import Sanitize from "../../../utils/js/components/sanitize";
 
 const NAME = "nestable";
 const NAME_KEY = "vg.nestable";
@@ -23,57 +24,6 @@ const CLASS_COLLAPSE_TOGGLE = "vg-nestable-collapse-toggle";
 const CLASS_DROP_TARGET = "is-drop-target";
 const CLASS_DROP_DENIED = "is-drop-denied";
 const CLASS_LIVE_REGION = "vg-nestable-live";
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-const ALLOWED_SVG_TAGS = new Set([
-	"svg",
-	"g",
-	"path",
-	"line",
-	"polyline",
-	"polygon",
-	"circle",
-	"ellipse",
-	"rect",
-	"defs",
-	"symbol",
-	"title",
-	"use"
-]);
-const ALLOWED_SVG_ATTRS = new Set([
-	"xmlns",
-	"viewbox",
-	"width",
-	"height",
-	"fill",
-	"stroke",
-	"stroke-width",
-	"stroke-linecap",
-	"stroke-linejoin",
-	"stroke-miterlimit",
-	"stroke-dasharray",
-	"stroke-dashoffset",
-	"opacity",
-	"transform",
-	"class",
-	"x",
-	"y",
-	"x1",
-	"y1",
-	"x2",
-	"y2",
-	"cx",
-	"cy",
-	"r",
-	"rx",
-	"ry",
-	"points",
-	"d",
-	"role",
-	"focusable",
-	"aria-hidden",
-	"href",
-	"xlink:href"
-]);
 
 const EVENT_KEY_START = `${NAME_KEY}.start`;
 const EVENT_KEY_CHANGE = `${NAME_KEY}.change`;
@@ -375,8 +325,8 @@ class VGNestable extends BaseModule {
 		toggle.setAttribute("data-vg-toggle", "collapse");
 		toggle.setAttribute("data-vg-target", `#${childList.id}`);
 		toggle.setAttribute("aria-controls", childList.id);
-		const safeShowText = this._toSafeHtmlString(this._params.collapse.showtext || getSVG("chevron"));
-		const safeHideText = this._toSafeHtmlString(this._params.collapse.hidetext || getSVG("chevron"));
+		const safeShowText = Sanitize.toSafeHtmlString(this._params.collapse.showtext || getSVG("chevron"));
+		const safeHideText = Sanitize.toSafeHtmlString(this._params.collapse.hidetext || getSVG("chevron"));
 		toggle.setAttribute("data-show-text", safeShowText);
 		toggle.setAttribute("data-hide-text", safeHideText);
 
@@ -422,7 +372,7 @@ class VGNestable extends BaseModule {
 			const icon = document.createElement("span");
 			icon.className = CLASS_HANDLE_ICON;
 			icon.setAttribute("aria-hidden", "true");
-			icon.innerHTML = this._toSafeHtmlString(this._params.handleicon || getSVG("dots-six-vertical") || ":::");
+			icon.innerHTML = Sanitize.toSafeHtmlString(this._params.handleicon || getSVG("dots-six-vertical") || ":::");
 			handle.prepend(icon);
 		}
 
@@ -1593,94 +1543,6 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 				this._liveRegion.textContent = message;
 			}
 		});
-	}
-
-	_toSafeHtmlString(value) {
-		if (value === null || value === undefined) {
-			return "";
-		}
-
-		const content = String(value).trim();
-		if (!content) {
-			return "";
-		}
-
-		if (!content.includes("<")) {
-			return this._escapeHtml(content);
-		}
-
-		const template = document.createElement("template");
-		template.innerHTML = content;
-
-		const sanitizedParts = Array.from(template.content.childNodes)
-			.map((node) => this._sanitizeSvgNode(node))
-			.filter(Boolean)
-			.map((node) => {
-				if (node.nodeType === Node.TEXT_NODE) {
-					return this._escapeHtml(node.textContent || "");
-				}
-				if (node.nodeType === Node.ELEMENT_NODE) {
-					return node.outerHTML;
-				}
-				return "";
-			});
-
-		const sanitized = sanitizedParts.join("");
-		return sanitized || this._escapeHtml(content);
-	}
-
-	_sanitizeSvgNode(node) {
-		if (!node) {
-			return null;
-		}
-
-		if (node.nodeType === Node.TEXT_NODE) {
-			return document.createTextNode(node.textContent || "");
-		}
-
-		if (node.nodeType !== Node.ELEMENT_NODE) {
-			return null;
-		}
-
-		const tagName = node.tagName.toLowerCase();
-		if (!ALLOWED_SVG_TAGS.has(tagName)) {
-			return null;
-		}
-
-		const safeNode = document.createElementNS(SVG_NAMESPACE, tagName);
-
-		Array.from(node.attributes || []).forEach((attr) => {
-			const name = attr.name.toLowerCase();
-			const attrValue = attr.value || "";
-
-			if (!ALLOWED_SVG_ATTRS.has(name) || name.startsWith("on")) {
-				return;
-			}
-
-			if ((name === "href" || name === "xlink:href") && attrValue && !attrValue.startsWith("#")) {
-				return;
-			}
-
-			safeNode.setAttribute(name, attrValue);
-		});
-
-		Array.from(node.childNodes || []).forEach((child) => {
-			const safeChild = this._sanitizeSvgNode(child);
-			if (safeChild) {
-				safeNode.append(safeChild);
-			}
-		});
-
-		return safeNode;
-	}
-
-	_escapeHtml(value) {
-		return String(value)
-			.replace(/&/g, "&amp;")
-			.replace(/</g, "&lt;")
-			.replace(/>/g, "&gt;")
-			.replace(/"/g, "&quot;")
-			.replace(/'/g, "&#39;");
 	}
 
 	_serializeList(list) {
