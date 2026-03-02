@@ -17,6 +17,7 @@ const CLASS_ITEM_GHOST = "is-drag-ghost";
 const CLASS_PLACEHOLDER = "vg-nestable-placeholder";
 const CLASS_PLACEHOLDER_HIDDEN = "vg-nestable-placeholder-hidden";
 const CLASS_DRAG_ELEMENT = "vg-nestable-drag-element";
+const CLASS_DRAG_LAYER = "vg-nestable-drag-layer";
 const CLASS_INNER = "vg-nestable-inner";
 const CLASS_HANDLE = "vg-nestable-handle";
 const CLASS_HANDLE_ICON = "vg-nestable-handle-icon";
@@ -51,9 +52,9 @@ class VGNestable extends BaseModule {
 			idattribute: "data-id", // Item id attribute used by serialize().
 			childlistclass: "vg-nestable-list", // Class for auto-created child list.
 			handleicon: '', // иконка для хендлера
-			indent: 28, // X offset (px), after which item moves into child level.
+			indent: 50, // X offset (px), after which item moves into child level.
 			maxdepth: 6, // Maximum nesting depth.
-			hoverthreshold: 0.18, // Vertical threshold (0..0.5) around hovered item center.
+			hoverthreshold: 0, // Vertical threshold (0..0.5) around hovered item center.
 			neighborchangethreshold: 0, // Percentage (0..49) of entering adjacent item before position changes.
 			showplaceholder: true, // Show placeholder during drag.
 			group: "",
@@ -95,6 +96,7 @@ class VGNestable extends BaseModule {
 		this._draggedItem = null;
 		this._placeholder = null;
 		this._dragElement = null;
+		this._dragLayer = null;
 		this._isDragging = false;
 		this._startSnapshot = "";
 		this._sourceInstance = this;
@@ -106,9 +108,14 @@ class VGNestable extends BaseModule {
 		this._mouse = {
 			startX: 0,
 			startY: 0,
+			startItemX: 0,
+			grabOffsetX: 0,
+			grabOffsetY: 0,
 			x: 0,
 			y: 0
 		};
+
+		this._previousBodyCursor = "";
 
 		this._boundOnMouseDown = this._onMouseDown.bind(this);
 		this._boundOnMouseMove = this._onMouseMove.bind(this);
@@ -919,9 +926,13 @@ class VGNestable extends BaseModule {
 
 		event.preventDefault();
 
+		const itemRect = item.getBoundingClientRect();
 		this._draggedItem = item;
 		this._mouse.startX = clientX;
 		this._mouse.startY = clientY;
+		this._mouse.startItemX = itemRect.left;
+		this._mouse.grabOffsetX = clientX - itemRect.left;
+		this._mouse.grabOffsetY = clientY - itemRect.top;
 		this._mouse.x = clientX;
 		this._mouse.y = clientY;
 		this._isDragging = false;
@@ -995,14 +1006,29 @@ class VGNestable extends BaseModule {
 			return;
 		}
 
-		if (mode === "child" && hoveredItem) {
-			const parentCandidate = targetInstance._getPreviousItem(hoveredItem) || hoveredItem;
-			if (!parentCandidate) {
-				this._setDropListState(null);
-				return;
+		if (mode === "child") {
+			// Indent: make dragged item a child of the hovered item (when available).
+			// This lets the user "shift right" without needing an extra vertical nudge first.
+			let parentCandidate = null;
+
+			if (hoveredItem) {
+				if (hoveredItem === this._draggedItem || this._draggedItem.contains(hoveredItem)) {
+					this._setDropListState(null);
+					return;
+				}
+				parentCandidate = hoveredItem;
+			} else {
+				this._placePlaceholderWhenExplicitlyNeeded(list, this._mouse.y, targetInstance);
+				const placeholderParent = this._placeholder?.parentElement || null;
+				if (placeholderParent) {
+					parentCandidate = targetInstance._getPreviousItem(this._placeholder);
+					while (parentCandidate && (parentCandidate === this._draggedItem || this._draggedItem.contains(parentCandidate))) {
+						parentCandidate = targetInstance._getPreviousItem(parentCandidate);
+					}
+				}
 			}
 
-			if (parentCandidate === this._draggedItem || this._draggedItem.contains(parentCandidate)) {
+			if (!parentCandidate) {
 				this._setDropListState(null);
 				return;
 			}
@@ -1184,7 +1210,27 @@ class VGNestable extends BaseModule {
 		this._draggedItem.parentElement.insertBefore(this._placeholder, this._draggedItem.nextSibling);
 
 		this._dragElement = this._createDragElement(this._draggedItem);
-		document.body.append(this._dragElement);
+		this._dragLayer = document.createElement("div");
+		this._dragLayer.classList.add(CLASS_DRAG_LAYER);
+		// Keep scoped styles working for the drag preview (e.g. ".vg-nestable .vg-nestable-item ...").
+		if (this._element?.classList) {
+			this._element.classList.forEach((className) => this._dragLayer.classList.add(className));
+		}
+		this._dragLayer.style.position = "fixed";
+		this._dragLayer.style.left = "0";
+		this._dragLayer.style.top = "0";
+		this._dragLayer.style.width = "0";
+		this._dragLayer.style.height = "0";
+		this._dragLayer.style.pointerEvents = "none";
+		this._dragLayer.style.zIndex = "99999";
+		document.body.append(this._dragLayer);
+		this._dragLayer.append(this._dragElement);
+
+		if (typeof document !== "undefined" && document.body) {
+			this._previousBodyCursor = document.body.style.cursor || "";
+			document.body.style.cursor = "grabbing";
+		}
+
 		this._moveDragElement(this._mouse.x, this._mouse.y);
 
 		this._draggedItem.classList.add(CLASS_ITEM_DRAGGING);
@@ -1218,10 +1264,11 @@ class VGNestable extends BaseModule {
 			return;
 		}
 
-		const offsetX = 16;
-		const offsetY = 12;
-		this._dragElement.style.left = `${x + offsetX}px`;
-		this._dragElement.style.top = `${y + offsetY}px`;
+		// Keep the cursor at the same relative point where the user grabbed the item.
+		const left = x - (Number(this._mouse.grabOffsetX) || 0);
+		const top = y - (Number(this._mouse.grabOffsetY) || 0);
+		this._dragElement.style.left = `${left}px`;
+		this._dragElement.style.top = `${top}px`;
 	}
 
 	_getPointerTarget(x, y) {
@@ -1253,7 +1300,12 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 
 	const rect = hoveredItem.getBoundingClientRect();
 	const offsetY = pointerY - rect.top;
-	const offsetX = pointerX - this._mouse.startX;
+	// Use the dragged item's original left edge as baseline, not the pointer-down X.
+	// This makes "shift right to nest" work reliably regardless of where inside the handle the user grabbed.
+	const baseX = Number.isFinite(this._mouse.startItemX) ? this._mouse.startItemX : this._mouse.startX;
+	const offsetX = pointerX - baseX;
+	const indentValue = parseFloat(params.indent);
+	const indent = Number.isFinite(indentValue) ? indentValue : 0;
 	const neighborThresholdPercent = Math.max(
 		0,
 		Math.min(49, Number(params.neighborchangethreshold || 0))
@@ -1264,7 +1316,7 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		const topBorder = rect.height * edgeRatio;
 		const bottomBorder = rect.height * (1 - edgeRatio);
 
-		if (offsetX > params.indent) {
+		if (offsetX > indent) {
 			return "child";
 		}
 
@@ -1284,7 +1336,7 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		Math.max(0.05, Number(params.hoverthreshold || 0.18))
 	);
 
-	if (offsetX > params.indent) {
+	if (offsetX > indent) {
 		return "child";
 	}
 
@@ -1490,6 +1542,14 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 			this._dragElement.remove();
 		}
 
+		if (this._dragLayer && this._dragLayer.parentElement) {
+			this._dragLayer.remove();
+		}
+
+		if (typeof document !== "undefined" && document.body) {
+			document.body.style.cursor = this._previousBodyCursor || "";
+		}
+
 		if (this._placeholder && this._placeholder.parentElement) {
 			this._placeholder.remove();
 		}
@@ -1497,6 +1557,8 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		this._draggedItem = null;
 		this._placeholder = null;
 		this._dragElement = null;
+		this._dragLayer = null;
+		this._previousBodyCursor = "";
 		this._isDragging = false;
 		this._currentTargetInstance = this;
 		this._lastDropInstance = this;
