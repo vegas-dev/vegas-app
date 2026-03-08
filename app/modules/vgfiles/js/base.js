@@ -394,7 +394,10 @@ class VGFilesBase extends BaseModule {
 		$list.appendChild(fragment);
 
 		const $message = Selectors.find(`.${this._getClass('drop-message')}`, this._nodes.drop);
-		if ($message) Classes.remove($message, 'show');
+		if ($message) {
+			if (files.length) Classes.add($message, 'has-files');
+			else Classes.remove($message, 'has-files');
+		}
 
 		this._nodes.drop.appendChild($list);
 		Classes.add(this._nodes.drop, 'active');
@@ -556,7 +559,7 @@ class VGFilesBase extends BaseModule {
 			if ($list) $list.innerHTML = '';
 
 			const $message = Selectors.find(`.${this._getClass('drop-message')}`, this._element);
-			if ($message) Classes.add($message, 'show');
+			if ($message) Classes.remove($message, 'has-files');
 
 			Classes.remove(this._nodes.drop, 'active');
 		}

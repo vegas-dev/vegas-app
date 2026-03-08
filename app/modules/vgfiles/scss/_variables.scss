@@ -17,7 +17,7 @@ $files-map: (
 	drop-border-style: dashed,
 	drop-border-color: var(--vg-secondary),
 	drop-radius: 8px,
-	drop-height: 200px,
+	drop-height: 250px,
 	drop-transition: all 0.2s ease,
 
 	drop-after-font-size: 14px,
@@ -39,12 +39,14 @@ $files-map: (
 	drop-message-color: #999999,
 	drop-message-icon-size: 48px,
 	drop-message-icon-color: #999999,
+	drop-message-padding: 1rem,
+	drop-message-margin: 0 0 1rem,
 
 	// drop list / file tiles
 	drop-list-gap: 8px,
 	drop-list-padding: 0.5rem,
 	drop-file-radius: 6px,
-	drop-file-height: 100px,
+	drop-file-height: 150px,
 	drop-file-flex: calc(25% - 6px),
 
 	drop-remove-offset: 10px,

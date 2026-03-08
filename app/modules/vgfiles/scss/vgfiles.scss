@@ -519,6 +519,20 @@
 			line-height: var(--vg-files-drop-message-line-height);
 			color: var(--vg-files-drop-message-color);
 
+			&.has-files {
+				padding: var(--vg-files-drop-message-padding);
+				margin: var(--vg-files-drop-message-margin);
+				flex-direction: row;
+				position: relative;
+				border: var(--vg-files-drop-border-width) var(--vg-files-drop-border-style) var(--vg-files-drop-border-color);
+				border-radius: var(--vg-files-drop-radius);
+
+				.icon {
+					width: calc(var(--vg-files-drop-message-icon-size) / 2);
+					height: calc(var(--vg-files-drop-message-icon-size) / 2);
+				}
+			}
+
 			&:not(.show) {
 				display: none;
 			}
@@ -616,44 +630,49 @@
 					}
 				}
 
-				&-remove {
+				.file-custom {
 					position: absolute;
 					right: var(--vg-files-drop-remove-offset);
 					top: var(--vg-files-drop-remove-offset);
+					display: flex;
+					flex-direction: column;
+					gap: 8px;
 
-					button {
-						background: var(--vg-body-bg);
-						color: var(--vg-body-color);
-						border: none;
-						cursor: pointer;
-						outline: none;
-						padding: 0;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						transition: all .2s ease-in-out;
-						position: relative;
-						width: var(--vg-files-drop-remove-size);
-						height: var(--vg-files-drop-remove-size);
-						border-radius: var(--vg-files-drop-remove-radius);
-
-						&:hover {
-							background-color: var(--vg-files-drop-remove-hover-bg);
-						}
-
-						i {
-							position: absolute;
-							left: 0;
-							top: 0;
-							width: 100%;
-							height: 100%;
+					.file-remove {
+						button {
+							background: var(--vg-body-bg);
+							color: var(--vg-body-color);
+							border: none;
+							cursor: pointer;
+							outline: none;
+							padding: 0;
 							display: flex;
 							align-items: center;
 							justify-content: center;
+							transition: all .2s ease-in-out;
+							position: relative;
+							width: var(--vg-files-drop-remove-size);
+							height: var(--vg-files-drop-remove-size);
+							border-radius: var(--vg-files-drop-remove-radius);
 
-							svg {
-								path {
-									fill: var(--vg-button-color);
+							&:hover {
+								background-color: var(--vg-files-drop-remove-hover-bg);
+							}
+
+							i {
+								position: absolute;
+								left: 0;
+								top: 0;
+								width: 100%;
+								height: 100%;
+								display: flex;
+								align-items: center;
+								justify-content: center;
+
+								svg {
+									path {
+										fill: var(--vg-button-color);
+									}
 								}
 							}
 						}
