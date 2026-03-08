@@ -22,7 +22,8 @@
     "titles": "Deleting files",
     "title": "Deleting file",
     "descriptions": "Do you really want to delete all uploaded files from the server?",
-    "description": "It will not be possible to return it"
+    "description": "It will not be possible to return it",
+    "drop-active": "Release to upload"
   },
   "alert": {
     "title": "Default header",

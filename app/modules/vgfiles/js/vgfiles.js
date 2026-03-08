@@ -43,6 +43,7 @@ class VGFiles extends VGFilesBase {
             prepend: true,
             replace: true,
             rename: false,
+            smartdrop: false,
             uploads: {
                 mode: 'sequential',
                 route: '',
@@ -113,6 +114,7 @@ class VGFiles extends VGFilesBase {
         if (this._nodes.drop) {
             this._params.image = true;
             this._params.detach = true;
+            this._setDropActiveText();
 
             VGFilesDroppable.getOrCreateInstance(this._nodes.drop, this._params).init();
         }
@@ -120,6 +122,20 @@ class VGFiles extends VGFilesBase {
         this._addEventListenerExtended();
         this._renderStat();
         this._triggerCallback('onInit', { element: this._element });
+    }
+
+    _setDropActiveText() {
+        if (!this._nodes.drop) return;
+
+        const messages = lang_messages(this._params.lang, NAME) || {};
+        const activeText = (this._nodes.drop.getAttribute('data-drop-active-text') || '').trim() || messages['drop-active'] || 'Release to upload';
+        this._nodes.drop.setAttribute('data-drop-active-text', activeText);
+
+        const title = Selectors.find('.vg-files-drop-message .title', this._nodes.drop);
+        if (!title) return;
+
+        const originalText = (title.getAttribute('data-drop-original-text') || '').trim() || (title.textContent || '').trim();
+        title.setAttribute('data-drop-original-text', originalText);
     }
 
     _addExternalFiles(files) {

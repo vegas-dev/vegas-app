@@ -314,7 +314,8 @@ class VGFilesBase extends BaseModule {
 
 	_parseTemplate() {
 		const render = this._render;
-		let tmpl = this.template;
+		const fallbackTemplate = '<li data-file="" class="file"><div class="file-image"></div><div class="file-custom"><div class="file-info"></div><div class="file-remove"></div></div></li>';
+		let tmpl = this.template || fallbackTemplate;
 
 		if (render) {
 			if (render.bufferTemplate) tmpl = render.bufferTemplate;
@@ -322,7 +323,12 @@ class VGFilesBase extends BaseModule {
 
 		const temp = document.createElement('div');
 		temp.innerHTML = tmpl;
-		const liElement = temp.firstElementChild;
+		let liElement = temp.firstElementChild;
+
+		if (!liElement) {
+			temp.innerHTML = fallbackTemplate;
+			liElement = temp.firstElementChild;
+		}
 		const liClasses = liElement.className || '';
 		const liClassList = liClasses ? liClasses.split(' ').filter(cls => cls.trim() !== '') : [];
 
@@ -374,13 +380,8 @@ class VGFilesBase extends BaseModule {
 
 			let parts = [];
 			$itemsTemplate.forEach(tmpl => {
-				if (tmpl.className === 'file-image') {
-					parts.push(this._renderUIImage(file))
-				} else if (tmpl.className === 'file-remove') {
-					parts.push(this._renderUIDetach(file))
-				} else {
-					parts.push(tmpl.element.cloneNode(true));
-				}
+				const part = this._renderTemplatePart(tmpl.element, file, null, { isDrop: true });
+				if (part) parts.push(part);
 			});
 
 			const $li = this._tpl.li(
@@ -430,15 +431,8 @@ class VGFilesBase extends BaseModule {
 
 			let parts = [];
 			$itemsTemplate.forEach(tmpl => {
-				if (tmpl.className === 'file-image') {
-					parts.push(this._renderUIImage(file))
-				} else if (tmpl.className === 'file-info') {
-					parts.push(this._renderUIInfo(file, i))
-				} else if (tmpl.className === 'file-remove') {
-					parts.push(this._renderUIDetach(file))
-				} else {
-					parts.push(tmpl.element.cloneNode(true));
-				}
+				const part = this._renderTemplatePart(tmpl.element, file, i);
+				if (part) parts.push(part);
 			});
 
 			const $li = this._tpl.li(
@@ -449,6 +443,50 @@ class VGFilesBase extends BaseModule {
 		$list.appendChild(fragment);
 
 		Classes.add(this._nodes.info, 'show')
+	}
+
+	_renderTemplatePart(element, file, index = null, options = {}) {
+		if (!element) return null;
+		const { isDrop = false } = options;
+
+		const classList = element?.classList;
+
+		if (classList?.contains('file-image')) return this._renderUIImage(file);
+		if (classList?.contains('file-info')) {
+			if (isDrop) return null;
+			return this._renderUIInfo(file, index);
+		}
+		if (classList?.contains('file-remove')) return this._wrapInFileCustom(this._renderUIDetach(file));
+
+		const $part = element.cloneNode(true);
+
+		this._replaceTemplateSlot($part, '.file-image', () => this._renderUIImage(file));
+		this._replaceTemplateSlot($part, '.file-info', () => isDrop ? null : this._renderUIInfo(file, index));
+		this._replaceTemplateSlot($part, '.file-remove', () => this._renderUIDetach(file));
+
+		return this._wrapInFileCustom($part);
+	}
+
+	_wrapInFileCustom(node) {
+		if (!node) return null;
+		if (node.classList?.contains('file-custom')) return node;
+
+		const wrapper = document.createElement('div');
+		wrapper.className = 'file-custom';
+		wrapper.appendChild(node);
+
+		return wrapper;
+	}
+
+	_replaceTemplateSlot(container, selector, renderer) {
+		const isMatchSelf = container?.matches && container.matches(selector);
+		const matched = isMatchSelf ? [container] : Array.from(container.querySelectorAll(selector));
+
+		matched.forEach((node) => {
+			const replacement = renderer();
+			if (replacement) node.replaceWith(replacement);
+			else node.remove();
+		});
 	}
 
 	_renderUIDetach(file) {

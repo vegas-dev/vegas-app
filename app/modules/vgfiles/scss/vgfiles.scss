@@ -1,4 +1,4 @@
-/**
+﻿/**
 *--------------------------------------------------------------------------
 * Модуль: VGFiles
 * Автор: Vegas DEV
@@ -465,19 +465,6 @@
 			}
 		}
 
-		&::after {
-			content: "Отпустите, чтобы загрузить";
-			position: absolute;
-			bottom: var(--vg-files-drop-after-bottom);
-			left: 0;
-			right: 0;
-			font-size: var(--vg-files-drop-after-font-size);
-			color: var(--vg-files-drop-after-color);
-			opacity: 0;
-			transition: opacity 0.2s;
-			pointer-events: none;
-		}
-
 		&:hover {
 			animation: stripes var(--vg-files-drop-stripes-duration) linear infinite;
 			background-image: linear-gradient(
@@ -497,10 +484,6 @@
 			border-color: var(--vg-files-drop-hover-border-color);
 			background-color: var(--vg-files-drop-hover-bg);
 			box-shadow: var(--vg-files-drop-hover-shadow);
-		}
-
-		&.drop-active::after {
-			opacity: 1;
 		}
 
 		> * {
