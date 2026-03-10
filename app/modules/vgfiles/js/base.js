@@ -138,7 +138,7 @@ class VGFilesBase extends BaseModule {
 			isSingle;
 
 		if (shouldReplaceOnSingle) {
-			this.clear();
+			this.clear(false);
 			this.append(filesArray, true);
 			this._revokeUrls();
 			this._cleanupFakeInputs();
@@ -586,9 +586,11 @@ class VGFilesBase extends BaseModule {
 		Selectors.findAll('[data-vg-files="generated"]', this._element).forEach(el => el.remove());
 	}
 
-	clear() {
+	clear(resetInput = true) {
 		this._revokeUrls();
-		this._resetFileInput();
+		if (resetInput) {
+			this._resetFileInput();
+		}
 		this._cleanupFakeInputs();
 		this._cleanupErrors();
 		this._files = [];

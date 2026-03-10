@@ -84,7 +84,7 @@ const files = new VGFiles(document.querySelector('.vg-files'), {
 | Колбэк | Параметры | Описание |
 |-------|----------|--------|
 | `onInit` | `(data)` | Инициализация завершена |
-| `onChange` | `{ files, input }` | Изменён список файлов |
+| `onChange` | `{ files, input, inputFiles }` | Изменён список файлов (`inputFiles` — снимок исходных `input.files`) |
 | `onUploadStart` | `{ files, total }` | Началась загрузка |
 | `onUploadProgress` | `{ file, progress, bytesSent, totalBytes }` | Прогресс загрузки |
 | `onUploadComplete` | `{ file, response, status, id }` | Файл успешно загружен |

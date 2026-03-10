@@ -209,14 +209,29 @@ class VGFiles extends VGFilesBase {
 
     _handleChange(e) {
         const input = e?.target;
+        const inputFiles = this._snapshotInputFiles(input);
         this.change(input);
 
         if (this._params.ajax) this.uploadAll(this._files);
 
-        const payload = { files: this._files, input: e?.target || e?.src || '' };
+        const payload = {
+            files: this._files,
+            input: e?.target || e?.src || '',
+            inputFiles
+        };
 
         this._triggerCallback('onChange', payload);
-        this._triggerEvent('change', { files: this._files, input: payload.input });
+        this._triggerEvent('change', {
+            files: this._files,
+            input: payload.input,
+            inputFiles: payload.inputFiles
+        });
+    }
+
+    _snapshotInputFiles(input) {
+        const files = input?.files;
+        if (!files?.length) return [];
+        return Array.from(files);
     }
 
     async uploadAll(files) {
