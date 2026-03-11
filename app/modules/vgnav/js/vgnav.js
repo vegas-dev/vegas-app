@@ -52,6 +52,10 @@ class VGNav extends BaseModule {
 			breakpoint: 'lg',
 			placement: 'horizontal',
 			hover: true,
+			hoversmoothfirstlevel: {
+				enable: false,
+				horizontalOnly: true
+			},
 			animation: {
 				enable: true,
 				timeout: 700
@@ -98,6 +102,7 @@ class VGNav extends BaseModule {
 		}
 
 		this._openDrops = new Map();
+		this._pointerPosition = null;
 		this._handleScroll = this._handleScroll.bind(this);
 		this._handleResize = this._handleResize.bind(this);
 	}
@@ -333,6 +338,50 @@ class VGNav extends BaseModule {
 		return vertInView && horInView;
 	}
 
+	_updatePointerPosition(event) {
+		if (!event || typeof event.clientX !== 'number' || typeof event.clientY !== 'number') return;
+		this._pointerPosition = {
+			x: event.clientX,
+			y: event.clientY
+		};
+	}
+
+	_isHorizontalPointerMove(event) {
+		if (!this._pointerPosition || !event) return false;
+
+		const dx = event.clientX - this._pointerPosition.x;
+		const dy = event.clientY - this._pointerPosition.y;
+
+		return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 0;
+	}
+
+	_isFirstLevelDropdown(drop) {
+		return !!drop && !drop.closest('.dropdown-content');
+	}
+
+	_hasDirectDropdownContent(drop) {
+		if (!drop || !drop.children) return false;
+		return [...drop.children].some((child) => child.classList && child.classList.contains('dropdown-content'));
+	}
+
+	_isAdjacentDropdown(drop, relatedDrop) {
+		if (!drop || !relatedDrop) return false;
+		if (drop.parentElement !== relatedDrop.parentElement) return false;
+		return drop.previousElementSibling === relatedDrop || drop.nextElementSibling === relatedDrop;
+	}
+
+	_canSmoothSwitchFirstLevel(event, currentDrop, relatedDrop) {
+		const smoothParams = this._params.hoversmoothfirstlevel || {};
+		if (!smoothParams.enable) return false;
+		if (!currentDrop || !relatedDrop || currentDrop === relatedDrop) return false;
+		if (!this._isFirstLevelDropdown(currentDrop) || !this._isFirstLevelDropdown(relatedDrop)) return false;
+		if (!this._hasDirectDropdownContent(currentDrop) || !this._hasDirectDropdownContent(relatedDrop)) return false;
+		if (!this._isAdjacentDropdown(currentDrop, relatedDrop)) return false;
+		if (smoothParams.horizontalOnly && !this._isHorizontalPointerMove(event)) return false;
+
+		return true;
+	}
+
 	static init(element, params = {}) {
 		const instance = VGNav.getOrCreateInstance(element, params);
 		instance.build();
@@ -340,12 +389,15 @@ class VGNav extends BaseModule {
 		let drops = Selectors.findAll('.dropdown', instance.navigation);
 
 		if (instance._params.hover && !isMobileDevice()) {
+			EventHandler.on(instance.navigation, `mousemove.${NAME_KEY}.data.api`, function (event) {
+				instance._updatePointerPosition(event);
+			});
+
 			[...drops].forEach(function (el) {
 				let currentElem = null;
 
 				EventHandler.on(el, EVENT_MOUSEOVER_DATA_API, function (event) {
 					if (currentElem) return;
-					VGNav.hideOpenDrops(event);
 
 					let target = event.target.closest('.dropdown');
 					if (!target) return;
@@ -353,17 +405,31 @@ class VGNav extends BaseModule {
 					if (!instance.navigation.contains(target)) return;
 					currentElem = target;
 
+					const previousDrop = event.relatedTarget?.closest('.dropdown');
+					const useSmoothSwitch = instance._canSmoothSwitchFirstLevel(event, target, previousDrop);
+
+					if (!useSmoothSwitch) {
+						VGNav.hideOpenDrops(event);
+					}
+
 					let relatedTarget = {
 						relatedTarget: target
 					};
 
 					instance.show(relatedTarget);
+
+					if (useSmoothSwitch && previousDrop && previousDrop.classList.contains(CLASS_NAME_ACTIVE)) {
+						instance.hide({ relatedTarget: previousDrop });
+					}
+
+					instance._updatePointerPosition(event);
 				});
 
 				EventHandler.on(el, EVENT_MOUSEOUT_DATA_API, function (event) {
 					if (!currentElem) return;
 
-					let relatedTarget = event.relatedTarget?.closest('.dropdown'),
+					let nextDrop = event.relatedTarget?.closest('.dropdown'),
+						relatedTarget = nextDrop,
 						elm = currentElem;
 
 					while (relatedTarget) {
@@ -371,8 +437,15 @@ class VGNav extends BaseModule {
 						relatedTarget = relatedTarget.parentNode;
 					}
 
+					if (instance._canSmoothSwitchFirstLevel(event, elm, nextDrop)) {
+						currentElem = null;
+						instance._updatePointerPosition(event);
+						return;
+					}
+
 					currentElem = null;
 					instance.hide({ relatedTarget: relatedTarget, elm: elm });
+					instance._updatePointerPosition(event);
 				});
 			});
 		}
