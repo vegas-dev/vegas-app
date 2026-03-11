@@ -209,6 +209,56 @@ class VGFilesBase extends BaseModule {
 		return `${file.name}-${file.size}-${file.type}`;
 	}
 
+	_getFileCustomData(file) {
+		const customData = file?.customData;
+		if (!customData || typeof customData !== 'object' || Array.isArray(customData)) return {};
+		return customData;
+	}
+
+	_toDataAttributeKey(key) {
+		if (!key) return '';
+
+		return String(key)
+			.replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+			.replace(/[_\s]+/g, '-')
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			.replace(/-+/g, '-')
+			.replace(/^-|-$/g, '')
+			.toLowerCase();
+	}
+
+	_toDataAttributeValue(value) {
+		if (value === undefined || value === null || value === '') return null;
+		if (typeof value === 'object') {
+			try {
+				return JSON.stringify(value);
+			} catch (e) {
+				return String(value);
+			}
+		}
+		return value;
+	}
+
+	_buildFileDataAttributes(file, baseAttrs = {}) {
+		const attrs = { ...baseAttrs };
+		const customData = this._getFileCustomData(file);
+
+		Object.entries(customData).forEach(([key, value]) => {
+			const attrKey = this._toDataAttributeKey(key);
+			if (!attrKey) return;
+
+			const attrName = `data-${attrKey}`;
+			if (Object.prototype.hasOwnProperty.call(attrs, attrName)) return;
+
+			const attrValue = this._toDataAttributeValue(value);
+			if (attrValue === null) return;
+
+			attrs[attrName] = attrValue;
+		});
+
+		return attrs;
+	}
+
 	_filterFiles(files) {
 		this._errors.clear();
 		const { count, sizes, total } = this._params.limits;
@@ -385,7 +435,13 @@ class VGFilesBase extends BaseModule {
 			});
 
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, 'data-id': file.id || '', class: 'file ' + classes.join(' ') }, parts
+				this._buildFileDataAttributes(file, {
+					'data-name': file.name,
+					'data-size': file.size ?? 0,
+					'data-id': file.id || '',
+					class: 'file ' + classes.join(' ')
+				}),
+				parts
 			);
 
 			fragment.appendChild($li);
@@ -442,7 +498,14 @@ class VGFilesBase extends BaseModule {
 			});
 
 			const $li = this._tpl.li(
-				{ 'data-name': file.name, 'data-size': file.size, 'data-type': file.type, 'data-id': file.id || '', class: 'file ' + classes.join(' ') + ' ' }, parts
+				this._buildFileDataAttributes(file, {
+					'data-name': file.name,
+					'data-size': file.size ?? 0,
+					'data-type': file.type || '',
+					'data-id': file.id || '',
+					class: 'file ' + classes.join(' ') + ' '
+				}),
+				parts
 			);
 			fragment.appendChild($li);
 		});

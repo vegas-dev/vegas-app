@@ -1,7 +1,7 @@
 import { isElement, normalizeData } from "../../../utils/js/functions";
 import Params from "../../../utils/js/components/params";
 import Selectors from "../../../utils/js/dom/selectors";
-import { Classes, Manipulator } from "../../../utils/js/dom/manipulator";
+import { Manipulator } from "../../../utils/js/dom/manipulator";
 
 class VGFilesTemplateRender {
 	constructor(vgFilesInstance, element, params = {}) {
@@ -38,26 +38,98 @@ class VGFilesTemplateRender {
 		const $items = Array.from($list.children).filter(li => li.tagName === 'LI');
 		if ($items.length === 0) return false;
 
-		// Сохраняем шаблон только один раз
 		this._setTemplateInBuffer($items);
-
 		if (!this.bufferTemplate) return false;
 
-		// Парсим данные файлов
 		this.parsedFiles = $items
 			.map(li => {
 				const rawData = Manipulator.get(li, 'data-file');
 				if (!rawData) return null;
 
-				const dataFile = normalizeData(rawData);
-				const requiredKeys = ['id', 'name', 'size', 'type', 'src'];
-				const isValid = requiredKeys.every(key => dataFile.hasOwnProperty(key));
-
-				return isValid ? dataFile : null;
+				return this._parseDataFile(rawData);
 			})
-			.filter(Boolean); // Убираем null
+			.filter(Boolean);
 
 		return true;
+	}
+
+	_parseDataFile(rawData) {
+		const dataFile = normalizeData(rawData);
+		if (!dataFile || typeof dataFile !== 'object' || Array.isArray(dataFile)) return null;
+
+		const binaryMeta = this._extractBinaryMeta(dataFile);
+		const name = this._toStringOrNull(dataFile.name);
+		const id = this._toStringOrNull(dataFile.id);
+		const src = this._toStringOrNull(dataFile.src);
+		const type = this._toStringOrNull(dataFile.type) || binaryMeta.type || 'application/octet-stream';
+		const size = this._toNumberOrNull(dataFile.size) ?? binaryMeta.size ?? 0;
+		const lastModified = this._toNumberOrNull(dataFile.lastModified ?? dataFile['last-modified']) ?? binaryMeta.lastModified ?? Date.now();
+
+		const result = {
+			id,
+			name,
+			size,
+			type,
+			src,
+			lastModified
+		};
+
+		if (dataFile.image !== undefined && dataFile.image !== null && dataFile.image !== '') {
+			result.image = dataFile.image;
+		}
+
+		const requiredKeys = ['id', 'name', 'size', 'type', 'src'];
+		const isValid = requiredKeys.every((key) => {
+			const value = result[key];
+			if (key === 'size') return Number.isFinite(value);
+			return value !== undefined && value !== null && value !== '';
+		});
+
+		if (!isValid) return null;
+
+		const customData = {};
+		const reserved = new Set(['id', 'name', 'size', 'type', 'src', 'image', 'lastModified', 'last-modified']);
+
+		Object.entries(dataFile).forEach(([key, value]) => {
+			if (reserved.has(key)) return;
+			if (value === undefined || value === null || value === '') return;
+			customData[key] = value;
+		});
+
+		if (Object.keys(customData).length) {
+			result.customData = customData;
+		}
+
+		return result;
+	}
+
+	_extractBinaryMeta(dataFile) {
+		const binary = dataFile.file || dataFile.blob || dataFile.originFile || null;
+		if (!(binary instanceof Blob)) return {};
+
+		const size = this._toNumberOrNull(binary.size);
+		const type = this._toStringOrNull(binary.type);
+		const lastModified = (binary instanceof File)
+			? this._toNumberOrNull(binary.lastModified)
+			: null;
+
+		return {
+			size: size ?? null,
+			type: type || null,
+			lastModified: lastModified ?? null
+		};
+	}
+
+	_toStringOrNull(value) {
+		if (value === undefined || value === null) return null;
+		const normalized = String(value).trim();
+		return normalized ? normalized : null;
+	}
+
+	_toNumberOrNull(value) {
+		if (value === undefined || value === null || value === '') return null;
+		const normalized = Number(value);
+		return Number.isFinite(normalized) ? normalized : null;
 	}
 
 	_setTemplateInBuffer($items) {
@@ -65,7 +137,6 @@ class VGFilesTemplateRender {
 
 		const firstItem = $items[0];
 
-		// Если нет data-file — шаблон извлекается и элемент удаляется
 		if (!Manipulator.has(firstItem, 'data-file')) {
 			this.bufferTemplate = firstItem.outerHTML;
 			firstItem.remove();

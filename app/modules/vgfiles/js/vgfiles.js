@@ -144,31 +144,53 @@ class VGFiles extends VGFilesBase {
         if (!Array.isArray(files) || !files.length) return;
 
         files.forEach(fileData => {
-            const file = new File([""], fileData.name, {
-                type: fileData.type || "application/octet-stream",
-                lastModified: fileData.lastModified || Date.now()
-            });
+            if (!fileData?.name) return;
 
-            // Добавляем ID, если он есть
-            Object.defineProperty(file, 'id', {
-                value: fileData.id,
-                writable: true,
-                enumerable: true
-            });
+            const fileOptions = {};
+            if (typeof fileData.type === 'string') fileOptions.type = fileData.type;
+            if (Number.isFinite(fileData.lastModified)) fileOptions.lastModified = fileData.lastModified;
 
-            // Добавляем Size, если он есть
-            Object.defineProperty(file, 'size', {
-                value: fileData.size,
-                writable: true,
-                enumerable: true
-            });
+            const file = new File([""], fileData.name, fileOptions);
 
-            // Добавляем Src, если он есть
-            Object.defineProperty(file, 'src', {
-                value: fileData.src,
-                writable: true,
-                enumerable: true
-            });
+            if (fileData.id !== undefined && fileData.id !== null && fileData.id !== '') {
+                Object.defineProperty(file, 'id', {
+                    value: fileData.id,
+                    writable: true,
+                    enumerable: true
+                });
+            }
+
+            if (Number.isFinite(fileData.size)) {
+                Object.defineProperty(file, 'size', {
+                    value: fileData.size,
+                    writable: true,
+                    enumerable: true
+                });
+            }
+
+            if (fileData.src !== undefined && fileData.src !== null && fileData.src !== '') {
+                Object.defineProperty(file, 'src', {
+                    value: fileData.src,
+                    writable: true,
+                    enumerable: true
+                });
+            }
+
+            if (fileData.image !== undefined && fileData.image !== null && fileData.image !== '') {
+                Object.defineProperty(file, 'image', {
+                    value: fileData.image,
+                    writable: true,
+                    enumerable: true
+                });
+            }
+
+            if (fileData.customData && typeof fileData.customData === 'object' && !Array.isArray(fileData.customData)) {
+                Object.defineProperty(file, 'customData', {
+                    value: fileData.customData,
+                    writable: true,
+                    enumerable: true
+                });
+            }
 
             const fileKey = this._getFileKey(file);
 
@@ -684,15 +706,15 @@ class VGFiles extends VGFilesBase {
 
         return this._tpl.button([
             this._tpl.i({}, icon, { isHTML: true })
-        ], 'button', {
+        ], 'button', this._buildFileDataAttributes(file, {
             type: 'button',
             [action]: 'file',
             'data-name': file.name,
-            'data-size': file.size,
-            'data-type': file.type,
-            'data-last-modified': file.lastModified,
+            'data-size': file.size ?? 0,
+            'data-type': file.type || '',
+            'data-last-modified': file.lastModified || '',
             'data-id': file.id || ''
-        });
+        }));
     }
 
     _renderStat() {
