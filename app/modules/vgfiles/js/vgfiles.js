@@ -106,8 +106,10 @@ class VGFiles extends VGFilesBase {
         if (this.isRenderNonInit) return;
         this.isRenderNonInit = this._render.init();
 
-        if (this._render.parsedFiles.length) {
-            this._addExternalFiles(this._render.parsedFiles);
+        const parsedFiles = this._render.parsedFiles;
+
+        if (parsedFiles.length) {
+            this._addExternalFiles(parsedFiles);
         }
 
         if (this._params.allowed && !this._params.ajax) this._params.detach = false;
@@ -121,7 +123,7 @@ class VGFiles extends VGFilesBase {
 
         this._addEventListenerExtended();
         this._renderStat();
-        this._triggerCallback('onInit', { element: this._element });
+        this._triggerCallback('onInit', { element: this._element, files: parsedFiles || [] });
     }
 
     _setDropActiveText() {
