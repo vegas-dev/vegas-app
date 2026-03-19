@@ -885,7 +885,14 @@ class VGFiles extends VGFilesBase {
         this._sortable = null;
 
         this.clear();
-        if (this._uploader) this._uploader.destroy();
+        if (this._uploader) {
+            if (typeof this._uploader.destroy === 'function') {
+                this._uploader.destroy();
+            } else {
+                if (typeof this._uploader.clear === 'function') this._uploader.clear();
+                if (typeof this._uploader.offAll === 'function') this._uploader.offAll();
+            }
+        }
         super.dispose();
     }
 }
