@@ -53,8 +53,8 @@ class VGFiles extends VGFilesBase {
                 retryDelay: 1000,
             },
             removes: {
-                all: { route: '', alert: true, toast: true },
-                single: { route: '', alert: true, toast: true }
+                all: { route: '', alert: true, toast: true, confirm: null },
+                single: { route: '', alert: true, toast: true, confirm: null }
             },
             sortable: {
                 enabled: false,
@@ -559,6 +559,81 @@ class VGFiles extends VGFilesBase {
         this.upload(fileToRetry);
     }
 
+    _runAjaxRequest(paramsAjax, callback) {
+        const previousAjax = this._params.ajax;
+        this._params.ajax = paramsAjax;
+
+        this._route((status, data) => {
+            this._params.ajax = previousAjax;
+            callback(status, data);
+        });
+    }
+
+    _normalizeConfirmResult(result) {
+        if (result === true) return { accepted: true, data: null };
+        if (result === false || result == null) return { accepted: false, data: null };
+
+        if (typeof result === 'object') {
+            if (typeof result.accepted === 'boolean') {
+                return { accepted: result.accepted, data: result.data ?? null };
+            }
+            if (Object.prototype.hasOwnProperty.call(result, 'data')) {
+                return { accepted: true, data: result.data ?? null };
+            }
+        }
+
+        return { accepted: Boolean(result), data: null };
+    }
+
+    _runDefaultRemoveConfirm(trigger, params) {
+        return new Promise((resolve) => {
+            VGAlert.confirm(trigger, {
+                lang: params.lang,
+                ajax: params.ajax,
+                buttons: params.buttons,
+                message: params.message
+            });
+
+            EventHandler.one(trigger, 'vg.alert.accept', (event) => {
+                resolve({ accepted: true, data: event?.vgalert?.data ?? null });
+            });
+
+            EventHandler.one(trigger, 'vg.alert.reject', () => {
+                resolve({ accepted: false, data: null });
+            });
+        });
+    }
+
+    _confirmRemove(type, trigger, ajax, message) {
+        const buttons = {
+            agree: {
+                text: lang_buttons(this._params.lang, NAME)['agree'],
+                class: ["btn-danger"],
+            },
+            cancel: {
+                text: lang_buttons(this._params.lang, NAME)['cancel'],
+                class: ["btn-outline-danger"],
+            },
+        };
+
+        const confirmParams = {
+            type,
+            trigger,
+            lang: this._params.lang,
+            ajax,
+            buttons,
+            message
+        };
+
+        const customConfirm = this._params?.removes?.[type]?.confirm;
+        if (typeof customConfirm === 'function') {
+            return Promise.resolve(customConfirm(confirmParams, this))
+                .then((result) => this._normalizeConfirmResult(result));
+        }
+
+        return this._runDefaultRemoveConfirm(trigger, confirmParams);
+    }
+
     removeFile(button) {
         const name = normalizeData(Manipulator.get(button, 'data-name'));
         const size = normalizeData(Manipulator.get(button, 'data-size'));
@@ -593,7 +668,9 @@ class VGFiles extends VGFilesBase {
         if (this._params.ajax && this._params.removes.single.route) {
             if (!id) return;
 
-            const route = this._params.removes.single.route + '/' + encodeURIComponent(id);
+            const routeBase = this._params.removes.single.route;
+            const routeSeparator = routeBase.includes('?') ? '&' : '?';
+            const route = `${routeBase}${routeSeparator}id=${encodeURIComponent(id)}`;
             const paramsAjax = {
                 route: route,
                 method: 'delete'
@@ -615,31 +692,27 @@ class VGFiles extends VGFilesBase {
             };
 
             if (this._params.removes.single.alert) {
-                VGAlert.confirm(button, {
-                    lang: this._params.lang,
-                    ajax: paramsAjax,
-                    buttons: {
-                        agree: {
-                            text: lang_buttons(this._params.lang, NAME)['agree'],
-                            class: ["btn-danger"],
-                        },
-                        cancel: {
-                            text: lang_buttons(this._params.lang, NAME)['cancel'],
-                            class: ["btn-outline-danger"],
-                        },
-                    },
-                    message: {
-                        title: lang_messages(this._params.lang, NAME)['title'],
-                        description: lang_messages(this._params.lang, NAME)['description']
-                    }
-                });
+                const message = {
+                    title: lang_messages(this._params.lang, NAME)['title'],
+                    description: lang_messages(this._params.lang, NAME)['description']
+                };
 
-                EventHandler.one(button, 'vg.alert.accept', (event) => {
-                    _completeRemoveFile(event.vgalert.data);
-                });
+                this._confirmRemove('single', button, paramsAjax, message)
+                    .then((result) => {
+                        if (!result.accepted) return;
+
+                        if (result.data) {
+                            _completeRemoveFile(result.data);
+                            return;
+                        }
+
+                        this._runAjaxRequest(paramsAjax, (status, data) => {
+                            _completeRemoveFile(data);
+                        });
+                    })
+                    .catch(() => {});
             } else {
-                this._params.ajax = paramsAjax;
-                this._route((status, data) => {
+                this._runAjaxRequest(paramsAjax, (status, data) => {
                     _completeRemoveFile(data);
                 });
             }
@@ -860,33 +933,33 @@ EventHandler.on(document, `click.${NAME_KEY}.data.api`, SELECTOR_DATA_DISMISS_AL
         };
 
         if (instance._params.removes.all.alert) {
-            VGAlert.confirm(e.target, {
-                lang: instance._params.lang,
-                ajax: paramsAjax,
-                buttons: {
-                    agree: {
-                        text: lang_buttons(instance._params.lang, NAME)['agree'],
-                        class: ["btn-danger"],
-                    },
-                    cancel: {
-                        text: lang_buttons(instance._params.lang, NAME)['cancel'],
-                        class: ["btn-outline-danger"],
-                    },
-                },
-                message: {
-                    title: lang_messages(instance._params.lang, NAME)['title'],
-                    description: lang_messages(instance._params.lang, NAME)['descriptions']
-                }
-            });
+            const message = {
+                title: lang_messages(instance._params.lang, NAME)['title'],
+                description: lang_messages(instance._params.lang, NAME)['descriptions']
+            };
 
-            EventHandler.one(e.target, 'vg.alert.accept', (event) => {
-                if (instance._params.removes.all.toast) {
-                    VGToast.run(event.vgalert.data?.response?.message);
-                }
-                _completeClearAll();
-            });
+            instance._confirmRemove('all', e.target, paramsAjax, message)
+                .then((result) => {
+                    if (!result.accepted) return;
+
+                    if (result.data) {
+                        if (instance._params.removes.all.toast) {
+                            VGToast.run(result.data?.response?.message);
+                        }
+                        _completeClearAll();
+                        return;
+                    }
+
+                    instance._runAjaxRequest(paramsAjax, (status, data) => {
+                        if (instance._params.removes.all.toast && data?.response?.message) {
+                            VGToast.run(data.response.message);
+                        }
+                        _completeClearAll();
+                    });
+                })
+                .catch(() => {});
         } else {
-            instance._route(paramsAjax, (status, data) => {
+            instance._runAjaxRequest(paramsAjax, (status, data) => {
                 if (instance._params.removes.all.toast && data?.response?.message) {
                     VGToast.run(data.response.message);
                 }

@@ -63,8 +63,12 @@ const files = new VGFiles(document.querySelector('.vg-files'), {
 | `uploads.retryDelay` | `number` | `1000` | Задержка между попытками (мс) |
 | `removes.single.route` | `string` | `''` | URL для удаления одного файла |
 | `removes.all.route` | `string` | `''` | URL для удаления всех файлов |
+| `removes.all.alert` | `boolean` | `true` | Показывать подтверждение при удалении всех файлов |
+| `removes.all.toast` | `boolean` | `true` | Показывать уведомление после удаления всех файлов |
+| `removes.all.confirm` | `function \| null` | `null` | Кастомный confirm-обработчик для удаления всех файлов |
 | `removes.single.alert` | `boolean` | `true` | Показывать подтверждение при удалении |
 | `removes.single.toast` | `boolean` | `true` | Показывать уведомление после удаления |
+| `removes.single.confirm` | `function \| null` | `null` | Кастомный confirm-обработчик для удаления одного файла |
 | `sortable.enabled` | `boolean` | `false` | Включить сортировку |
 | `sortable.route` | `string` | `''` | URL для сохранения порядка файлов |
 | `callbacks` | `object` | `null` | Колбэки на события (см. ниже) |
@@ -117,6 +121,33 @@ const files = new VGFiles(document.querySelector('.vg-files'), {
 - **Очистка всех**: кнопка с `data-vg-dismiss="vg-files"` → `clear()`.
 
 Поддержка подтверждения через `VGAlert` и уведомлений через `VGToast`.
+
+### Кастомный confirm для удаления
+
+Если задан `removes.single.confirm` или `removes.all.confirm`, модуль вызовет вашу функцию вместо дефолтного `VGAlert`.
+
+```js
+new VGFiles(document.querySelector('.vg-files'), {
+  ajax: true,
+  removes: {
+    single: {
+      route: '/api/file/remove',
+      alert: true,
+      confirm: async ({ message }) => {
+        const accepted = window.confirm(`${message.title}\n${message.description}`);
+        return { accepted };
+      }
+    }
+  }
+});
+```
+
+Контракт функции confirm:
+- Вход: объект `{ type, trigger, lang, ajax, buttons, message }`.
+- Выход:
+`true` или `{ accepted: true }` — подтвердить;
+`false` или `{ accepted: false }` — отменить;
+`{ accepted: true, data }` — подтвердить и передать готовый ответ удаления (если запрос уже выполнен внутри confirm).
 
 ---
 
