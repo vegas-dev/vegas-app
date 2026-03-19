@@ -351,6 +351,7 @@ class VGModal extends BaseModule {
 			for (const elm of elements) {
 				switch (elm.tagName) {
 					case 'INPUT': elm.value = item.value; break;
+					case 'FORM': elm.action = item.value; break;
 					case 'IMG': Manipulator.set(elm, 'src', item.value); break;
 					default: elm.innerHTML = item.value;
 				}
