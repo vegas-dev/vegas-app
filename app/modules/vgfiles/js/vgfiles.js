@@ -638,6 +638,18 @@ class VGFiles extends VGFilesBase {
         const name = normalizeData(Manipulator.get(button, 'data-name'));
         const size = normalizeData(Manipulator.get(button, 'data-size'));
         const id = normalizeData(Manipulator.get(button, 'data-id'));
+        const emitRemove = () => {
+            const payload = {
+                button: button,
+                name: name,
+                size: size,
+                id: id,
+                remaining: this._files.length
+            };
+
+            this._triggerCallback('onRemoveFile', payload);
+            this._triggerEvent('remove', payload);
+        };
 
         const fileToRemove = this._files.find(f => f.name === name && f.size === size);
         if (fileToRemove) {
@@ -689,6 +701,8 @@ class VGFiles extends VGFilesBase {
                 if (this._params.removes.single.toast) {
                     VGToast.run(data?.response?.message);
                 }
+
+                emitRemove();
             };
 
             if (this._params.removes.single.alert) {
@@ -720,20 +734,10 @@ class VGFiles extends VGFilesBase {
             this._files = this._files.filter(f => !(f.name === name && f.size === size));
             this._updateStatsAfterRemove();
             this._files.length ? this.build() : this.clear(true);
+            emitRemove();
         }
 
         this._resetFileInput();
-
-        const payload = {
-            button: button,
-            name: name,
-            size: size,
-            id: id,
-            remaining: this._files.length
-        };
-
-        this._triggerCallback('onRemoveFile', payload);
-        this._triggerEvent('remove', payload);
     }
 
     _updateStatsAfterRemove() {
