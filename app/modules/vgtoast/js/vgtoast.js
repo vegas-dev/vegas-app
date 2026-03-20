@@ -281,6 +281,7 @@ class VGToast extends BaseModule {
 	 */
 	hide() {
 		if (isDisabled(this._element)) return;
+		this._clearTimeout();
 
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
@@ -289,14 +290,15 @@ class VGToast extends BaseModule {
 
 		setTimeout(() => {
 			this._element.classList.remove(CLASS_NAME_SHOW);
+			if (this._params.stack.enable) {
+				this._setPlacement();
+			}
 
 			const completeCallback = () => {
-				document.body.classList.remove(CLASS_NAME_OPEN);
-				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
-
-				if (this._params.stack.enable) {
-					this._setPlacement();
+				if (!Selectors.findOne('.vg-toast.show')) {
+					document.body.classList.remove(CLASS_NAME_OPEN);
 				}
+				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 
 				if (!this._params.static) {
 					this.dispose();
@@ -346,7 +348,6 @@ class VGToast extends BaseModule {
 	 */
 	_enableStack() {
 		const placement = this._params.placement;
-		const isVerticalCenter = placement.includes('center');
 		const isTop = placement.includes('top');
 		const isBottom = !isTop; // по умолчанию снизу
 
@@ -389,15 +390,24 @@ class VGToast extends BaseModule {
 	 * @private
 	 */
 	_setPlacement() {
-		const elms = this._enableStack();
-		const isCenter = this._params.placement.includes('center');
-		const isLeft = this._params.placement.includes('left');
-		const isRight = this._params.placement.includes('right');
+		const stackItems = this._enableStack();
 		const isTop = this._params.placement.includes('top');
 
 		const stackClass = isTop ? 'top' : 'bottom';
+		const visibleStack = Selectors.findAll(`.vg-toast.show.${stackClass}`)
+			.filter(el => {
+				const instance = VGToast.getInstance(el);
+				return instance?._params.stack.enable;
+			});
+		const elms = visibleStack.length ? visibleStack : stackItems.map(item => item.el);
+		let offset = 0;
 
-		elms.forEach(({ el, top }) => {
+		elms.forEach((el) => {
+			const instance = VGToast.getInstance(el);
+			const placement = instance?._params.placement || this._params.placement;
+			const isCenter = placement.includes('center');
+			const isLeft = placement.includes('left');
+			const isRight = placement.includes('right');
 			const style = el.style;
 			style.left = '';
 			style.right = '';
@@ -420,10 +430,12 @@ class VGToast extends BaseModule {
 			}
 
 			if (isTop) {
-				style.top = top + 'px';
+				style.top = offset + 'px';
 			} else {
-				style.bottom = top + 'px';
+				style.bottom = offset + 'px';
 			}
+
+			offset += el.offsetHeight;
 		});
 	}
 
