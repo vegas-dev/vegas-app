@@ -101,8 +101,6 @@ class VGNestable extends BaseModule {
 		this._isDragging = false;
 		this._startSnapshot = "";
 		this._sourceInstance = this;
-		this._sourceRoot = null;
-		this._currentTargetInstance = this;
 		this._lastDropInstance = this;
 		this._activeDropList = null;
 
@@ -317,11 +315,14 @@ class VGNestable extends BaseModule {
 			childList.id = `vg-nestable-collapse-${Math.random().toString(36).slice(2, 10)}`;
 		}
 
+		const hasCollapseClass = childList.classList.contains("vg-collapse");
 		childList.classList.add("vg-collapse");
-		if (this._params.collapse.open) {
-			childList.classList.add("show");
-		} else {
-			childList.classList.remove("show");
+		if (!hasCollapseClass) {
+			if (this._params.collapse.open) {
+				childList.classList.add("show");
+			} else {
+				childList.classList.remove("show");
+			}
 		}
 
 		if (!toggle) {

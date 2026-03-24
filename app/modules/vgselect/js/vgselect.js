@@ -88,6 +88,7 @@ class VGSelect extends BaseModule {
 				loadMoreText: 'Загрузить ещё',
 			},
 			close: true,
+			tree: false,
 			placeholder: '',
 			onInit: null,
 			onShow: null,
@@ -146,7 +147,7 @@ class VGSelect extends BaseModule {
 	 * @param {HTMLElement} drop - Контейнер выпадающего списка
 	 * @returns {HTMLElement} - Обновлённый список
 	 */
-	static buildListOptions(selector, drop) {
+	static buildListOptions(selector, drop, params = {}) {
 		let list = drop.querySelector(`.${CLASS_NAME_LIST}`);
 		if (!list) {
 			list = document.createElement('ul');
@@ -158,6 +159,7 @@ class VGSelect extends BaseModule {
 
 		const optGroups = Selectors.findAll('optgroup', selector);
 		const fragment = document.createDocumentFragment();
+		const isTree = this._isTreeEnabled(selector, params);
 
 		if (optGroups.length > 0) {
 			optGroups.forEach(optGroup => {
@@ -169,12 +171,18 @@ class VGSelect extends BaseModule {
 				Classes.add(label, CLASS_NAME_OPTGROUP_TITLE);
 				ol.appendChild(label);
 
-				VGSelect._createListItems(Selectors.findAll('option', optGroup), ol, selector);
+				VGSelect._createListItems(Selectors.findAll('option', optGroup), ol, selector, {
+					tree: isTree,
+					depth: isTree ? 1 : 0,
+				});
 				fragment.appendChild(ol);
 			});
 			list.appendChild(fragment);
 		} else {
-			VGSelect._createListItems(selector.options, list, selector);
+			VGSelect._createListItems(selector.options, list, selector, {
+				tree: isTree,
+				depth: 0,
+			});
 		}
 
 		return list;
@@ -187,10 +195,10 @@ class VGSelect extends BaseModule {
 	 * @param {HTMLSelectElement} selector - Исходный <select>
 	 * @private
 	 */
-	static _createListItems(options, parent, selector) {
+	static _createListItems(options, parent, selector, config = {}) {
 		const frag = document.createDocumentFragment();
-		const selectedIndex = selector.selectedIndex;
-		const hasExplicitSelected = VGSelect.hasExplicitSelectedOption(selector);
+		const baseDepth = Number.isInteger(config.depth) ? config.depth : 0;
+		const treeEnabled = !!config.tree;
 
 		[...options].forEach((option) => {
 			if (option.hidden) return;
@@ -207,6 +215,13 @@ class VGSelect extends BaseModule {
 			li.dataset.value = value;
 			li.classList.add(CLASS_NAME_OPTION);
 			Manipulator.set(li, 'data-vg-toggle', 'select-option');
+			if (treeEnabled) {
+				const optionLevelRaw = option.dataset.level;
+				const optionLevel = Number.isFinite(Number(optionLevelRaw)) ? parseInt(optionLevelRaw, 10) : null;
+				const level = Math.max(0, optionLevel == null ? baseDepth : optionLevel);
+				li.dataset.level = String(level);
+				li.style.paddingLeft = `${16 + (level * 16)}px`;
+			}
 
 			// Раньше подсветка зависела от "явно выбранных" option (атрибут selected),
 			// из-за этого UI мог показывать placeholder, но DOM считал, что выбрана 1-я опция.
@@ -235,6 +250,15 @@ class VGSelect extends BaseModule {
 		});
 
 		parent.appendChild(frag);
+	}
+
+	static _isTreeEnabled(selector, params = {}) {
+		if (typeof params.tree === 'boolean') return params.tree;
+		if (selector?.dataset && typeof selector.dataset.tree !== 'undefined') {
+			return normalizeData(selector.dataset.tree) === true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -318,7 +342,7 @@ class VGSelect extends BaseModule {
 			const input = document.createElement('input');
 			input.type = 'text';
 			input.className = 'vg-select-multiple-input';
-			input.style.cssText = 'border:none;outline:none;background:transparent;padding:0;margin:0;min-width:40px;font:inherit;';
+			input.style.cssText = 'border:0;outline:none;background:transparent;padding:0;margin:0;min-width:1px;width:1px;height:1px;line-height:1;font:inherit;opacity:0;';
 			tags.appendChild(input);
 
 			input.addEventListener('focus', () => {
@@ -344,7 +368,7 @@ class VGSelect extends BaseModule {
 		dropdown.classList.add(CLASS_NAME_DROPDOWN);
 		container.appendChild(dropdown);
 
-		this.buildListOptions(selector, dropdown);
+		this.buildListOptions(selector, dropdown, params);
 
 		selector.insertAdjacentElement('afterend', container);
 		selector.dataset.inited = 'true';
@@ -352,6 +376,8 @@ class VGSelect extends BaseModule {
 		this.getOrCreateInstance(container, params);
 		this.updateUI(selector);
 		const instance = VGSelect.getInstance(container);
+
+		console.log(instance);
 
 		let searchInput = null;
 		if (Manipulator.has(selector, 'data-search-enabled')) {
@@ -547,7 +573,7 @@ class VGSelect extends BaseModule {
 		}
 
 		const drop = this._element.querySelector(SELECTOR_DROPDOWN);
-		VGSelect.buildListOptions(select, drop);
+		VGSelect.buildListOptions(select, drop, this._params);
 		VGSelect.updateUI(select);
 	}
 
@@ -1111,6 +1137,7 @@ class VGSelect extends BaseModule {
 			instance?._triggerEvent(EVENT_KEY_ERROR, { error: 'Invalid data format: expected array' });
 			return;
 		}
+		const treeEnabled = this._isTreeEnabled(select, instance?._params || {});
 
 		if (!preserve) {
 			// Удаление только не помеченных как data-preserve
@@ -1129,47 +1156,59 @@ class VGSelect extends BaseModule {
 			});
 		}
 
-		optionsData.forEach(item => {
-			if (item.children && Array.isArray(item.children)) {
-				const optgroup = document.createElement('optgroup');
-				optgroup.label = item.text || '';
-				if (item.disabled) optgroup.disabled = true;
+		const appendOption = (item, parent, level = null) => {
+			const option = document.createElement('option');
+			const hasChildren = Array.isArray(item.children) && item.children.length > 0;
 
-				item.children.forEach(child => {
-					const option = document.createElement('option');
-					option.value = child.id || '';
-					option.textContent = child.text || '';
-					if (child.selected) option.selected = true;
-					if (child.disabled) option.disabled = true;
-
-					const dataAttrs = Object.keys(child).filter(k => !['id', 'text', 'selected', 'disabled'].includes(k));
-					dataAttrs.forEach(key => {
-						option.setAttribute(`data-${key}`, child[key]);
-					});
-
-					optgroup.appendChild(option);
-				});
-
-				select.appendChild(optgroup);
-			} else {
-				const option = document.createElement('option');
-				option.value = item.id || '';
-				option.textContent = item.text || '';
-				if (item.selected) option.selected = true;
-				if (item.disabled) option.disabled = true;
-
-				const dataAttrs = Object.keys(item).filter(k => !['id', 'text', 'selected', 'disabled'].includes(k));
-				dataAttrs.forEach(key => {
-					option.setAttribute(`data-${key}`, item[key]);
-				});
-
-				select.appendChild(option);
+			option.value = item.id || '';
+			option.textContent = item.text || '';
+			if (item.selected) option.selected = true;
+			if (item.disabled) option.disabled = true;
+			if (treeEnabled && Number.isInteger(level)) {
+				option.setAttribute('data-level', String(level));
+				if (hasChildren && !option.value) {
+					option.disabled = true;
+				}
 			}
-		});
+
+			const dataAttrs = Object.keys(item).filter(k => !['id', 'text', 'selected', 'disabled', 'children'].includes(k));
+			dataAttrs.forEach(key => {
+				option.setAttribute(`data-${key}`, item[key]);
+			});
+
+			parent.appendChild(option);
+		};
+
+		const appendTreeOptions = (items, parent, level = 0) => {
+			items.forEach(item => {
+				appendOption(item, parent, level);
+				if (Array.isArray(item.children) && item.children.length > 0) {
+					appendTreeOptions(item.children, parent, level + 1);
+				}
+			});
+		};
+
+		if (treeEnabled) {
+			appendTreeOptions(optionsData, select, 0);
+		} else {
+			optionsData.forEach(item => {
+				if (item.children && Array.isArray(item.children)) {
+					const optgroup = document.createElement('optgroup');
+					optgroup.label = item.text || '';
+					if (item.disabled) optgroup.disabled = true;
+
+					item.children.forEach(child => appendOption(child, optgroup));
+
+					select.appendChild(optgroup);
+				} else {
+					appendOption(item, select);
+				}
+			});
+		}
 
 		if (isRebuild) {
 			const drop = container.querySelector(`.${CLASS_NAME_DROPDOWN}`);
-			VGSelect.buildListOptions(select, drop);
+			VGSelect.buildListOptions(select, drop, instance?._params || {});
 			instance?._triggerEvent(EVENT_KEY_REBUILD);
 		} else {
 			this.updateUI(select);

@@ -295,7 +295,7 @@ class VGToast extends BaseModule {
 			}
 
 			const completeCallback = () => {
-				if (!Selectors.findOne('.vg-toast.show')) {
+				if (!Selectors.find('.vg-toast.show')) {
 					document.body.classList.remove(CLASS_NAME_OPEN);
 				}
 				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
