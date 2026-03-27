@@ -88,7 +88,13 @@ class VGRollup extends BaseModule {
 			button: {
 				enabled: true,
 				more: "Показать",
-				less: "Свернуть"
+				less: "Свернуть",
+				classes: ''
+			},
+			callbacks: {
+				init: () => {},
+				expand: () => {},
+				collapse: () => {}
 			}
 		}, params));
 
@@ -255,6 +261,8 @@ class VGRollup extends BaseModule {
 		} else if (content === 'elements') {
 			this._setupElementsContent(element, elementClass, cnt, fade, transition, isEllipsis, isButton, showNum);
 		}
+
+		execute(this._params.callbacks.init, [element, this])
 	}
 
 	/**
@@ -336,7 +344,7 @@ class VGRollup extends BaseModule {
 
 		const btnTextMore = this._params.button.more;
 		const btnHTML = `<div class="${this.classes.button}">
-            <a href="#" aria-expanded="false" data-vg-toggle="rollup" data-vg-target="#${element.id}">
+            <a href="#" aria-expanded="false" data-vg-toggle="rollup" class="${this._params.button.classes}" data-vg-target="#${element.id}">
                 ${btnTextMore}${textNum}
             </a>
         </div>`;
@@ -369,6 +377,8 @@ class VGRollup extends BaseModule {
 
 				if (this._params.fade) Classes.add(el, this.classes.fade);
 				if (this._params.transition) Classes.add(el, this.classes.transition);
+
+				execute(this._params.callbacks.expand, [el, this])
 			} else if (content === 'elements') {
 				const items = Selectors.findAll('.' + this._params.elements, el);
 				items.forEach((item, index) => {
@@ -376,6 +386,8 @@ class VGRollup extends BaseModule {
 						Classes.add(item, CLASS_NAME_HIDE);
 					}
 				});
+
+				execute(this._params.callbacks.collapse, [el, items, this])
 			}
 
 			Classes.add(el, this.classes.container);
@@ -388,6 +400,8 @@ class VGRollup extends BaseModule {
 				const items = Selectors.findAll('.' + this._params.elements, el);
 				items.forEach(item => Classes.remove(item, CLASS_NAME_HIDE));
 			}
+
+			execute(this._params.callbacks.expand, [el, this])
 		}
 	}
 
