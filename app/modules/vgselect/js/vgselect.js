@@ -52,6 +52,7 @@ const SELECTOR_DROPDOWN         = `.${CLASS_NAME_DROPDOWN}`;
 const SELECTOR_SEARCH_INPUT     = `.${CLASS_NAME_SEARCH} input`;
 const SELECTOR_LIST             = `.${CLASS_NAME_LIST}`;
 const SELECTOR_LOAD_MORE_BTN    = `.${CLASS_NAME_LOAD_MORE}`;
+const DATA_ATTR_COPY_EXCLUDE_DEFAULT = ['inited', 'updating', 'exclude'];
 
 /**
  * Класс VGSelect
@@ -89,6 +90,7 @@ class VGSelect extends BaseModule {
 			},
 			close: true,
 			tree: false,
+			exclude: 'data-filter-param',
 			placeholder: '',
 			onInit: null,
 			onShow: null,
@@ -261,6 +263,25 @@ class VGSelect extends BaseModule {
 		return false;
 	}
 
+	static _getDataAttrCopyExclusions(selector, params = {}) {
+		const rawExclude = typeof params.exclude === 'string'
+			? params.exclude
+			: (selector.dataset.exclude || '');
+		const customExcluded = rawExclude
+			.split(',')
+			.map(item => this._normalizeDataAttrKey(item))
+			.filter(Boolean);
+
+		return new Set([...DATA_ATTR_COPY_EXCLUDE_DEFAULT, ...customExcluded]);
+	}
+
+	static _normalizeDataAttrKey(value) {
+		return String(value || '')
+			.trim()
+			.replace(/^data-/, '')
+			.toLowerCase();
+	}
+
 	/**
 	 * Проверяет, является ли значение "пустым" (соответствует placeholder)
 	 * @param {HTMLSelectElement} select - Элемент <select>
@@ -319,7 +340,9 @@ class VGSelect extends BaseModule {
 
 		const elData = Manipulator.get(selector);
 		if (!isEmptyObj(elData)) {
+			const excludeDataAttrs = this._getDataAttrCopyExclusions(selector, params);
 			Object.keys(elData).forEach(key => {
+				if (excludeDataAttrs.has(key)) return;
 				Manipulator.set(container, `data-${key}`, elData[key]);
 			});
 		}
@@ -376,8 +399,6 @@ class VGSelect extends BaseModule {
 		this.getOrCreateInstance(container, params);
 		this.updateUI(selector);
 		const instance = VGSelect.getInstance(container);
-
-		console.log(instance);
 
 		let searchInput = null;
 		if (Manipulator.has(selector, 'data-search-enabled')) {
@@ -770,7 +791,6 @@ class VGSelect extends BaseModule {
 	static changeSelector(select, value, data = {}) {
 		const container = select.nextElementSibling;
 		const instance = container ? VGSelect.getInstance(container) : null;
-		const prevValue = select.value;
 
 		select.setAttribute('data-updating', 'true');
 		try {
@@ -780,13 +800,16 @@ class VGSelect extends BaseModule {
 				return;
 			}
 
-			const oldValue = select.value;
 			const wasSelected = opt.selected;
 			const selectedText = opt.textContent.trim();
 
-			[...select.options].forEach(o => o.selected = false);
-			opt.selected = true;
-			select.value = opt.value;
+			if (select.multiple) {
+				opt.selected = data?.selected === false ? false : true;
+			} else {
+				[...select.options].forEach(o => o.selected = false);
+				opt.selected = true;
+				select.value = opt.value;
+			}
 
 			this.updateUI(select);
 
@@ -825,9 +848,13 @@ class VGSelect extends BaseModule {
 			const selectedText = opt.textContent.trim();
 			const value = opt.value;
 
-			[...select.options].forEach(o => o.selected = false);
-			opt.selected = true;
-			select.value = opt.value;
+			if (select.multiple) {
+				opt.selected = data?.selected === false ? false : true;
+			} else {
+				[...select.options].forEach(o => o.selected = false);
+				opt.selected = true;
+				select.value = opt.value;
+			}
 
 			this.updateUI(select);
 

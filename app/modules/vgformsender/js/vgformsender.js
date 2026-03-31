@@ -276,8 +276,13 @@ class VGFormSender extends BaseModule {
 	request(event, data = null) {
 		const _this = this;
 		const mergeFormData = (target, source) => {
+			const replacedKeys = new Set();
 			source.forEach((value, key) => {
-				target.set(key, value);
+				if (!replacedKeys.has(key)) {
+					target.delete(key);
+					replacedKeys.add(key);
+				}
+				target.append(key, value);
 			});
 			return target;
 		}
