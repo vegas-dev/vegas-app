@@ -60,6 +60,10 @@ class TextModal {
 			dismiss: true,
 			backdrop: true,
 			keyboard: true,
+			sizes: {
+				width: '600px',
+				height: '',
+			},
 			animation: {
 				enable: false
 			}
@@ -80,22 +84,30 @@ class TextModal {
 			element.classList.add('vg-filepreview-text-modal');
 
 			const body = element.querySelector('.vg-modal-body');
-			if (!body) {
+			const content = element.querySelector('.vg-modal-content');
+			if (!body || !content) {
 				return;
 			}
 
 			body.classList.add('vg-filepreview-text-modal__body');
 			body.innerHTML = '';
 
+			let header = element.querySelector('.vg-modal-header');
+			if (!header) {
+				header = document.createElement('div');
+				header.className = 'vg-modal-header';
+				content.prepend(header);
+			}
+
 			this._title = document.createElement('div');
-			this._title.className = 'vg-filepreview-text-modal__title';
+			this._title.className = 'vg-modal-title';
 			this._title.textContent = '';
 
 			this._content = document.createElement('pre');
 			this._content.className = 'vg-filepreview-text-modal__content';
 			this._content.textContent = '';
 
-			body.appendChild(this._title);
+			header.appendChild(this._title);
 			body.appendChild(this._content);
 
 			this._bindLifecycle(element);

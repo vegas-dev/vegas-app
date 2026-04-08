@@ -150,6 +150,14 @@ class VGModal extends BaseModule {
 			modal._animation(_element, VGModal.NAME_KEY, params.animation);
 		}
 
+		if ('sizes' in modal._params && modal._params.sizes.width) {
+			_element.style.setProperty('--vg-modal-width', modal._params.sizes.width);
+		}
+
+		if ('sizes' in modal._params && modal._params.sizes.height) {
+			dialog.style.height = modal._params.sizes.height;
+		}
+
 		execute(callback, [modal]);
 
 		return modal;

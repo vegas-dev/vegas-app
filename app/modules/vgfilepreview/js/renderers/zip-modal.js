@@ -60,6 +60,9 @@ class ZipModal {
 			dismiss: true,
 			backdrop: true,
 			keyboard: true,
+			sizes: {
+				width: '800px',
+			},
 			animation: {
 				enable: false
 			}
@@ -80,21 +83,29 @@ class ZipModal {
 			element.classList.add('vg-filepreview-zip-modal');
 
 			const body = element.querySelector('.vg-modal-body');
-			if (!body) {
+			const content = element.querySelector('.vg-modal-content');
+			if (!body || !content) {
 				return;
 			}
 
-			body.classList.add('vg-filepreview-zip-modal__body');
+			body.classList.add('vg-filepreview-image-modal__body');
 			body.innerHTML = '';
 
+			let header = element.querySelector('.vg-modal-header');
+			if (!header) {
+				header = document.createElement('div');
+				header.className = 'vg-modal-header';
+				content.prepend(header);
+			}
+
 			this._title = document.createElement('div');
-			this._title.className = 'vg-filepreview-zip-modal__title';
+			this._title.className = 'vg-modal-title';
 			this._title.textContent = '';
 
 			this._content = document.createElement('div');
 			this._content.className = 'vg-filepreview-zip-modal__content';
 
-			body.appendChild(this._title);
+			header.appendChild(this._title);
 			body.appendChild(this._content);
 
 			this._bindLifecycle(element);

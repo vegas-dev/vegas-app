@@ -52,6 +52,9 @@ class OfficeModal {
 			dismiss: true,
 			backdrop: true,
 			keyboard: true,
+			sizes: {
+				width: 'fit-content',
+			},
 			animation: {
 				enable: false
 			}
@@ -63,15 +66,23 @@ class OfficeModal {
 			element.classList.add('vg-filepreview-office-modal');
 
 			const body = element.querySelector('.vg-modal-body');
-			if (!body) {
+			const content = element.querySelector('.vg-modal-content');
+			if (!body || !content) {
 				return;
 			}
 
-			body.classList.add('vg-filepreview-office-modal__body');
+			body.classList.add('vg-filepreview-image-modal__body');
 			body.innerHTML = '';
 
+			let header = element.querySelector('.vg-modal-header');
+			if (!header) {
+				header = document.createElement('div');
+				header.className = 'vg-modal-header';
+				content.prepend(header);
+			}
+
 			this._title = document.createElement('div');
-			this._title.className = 'vg-filepreview-office-modal__title';
+			this._title.className = 'vg-modal-title';
 
 			this._frame = document.createElement('iframe');
 			this._frame.className = 'vg-filepreview-office-modal__frame';
@@ -91,9 +102,9 @@ class OfficeModal {
 			footer.appendChild(this._fallback);
 			footer.appendChild(this._download);
 
-			body.appendChild(this._title);
+			header.appendChild(this._title);
 			body.appendChild(this._frame);
-			body.appendChild(footer);
+			content.appendChild(footer);
 
 			this._bindLifecycle(element);
 		});

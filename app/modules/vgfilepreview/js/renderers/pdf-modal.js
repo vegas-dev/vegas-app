@@ -57,6 +57,9 @@ class PdfModal {
 			dismiss: true,
 			backdrop: true,
 			keyboard: true,
+			sizes: {
+				width: 'fit-content',
+			},
 			animation: {
 				enable: false
 			}
@@ -77,15 +80,23 @@ class PdfModal {
 			element.classList.add('vg-filepreview-pdf-modal');
 
 			const body = element.querySelector('.vg-modal-body');
-			if (!body) {
+			const content = element.querySelector('.vg-modal-content');
+			if (!body || !content) {
 				return;
 			}
 
 			body.classList.add('vg-filepreview-pdf-modal__body');
 			body.innerHTML = '';
 
+			let header = element.querySelector('.vg-modal-header');
+			if (!header) {
+				header = document.createElement('div');
+				header.className = 'vg-modal-header';
+				content.prepend(header);
+			}
+
 			this._title = document.createElement('div');
-			this._title.className = 'vg-filepreview-pdf-modal__title';
+			this._title.className = 'vg-modal-title';
 
 			const toolbar = document.createElement('div');
 			toolbar.className = 'vg-filepreview-pdf-modal__toolbar';
@@ -156,8 +167,8 @@ class PdfModal {
 			this._frame.className = 'vg-filepreview-pdf-modal__frame';
 			this._frame.setAttribute('title', 'PDF preview');
 
-			body.appendChild(this._title);
-			body.appendChild(toolbar);
+			header.appendChild(this._title);
+			//header.appendChild(toolbar);
 			body.appendChild(this._frame);
 
 			this._bindLifecycle(element);

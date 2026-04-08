@@ -55,6 +55,9 @@ class ImageModal {
 			dismiss: true,
 			backdrop: true,
 			keyboard: true,
+			sizes: {
+				width: 'fit-content',
+			},
 			animation: {
 				enable: false
 			}
@@ -75,15 +78,23 @@ class ImageModal {
 			element.classList.add('vg-filepreview-image-modal');
 
 			const body = element.querySelector('.vg-modal-body');
-			if (!body) {
+			const content = element.querySelector('.vg-modal-content');
+			if (!body || !content) {
 				return;
 			}
 
 			body.classList.add('vg-filepreview-image-modal__body');
 			body.innerHTML = '';
 
+			let header = element.querySelector('.vg-modal-header');
+			if (!header) {
+				header = document.createElement('div');
+				header.className = 'vg-modal-header';
+				content.prepend(header);
+			}
+
 			this._title = document.createElement('div');
-			this._title.className = 'vg-filepreview-image-modal__title';
+			this._title.className = 'vg-modal-title';
 			this._title.textContent = '';
 
 			this._image = document.createElement('img');
@@ -91,7 +102,7 @@ class ImageModal {
 			this._image.loading = 'eager';
 			this._image.decoding = 'async';
 
-			body.appendChild(this._title);
+			header.appendChild(this._title);
 			body.appendChild(this._image);
 
 			this._bindLifecycle(element);
