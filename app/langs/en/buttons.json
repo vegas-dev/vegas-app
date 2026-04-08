@@ -7,6 +7,21 @@
     "agree": "Yeah, I agree",
     "cancel": "Cancel"
   },
+  "filepreview": {
+    "open_audio": "Open player",
+    "open_image": "Open image",
+    "open_text": "Open text",
+    "open_video": "Open video",
+    "open_archive": "Open archive",
+    "open_pdf": "Open PDF",
+    "open_office": "Open document",
+    "download": "Download",
+    "preview": "Preview",
+    "prev": "Prev",
+    "next": "Next",
+    "zoom_in": "Zoom +",
+    "zoom_out": "Zoom -"
+  },
   "loadmore": {
     "send": "Uploading...",
     "show": "I'm showing you...",

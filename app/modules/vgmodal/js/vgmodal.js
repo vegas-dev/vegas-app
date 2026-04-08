@@ -52,6 +52,10 @@ class VGModal extends BaseModule {
 			hash: false,
 			centered: false,
 			dismiss: true,
+			sizes: {
+				width: '',
+				height: '',
+			},
 			ajax: {
 				route: '',
 				target: '',

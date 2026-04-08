@@ -598,12 +598,7 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_getIconByFileType(file) {
-		if (file.type === 'application/pdf') return getSVG('file-pdf');
-		if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) return getSVG('file-word');
-		if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) return getSVG('file-exel');
-		if (file.type === 'application/zip' || file.name.endsWith('.zip')) return getSVG('file-zip');
-		if (file.name.endsWith('.txt')) return getSVG('file-text');
-		return getSVG('file-generic');
+		return getSVG(file);
 	}
 
 	_updateStat() {
