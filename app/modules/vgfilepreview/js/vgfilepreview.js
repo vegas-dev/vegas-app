@@ -16,7 +16,8 @@ class VGFilePreview extends BaseModule {
 			validate: true,
 			lang: 'ru',
 			ui: {
-				nameOnly: false
+				nameOnly: false,
+				preview: false
 			}
 		}, params));
 
@@ -102,7 +103,19 @@ class VGFilePreview extends BaseModule {
 		this._renderIcon();
 		this._renderTextFields();
 		this._renderDownloadField();
-		this._renderPreview();
+
+		if (this._shouldRenderPreview()) {
+			this._renderPreview();
+			return this._editableFields;
+		}
+
+		const previewField = this._editableFields.preview;
+		if (previewField) {
+			previewField.innerHTML = '';
+		}
+
+		this._element.removeAttribute('data-vg-filepreview-renderer');
+		this._setState('ready');
 
 		return this._editableFields;
 	}
@@ -113,12 +126,22 @@ class VGFilePreview extends BaseModule {
 			return;
 		}
 
-		const icon = getSVG(this._filePath);
-		if (!icon) {
+		const imageSrc = this._getImageIconSrc();
+		if (imageSrc) {
+			iconField.innerHTML = '';
+			const image = document.createElement('img');
+			image.src = imageSrc;
+			image.alt = this._fileMeta?.originalName || this._fileMeta?.name || '';
+			image.className = 'vg-filepreview-icon-image';
+			image.loading = 'lazy';
+			image.addEventListener('error', () => {
+				this._renderDefaultIcon(iconField);
+			});
+			iconField.appendChild(image);
 			return;
 		}
 
-		iconField.innerHTML = icon;
+		this._renderDefaultIcon(iconField);
 	}
 
 	_renderTextFields() {
@@ -130,6 +153,7 @@ class VGFilePreview extends BaseModule {
 			} else if (this._fileMeta.name) {
 				nameField.classList.remove('vg-filepreview-audio-inline');
 				nameField.textContent = this._fileMeta.name;
+				this._applyNameClampStyles(nameField);
 			}
 		}
 
@@ -150,6 +174,7 @@ class VGFilePreview extends BaseModule {
 
 		if (this._fileMeta.originalName) {
 			originalNameField.textContent = this._fileMeta.originalName;
+			this._applyNameClampStyles(originalNameField);
 			return;
 		}
 
@@ -186,6 +211,7 @@ class VGFilePreview extends BaseModule {
 		const text = document.createElement('span');
 		text.className = 'vg-filepreview-audio-inline__name';
 		text.textContent = fileName;
+		this._applyNameClampStyles(text);
 
 		button.addEventListener('click', (event) => {
 			event.preventDefault();
@@ -479,6 +505,42 @@ class VGFilePreview extends BaseModule {
 		this._editableFields.preview = container;
 
 		return container;
+	}
+
+	_shouldRenderPreview() {
+		return Boolean(this._params?.ui?.preview);
+	}
+
+	_getImageIconSrc() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif', '.ico'];
+		if (!imageExts.includes(ext)) {
+			return '';
+		}
+
+		return this._fileUrl?.href || this._filePath || '';
+	}
+
+	_renderDefaultIcon(iconField) {
+		const icon = getSVG(this._filePath);
+		if (!icon) {
+			iconField.innerHTML = '';
+			return;
+		}
+
+		iconField.innerHTML = icon;
+	}
+
+	_applyNameClampStyles(field) {
+		if (!field || !field.style) {
+			return;
+		}
+
+		field.style.minWidth = '60px';
+		field.style.maxWidth = '100%';
+		field.style.overflow = 'hidden';
+		field.style.textOverflow = 'ellipsis';
+		field.style.whiteSpace = 'nowrap';
 	}
 
 	static init(element, params = {}) {
