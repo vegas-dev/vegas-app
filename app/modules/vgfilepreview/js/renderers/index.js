@@ -1,4 +1,3 @@
-import AudioFilePreviewRenderer from "./audio";
 import ImageFilePreviewRenderer from "./image";
 import OfficeFilePreviewRenderer from "./office";
 import PdfFilePreviewRenderer from "./pdf";
@@ -13,8 +12,7 @@ const createFilePreviewRenderers = () => {
 		new PdfFilePreviewRenderer(),
 		new OfficeFilePreviewRenderer(),
 		new ZipFilePreviewRenderer(),
-		new TextFilePreviewRenderer(),
-		new AudioFilePreviewRenderer()
+		new TextFilePreviewRenderer()
 	];
 };
 

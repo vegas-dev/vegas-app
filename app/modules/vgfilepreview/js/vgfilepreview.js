@@ -27,6 +27,10 @@ class VGFilePreview extends BaseModule {
 		this._renderers = createFilePreviewRenderers();
 		this._lang = resolveFilePreviewLang(this._params.lang, this._element);
 		this._i18n = createFilePreviewI18n(this._lang);
+		this._inlineAudio = null;
+		this._inlineAudioSrc = '';
+		this._inlineAudioButton = null;
+		this._inlineAudioIcon = null;
 
 		this.init();
 	}
@@ -115,8 +119,13 @@ class VGFilePreview extends BaseModule {
 
 	_renderTextFields() {
 		const nameField = this._editableFields.name;
-		if (nameField && this._fileMeta.name) {
-			nameField.textContent = this._fileMeta.name;
+		if (nameField) {
+			if (this._isAudioFile()) {
+				this._renderAudioNameField(nameField);
+			} else if (this._fileMeta.name) {
+				nameField.classList.remove('vg-filepreview-audio-inline');
+				nameField.textContent = this._fileMeta.name;
+			}
 		}
 
 		const extField = this._editableFields.ext;
@@ -142,6 +151,99 @@ class VGFilePreview extends BaseModule {
 		if (this._fileMeta.isMedia) {
 			originalNameField.textContent = '';
 		}
+	}
+
+	_renderAudioNameField(nameField) {
+		const fileName = String(this._fileMeta?.name || '').trim();
+		if (!fileName) {
+			return;
+		}
+
+		nameField.innerHTML = '';
+		nameField.classList.add('vg-filepreview-audio-inline');
+
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'vg-filepreview-audio-inline__toggle';
+		button.setAttribute('aria-label', 'Play/Pause');
+
+		const icon = document.createElement('span');
+		icon.className = 'vg-filepreview-audio-inline__icon';
+		button.appendChild(icon);
+
+		const text = document.createElement('span');
+		text.className = 'vg-filepreview-audio-inline__name';
+		text.textContent = fileName;
+
+		button.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this._toggleInlineAudio();
+		});
+
+		nameField.appendChild(button);
+		nameField.appendChild(text);
+
+		this._inlineAudioButton = button;
+		this._inlineAudioIcon = icon;
+		const isCurrentAudioPlaying = VGFilePreview._activeAudioOwner === this && this._inlineAudio && !this._inlineAudio.paused;
+		this._syncInlineAudioIcon(isCurrentAudioPlaying);
+	}
+
+	_toggleInlineAudio() {
+		const src = this._fileUrl?.href || this._filePath || '';
+		if (!src || !this._inlineAudioButton) {
+			return;
+		}
+
+		if (VGFilePreview._activeAudioOwner && VGFilePreview._activeAudioOwner !== this) {
+			VGFilePreview._activeAudioOwner._stopInlineAudio();
+		}
+
+		if (!this._inlineAudio || this._inlineAudioSrc !== src) {
+			this._stopInlineAudio();
+			this._inlineAudio = new Audio(src);
+			this._inlineAudioSrc = src;
+			this._inlineAudio.addEventListener('ended', () => this._syncInlineAudioIcon(false));
+		}
+
+		if (this._inlineAudio.paused) {
+			this._inlineAudio.play().then(() => {
+				VGFilePreview._activeAudioOwner = this;
+				this._syncInlineAudioIcon(true);
+			}).catch(() => {
+				this._syncInlineAudioIcon(false);
+			});
+			return;
+		}
+
+		this._inlineAudio.pause();
+		this._syncInlineAudioIcon(false);
+		if (VGFilePreview._activeAudioOwner === this) {
+			VGFilePreview._activeAudioOwner = null;
+		}
+	}
+
+	_stopInlineAudio() {
+		if (!this._inlineAudio) {
+			this._syncInlineAudioIcon(false);
+			return;
+		}
+
+		this._inlineAudio.pause();
+		this._inlineAudio.currentTime = 0;
+		this._syncInlineAudioIcon(false);
+		if (VGFilePreview._activeAudioOwner === this) {
+			VGFilePreview._activeAudioOwner = null;
+		}
+	}
+
+	_syncInlineAudioIcon(isPlaying) {
+		if (!this._inlineAudioIcon) {
+			return;
+		}
+
+		this._inlineAudioIcon.innerHTML = isPlaying ? (getSVG('pause') || '') : (getSVG('play') || '');
 	}
 
 	_renderDownloadField() {
@@ -329,6 +431,11 @@ class VGFilePreview extends BaseModule {
 			return;
 		}
 		this._element.setAttribute('data-vg-filepreview-state', value);
+	}
+
+	_isAudioFile() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		return ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.opus', '.wma'].includes(ext);
 	}
 }
 

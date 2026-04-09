@@ -91,6 +91,47 @@
 	@include filepreview-trigger(var(--vg-filepreview-trigger-audio-bg));
 }
 
+.vg-filepreview-audio-inline {
+	@extend %vg-filepreview-vars;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--vg-filepreview-audio-inline-gap);
+	min-width: 0;
+
+	&__toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: var(--vg-filepreview-audio-inline-toggle-size);
+		height: var(--vg-filepreview-audio-inline-toggle-size);
+		border: 0;
+		border-radius: var(--vg-filepreview-audio-inline-toggle-radius);
+		background: var(--vg-filepreview-audio-inline-toggle-bg);
+		color: var(--vg-filepreview-audio-inline-toggle-color);
+		cursor: pointer;
+		padding: 0;
+		flex: 0 0 auto;
+	}
+
+	&__icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		svg {
+			width: var(--vg-filepreview-audio-inline-icon-size);
+			height: var(--vg-filepreview-audio-inline-icon-size);
+		}
+	}
+
+	&__name {
+		line-height: var(--vg-filepreview-audio-inline-name-line-height);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
+
 .vg-filepreview-image-modal,
 .vg-filepreview-text-modal,
 .vg-filepreview-video-modal,

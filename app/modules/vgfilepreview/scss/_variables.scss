@@ -33,6 +33,15 @@ $filepreview-map: (
 				close-bg: rgba(255, 255, 255, .12),
 				close-color: #fff,
 		),
+		audio-inline: (
+				gap: 12px,
+				toggle-size: 24px,
+				icon-size: 18px,
+				toggle-radius: 999px,
+				toggle-bg: rgba(255, 255, 255, .12),
+				toggle-color: #fff,
+				name-line-height: 1.2,
+		),
 		trigger: (
 				radius: 8px,
 				padding: 8px 12px,
