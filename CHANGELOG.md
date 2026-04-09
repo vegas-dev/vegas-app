@@ -1,12 +1,18 @@
 # VEGAS-APP 1.1.5 (Апрель, 9, 2026)
+## Новые фичи
+* В VGModal добавлены встроенные модули `VGModalDrag` и `VGModalResize` с поддержкой параметров `drag`/`resize` (включение, порог, зона edge, минимальные размеры, debug).
+
 ## Изменения
-* В VGFilePreview при `ui.preview=false` блок `.preview` отключается (очистка + скрытие), при этом inline-триггеры предпросмотра и открытие modal сохранены.
+* В VGFilePreview при `ui.nameOnly=true` блок `.preview` отключается (очистка + скрытие), отображается только имя файла.
 * В VGFilePreview добавлена интеграция метаданных для audio/video. Audio: `title` и `cover` из ID3; Video: генерация poster-кадра в `icon`.
 * В VGFilePreview унифицировано поведение имени для audio/video: `name` показывает title из метаданных (если есть), иначе имя файла; `original_name` при наличии title показывает имя файла.
 * В VGFilePreview клик по `.vg-filepreview-audio-inline__name` теперь запускает/ставит на паузу аудио.
 * В VGFilePreview клик по картинке в `icon` (image/audio cover/video poster) открывает ImageModal.
 * В стилях VGFilePreview добавлен `.is-preview-action { cursor: pointer; }`.
-* В VGFilePreview добавлена конфигурация предпросмотра по группам через `this._params.preview.<group>.enable` (`audio`, `video`, `image`, `archive`, `text`, `office`, `pdf`), по умолчанию группы отключены; инициализация модуля не блокируется.
+* В VGFilePreview добавлена конфигурация предпросмотра по группам через `this._params.preview.<group>.enable` (`audio`, `video`, `image`, `archive`, `text`, `office`, `pdf`), в текущем состоянии по умолчанию группы включены.
+* В VGModal добавлено автоматическое управление drag/resize при `show/hide/resize` модального окна, с синхронизацией позиции и границ внутри viewport.
+* В VGFilePreview изменены дефолты групп предпросмотра: `image` и `office` включены по умолчанию (теперь включены все группы предпросмотра).
+* В VGFilePreview для image-файлов в `_shouldRenderPreviewForCurrentFile()` добавлено принудительное отключение inline-preview.
 
 ---
 # VEGAS-APP 1.1.4 (Апрель, 9, 2026)

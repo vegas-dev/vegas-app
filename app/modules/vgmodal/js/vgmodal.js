@@ -6,6 +6,8 @@ import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
+import VGModalDrag from "./vgmodal.drag";
+import VGModalResize from "./vgmodal.resize";
 
 /**
  * Constants
@@ -44,6 +46,23 @@ class VGModal extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
+		this._interactionDefaults = {
+			drag: {
+				enable: false,
+				selector: '.vg-modal-content',
+				threshold: 4,
+				resizeEdgeSize: 8,
+				debug: false,
+			},
+			resize: {
+				enable: false,
+				edgeSize: 8,
+				minWidth: 300,
+				minHeight: 160,
+				debug: false,
+			},
+		};
+
 		this._params = this._getParams(element, mergeDeepObject({
 			backdrop: true,
 			focus: true,
@@ -52,6 +71,20 @@ class VGModal extends BaseModule {
 			hash: false,
 			centered: false,
 			dismiss: true,
+			resize: {
+				enable: false,
+				edgeSize: 8,
+				minWidth: 300,
+				minHeight: 160,
+				debug: false,
+			},
+			drag: {
+				enable: false,
+				selector: '.vg-modal-content',
+				threshold: 4,
+				resizeEdgeSize: 8,
+				debug: false,
+			},
 			sizes: {
 				width: '',
 				height: '',
@@ -87,6 +120,11 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = false;
 		this._scrollBar = new ScrollBarHelper();
+		this._dragHandler = new VGModalDrag(this._element, this._dialog);
+		this._resizeHandler = new VGModalResize(this._element, this._dialog);
+		this._interactionConfig = this._resolveInteractionConfig();
+		this._dragHandler.setOptions(this._interactionConfig.drag);
+		this._resizeHandler.setOptions(this._interactionConfig.resize);
 
 		this._addEventListeners();
 		this._dismissElement();
@@ -218,6 +256,7 @@ class VGModal extends BaseModule {
 
 	_hideModal(openedModals, isLeaveBackDrop) {
 		if (!isLeaveBackDrop) {
+			this._disableInteractionHandlers();
 			this._element.style.display = 'none';
 			this._element.removeAttribute('aria-modal');
 			this._element.removeAttribute('role');
@@ -255,21 +294,81 @@ class VGModal extends BaseModule {
 
 		reflow(this._element);
 
-		this._element.classList.add(CLASS_NAME_SHOW)
+		this._element.classList.add(CLASS_NAME_SHOW);
+		this._toggleInteractionHandlers();
 
 		const transitionComplete = () => {
 			this._isTransitioning = false;
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, {
 				relatedTarget
 			});
+			this._syncInteractiveBounds();
 
 			this._params = this._getParams(relatedTarget, this._params);
 			this._route((status, data) => {
 				EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data});
+				this._syncInteractiveBounds();
 			});
 		}
 
 		this._queueCallback(transitionComplete, this._dialog, this._isAnimatedFade())
+	}
+
+	_toggleInteractionHandlers() {
+		this._interactionConfig = this._resolveInteractionConfig();
+		this._dragHandler.setOptions(this._interactionConfig.drag);
+		this._resizeHandler.setOptions(this._interactionConfig.resize);
+
+		if (this._interactionConfig.drag.enable) {
+			this._dragHandler.enable();
+		} else {
+			this._dragHandler.disable();
+		}
+
+		if (this._interactionConfig.resize.enable) {
+			this._resizeHandler.enable();
+		} else {
+			this._resizeHandler.disable();
+		}
+	}
+
+	_disableInteractionHandlers() {
+		this._dragHandler.disable();
+		this._resizeHandler.disable();
+	}
+
+	_syncInteractiveBounds() {
+		if (this._interactionConfig.resize.enable) {
+			this._resizeHandler.syncToViewport();
+		}
+
+		if (this._interactionConfig.drag.enable) {
+			this._dragHandler.syncPosition();
+		}
+	}
+
+	_resolveInteractionConfig() {
+		return {
+			drag: this._normalizeInteractionParams(this._params.drag, this._interactionDefaults.drag),
+			resize: this._normalizeInteractionParams(this._params.resize, this._interactionDefaults.resize),
+		};
+	}
+
+	_normalizeInteractionParams(paramsValue, defaults) {
+		if (typeof paramsValue === 'boolean') {
+			return {...defaults, enable: paramsValue};
+		}
+
+		if (paramsValue && typeof paramsValue === 'object') {
+			const hasEnable = Object.prototype.hasOwnProperty.call(paramsValue, 'enable');
+			return {
+				...defaults,
+				...paramsValue,
+				enable: hasEnable ? Boolean(paramsValue.enable) : true,
+			};
+		}
+
+		return {...defaults};
 	}
 
 	_isAnimatedFade() {
@@ -310,7 +409,10 @@ class VGModal extends BaseModule {
 		});
 
 		EventHandler.on(window, EVENT_KEY_RESIZE, () => {
-			if (this._isShown && !this._isTransitioning) this._adjustDialog();
+			if (this._isShown && !this._isTransitioning) {
+				this._adjustDialog();
+				this._syncInteractiveBounds();
+			}
 		});
 
 		EventHandler.on(this._element, EVENT_KEY_MOUSEDOWN_DISMISS, event => {

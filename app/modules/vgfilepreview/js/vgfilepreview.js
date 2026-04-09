@@ -24,10 +24,10 @@ class VGFilePreview extends BaseModule {
 			preview: {
 				audio: {enable: true},
 				video: {enable: true},
-				image: {enable: false},
+				image: {enable: true},
 				archive: {enable: true},
 				text: {enable: true},
-				office: {enable: false},
+				office: {enable: true},
 				pdf: {enable: true}
 			}
 		}, params));
@@ -761,7 +761,7 @@ class VGFilePreview extends BaseModule {
 		}
 
 		if (this._isImageFile()) {
-			return this._isPreviewGroupEnabled('image');
+			return false;
 		}
 
 		if (this._isOfficeFile()) {
