@@ -1,5 +1,7 @@
 # VEGAS-APP 1.0.0 - 1.1.3 (Март, 2, 2026)
 * Новый модуль VGFilePreview, см. файл readme.md
+* У модуля VGModal новый параметр `size: width и height`, кастомная высота и ширина, хорошо для `width: fit-content`
+* модуль VGFilePreview интегрирован с VGFiles
 * Исправлены ошибки в разных модулях
 
 ---

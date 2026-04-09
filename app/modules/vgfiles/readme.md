@@ -1,224 +1,123 @@
-# VGFiles — Модуль загрузки и управления файлами
+# VGFiles
 
-`VGFiles` — это расширяемый и гибкий JavaScript-модуль для управления файлами на веб-странице, поддерживающий как локальную работу с файлами, так и асинхронную загрузку через AJAX. Модуль интегрируется с DOM-элементами, предоставляет визуальный интерфейс, поддерживает драг-н-дроп, валидацию, сортировку, отслеживание статусов и обработку событий.
+`VGFiles` — модуль загрузки и управления файлами с поддержкой локального режима и AJAX.
 
----
+## Новые фичи
 
-## 🔧 Возможности
+- Поддержка `replace` для single-mode (`limits.count = 1`): новый файл заменяет предыдущий без накопления.
+- Переименование входящих файлов через `rename: true | (file, index) => string`.
+- `smartdrop`: глобальная подсветка dropzone, если на экране только одна видимая зона дропа.
+- Расширенный lifecycle для внешних файлов из `data-file`: парсинг `customData`, `src/image`, бинарных метаданных.
+- Интеграция с `VGFilePreview` в info-списке (`ui.nameOnly: true`) для inline-аудио, скачивания и предпросмотра по клику.
+- Авто-обогащение аудиофайлов метаданными (title/cover) через `extractAudioMetadata`.
+- Гибкие confirm-хуки для удаления (`removes.single.confirm`, `removes.all.confirm`) с контрактом `accepted/data`.
+- Повторная загрузка упавших файлов через `data-vg-reload="file"` и кнопки retry.
+- Проброс `customData` файла в `data-*` атрибуты элементов списка.
 
-### ✅ Основные функции
-- **Добавление файлов** через `<input type="file">` или **drag & drop**.
-- **Просмотр списков файлов** с превью (если тип — изображение).
-- **Удаление отдельных файлов** и **очистка всего списка**.
-- **Интеграция с сервером** через AJAX-запросы (загрузка, удаление, сортировка).
-- **Автоматическая валидация** по типу, количеству, размеру файлов.
-- **Многоязычная поддержка** (настраиваемые кнопки и сообщения).
+## Базовые возможности
 
----
+- Выбор файлов через `<input type="file">` и drag&drop.
+- Лимиты: количество, размер файла, общий размер, MIME-типы.
+- Режимы загрузки: `sequential` и `parallel`.
+- Автоматическая/ручная инициализация.
+- Сортировка загруженных файлов с сохранением порядка на сервере.
+- Удаление одного файла и очистка всего списка.
 
-## 📦 Установка и инициализация
-
-Модуль автоматически инициализируется на элементах с классом `.vg-files` при загрузке DOM:
-
-Или вручную:
-
-```js
-const files = new VGFiles(document.querySelector('.vg-files'), { 
-    ajax: true,
-    uploads: {
-        route: '/api/upload', 
-        mode: 'sequential'
-    }, 
-    limits: { 
-        count: 10, 
-        sizes: 5, // MB 
-        total: 50 
-    } 
-});
-```
-
----
-
-## ⚙️ Параметры конфигурации
-
-| Параметр | Тип | По умолчанию | Описание |
-|--------|------|-------------|---------|
-| `init` | `boolean` | `true` | Автоматическая инициализация |
-| `allowed` | `boolean` | `false` | Разрешить дроп файлов |
-| `lang` | `string` | `'ru'` | Язык интерфейса (поддерживается через `lang_buttons`, `lang_messages`) |
-| `limits.count` | `number` | `0` | Макс. количество файлов (0 — без ограничений) |
-| `limits.sizes` | `number` | `10` | Макс. размер одного файла (в МБ) |
-| `limits.total` | `number` | `0` | Общий лимит размера (в МБ, 0 — без ограничений) |
-| `image` | `boolean` | `false` | Отображать превью изображений |
-| `detach` | `boolean` | `true` | Откреплять файлы после загрузки |
-| `info` | `boolean` | `true` | Показывать кнопку удаления |
-| `types` | `array` | `[]` | Разрешённые MIME-типы (например, `['image/png', 'application/pdf']`) |
-| `ajax` | `boolean` | `false` | Использовать AJAX-загрузку |
-| `prepend` | `boolean` | `true` | Добавлять новые файлы в начало списка |
-| `uploads.route` | `string` | `''` | URL для загрузки файлов |
-| `uploads.mode` | `'sequential' \| 'parallel'` | `'sequential'` | Режим отправки файлов |
-| `uploads.maxParallel` | `number` | `3` | Макс. файлов при параллельной загрузке |
-| `uploads.maxConcurrent` | `number` | `1` | Макс. одновременных запросов |
-| `uploads.retryAttempts` | `number` | `1` | Кол-во попыток повтора при ошибке |
-| `uploads.retryDelay` | `number` | `1000` | Задержка между попытками (мс) |
-| `removes.single.route` | `string` | `''` | URL для удаления одного файла |
-| `removes.all.route` | `string` | `''` | URL для удаления всех файлов |
-| `removes.all.alert` | `boolean` | `true` | Показывать подтверждение при удалении всех файлов |
-| `removes.all.toast` | `boolean` | `true` | Показывать уведомление после удаления всех файлов |
-| `removes.all.confirm` | `function \| null` | `null` | Кастомный confirm-обработчик для удаления всех файлов |
-| `removes.single.alert` | `boolean` | `true` | Показывать подтверждение при удалении |
-| `removes.single.toast` | `boolean` | `true` | Показывать уведомление после удаления |
-| `removes.single.confirm` | `function \| null` | `null` | Кастомный confirm-обработчик для удаления одного файла |
-| `sortable.enabled` | `boolean` | `false` | Включить сортировку |
-| `sortable.route` | `string` | `''` | URL для сохранения порядка файлов |
-| `callbacks` | `object` | `null` | Колбэки на события (см. ниже) |
-
----
-
-## 📢 События и колбэки
-
-Модуль поддерживает как DOM-события, так и JS-колбэки:
-
-### DOM-события
-- `vg.files.change` — изменение списка файлов
-- `vg.files.upload.allComplete` — все файлы загружены
-- `vg.files.remove` — файл удалён
-
-### Колбэки (`callbacks`)
-| Колбэк | Параметры | Описание |
-|-------|----------|--------|
-| `onInit` | `(data)` | Инициализация завершена |
-| `onChange` | `{ files, input, inputFiles }` | Изменён список файлов (`inputFiles` — снимок исходных `input.files`) |
-| `onUploadStart` | `{ files, total }` | Началась загрузка |
-| `onUploadProgress` | `{ file, progress, bytesSent, totalBytes }` | Прогресс загрузки |
-| `onUploadComplete` | `{ file, response, status, id }` | Файл успешно загружен |
-| `onUploadError` | `{ file }` | Ошибка загрузки |
-| `onUploadAllComplete` | `{ uploaded, failed, total }` | Все файлы загружены |
-| `onRemoveFile` | `{ button, name, size, id, remaining }` | Удалён файл |
-| `onClear` | `{}` | Очищен весь список |
-| `onReload` | `{ button, file }` | Повторная попытка загрузки |
-
----
-
-## 📊 Статусы файлов
-
-Модуль отслеживает статусы в реальном времени:
-- **`pending`** — ожидает загрузки
-- **`loading`** — идёт загрузка
-- **`completed`** — успешно загружен
-- **`failing`** — ошибка загрузки
-
----
-
-## 🔁 Внешние (уже загруженные) файлы
-
-Модуль может отображать уже загруженные файлы, переданные через `data-file`:
--- TODO описать полностью
-
-## 🧹 Очистка и удаление
-
-- **Удаление одного файла**: кнопка с `data-vg-dismiss="file"` → вызов `removeFile()`.
-- **Очистка всех**: кнопка с `data-vg-dismiss="vg-files"` → `clear()`.
-
-Поддержка подтверждения через `VGAlert` и уведомлений через `VGToast`.
-
-### Кастомный confirm для удаления
-
-Если задан `removes.single.confirm` или `removes.all.confirm`, модуль вызовет вашу функцию вместо дефолтного `VGAlert`.
+## Инициализация
 
 ```js
-new VGFiles(document.querySelector('.vg-files'), {
+const files = new VGFiles(document.querySelector('.vg-files'), {
   ajax: true,
-  removes: {
-    single: {
-      route: '/api/file/remove',
-      alert: true,
-      confirm: async ({ message }) => {
-        const accepted = window.confirm(`${message.title}\n${message.description}`);
-        return { accepted };
-      }
-    }
+  smartdrop: true,
+  rename: true,
+  replace: true,
+  uploads: {
+    route: '/api/upload',
+    mode: 'sequential'
+  },
+  limits: {
+    count: 10,
+    sizes: 5,
+    total: 50
   }
 });
 ```
 
-Контракт функции confirm:
-- Вход: объект `{ type, trigger, lang, ajax, buttons, message }`.
-- Выход:
-`true` или `{ accepted: true }` — подтвердить;
-`false` или `{ accepted: false }` — отменить;
-`{ accepted: true, data }` — подтвердить и передать готовый ответ удаления (если запрос уже выполнен внутри confirm).
+## Ключевые параметры
 
----
+- `allowed` — разрешить drag-drop режим и особенности drop-зоны.
+- `ajax` — включить серверную загрузку.
+- `replace` (`default: true`) — замена файла в single-mode.
+- `rename` (`default: false`) — переименование файлов до добавления в список.
+- `smartdrop` (`default: false`) — глобальная логика подсказки drop-зоны.
+- `prepend` (`default: true`) — добавление новых файлов в начало.
+- `uploads.mode` — `'sequential' | 'parallel'`.
+- `uploads.maxParallel`, `uploads.maxConcurrent`, `uploads.retryAttempts`, `uploads.retryDelay`.
+- `removes.single.confirm`, `removes.all.confirm` — кастомные confirm-обработчики.
+- `sortable.enabled`, `sortable.route`, `sortable.handle`, `sortable.lists`.
 
-## 🧩 Расширяемость
+## Внешние (уже загруженные) файлы
 
-- **FileUploader** — управляет загрузкой с поддержкой retry.
-- **VGFilesTemplateRender** — рендеринг шаблонов.
-- **Sortable (сортировка)** — подключается при необходимости.
-- Поддержка кастомных иконок через `getSVG()`.
+Модуль может стартовать с предзаполненным списком через `data-file` в `<li>`.
 
----
+Поддерживаемые поля объекта:
 
-## 🧰 API Методы
+- `id`, `name`, `size`, `type`, `src` (обязательный набор для валидного внешнего файла)
+- `image` (опционально)
+- `lastModified` / `last-modified` (опционально)
+- любые дополнительные поля -> попадают в `customData`
 
-| Метод | Описание |
-|------|--------|
-| `upload(file)` | Загрузить один файл |
-| `uploadAll(files)` | Загрузить все неотправленные файлы |
-| `reload(button)` | Повторить загрузку файла |
-| `removeFile(button)` | Удалить файл |
-| `clear(full, uiOnly)` | Очистить список |
-| `dispose()` | Полная деинициализация |
-| `_triggerCallback(name, data)` | Вызов колбэка |
-| `_route(params, cb)` | Выполнить AJAX-запрос |
+`customData` дальше пробрасывается в `data-*` атрибуты элементов файла и может использоваться в шаблонах/интеграциях.
 
----
+## AJAX-события и callbacks
 
-## 🌐 AJAX-интеграция
+DOM-события:
 
-Поддерживает:
-- Загрузку `POST /upload`
-- Удаление `DELETE /files/{id}` или `POST /clear` с `ids[]`
-- Сортировку `POST /sort` с массивом `ids`
+- `vg.files.change`
+- `vg.files.upload.start`
+- `vg.files.upload.progress`
+- `vg.files.upload.complete`
+- `vg.files.upload.error`
+- `vg.files.upload.allComplete`
+- `vg.files.remove`
+- `vg.files.reload`
 
----
+Callbacks (`params.callbacks`):
 
-## 🛑 Ограничения и валидация
+- `onInit`
+- `onChange` (`{ files, input, inputFiles }`)
+- `onUploadStart`
+- `onUploadProgress`
+- `onUploadComplete`
+- `onUploadError`
+- `onUploadAllComplete`
+- `onRemoveFile`
+- `onClear`
+- `onReload`
 
-- Проверка по размеру (одиночному и общему).
-- Проверка по количеству файлов.
-- Проверка MIME-типов.
-- Отображение ошибок через `VGAlert` или консоль.
+## Удаление с кастомным confirm
 
----
+Если передан `removes.single.confirm` или `removes.all.confirm`, модуль вызывает вашу функцию вместо стандартного `VGAlert`.
 
-## 🧾 Поддержка браузеров
+Контракт результата:
 
-- Современные браузеры (Chrome, Firefox, Safari, Edge)
-- Требуется поддержка: `File`, `FormData`, `ES6+`, `CustomEvent`
+- `true` или `{ accepted: true }` — подтвердить.
+- `false` или `{ accepted: false }` — отменить.
+- `{ accepted: true, data }` — подтвердить и использовать готовый ответ удаления (без дополнительного AJAX-запроса).
 
----
+## Статусы файлов
 
-## 📚 Зависимости
+- `pending` — ожидает загрузки.
+- `loading` — идет загрузка.
+- `completed` — успешно загружен.
+- `failing` — ошибка загрузки (доступен reload).
 
-- `VGFilesBase`, `VGFilesDroppable`, `VGFilesTemplateRender`, `FileUploader`
-- `VGAlert`, `VGToast` — модули уведомлений
-- `EventHandler`, `Selectors`, `Manipulator`, `Classes` — утилиты DOM
-- `getSVG`, `lang_buttons`, `lang_messages` — компоненты интерфейса
+## Методы API
 
----
+- `upload(file)`
+- `uploadAll(files)`
+- `reload(button)`
+- `removeFile(button)`
+- `clear(resetInput, uiOnly)`
+- `dispose()`
 
-✅ **Гибкий | Расширяемый | Локализуемый | Готов к production**
-
----
-
-## 📝 Лицензия
-
-MIT. Свободно использовать и модифицировать.
-
----
-
-📌 *Разработано в рамках фронтенд-системы VG Modules.*
-> 🚀 Автор: VEGAS STUDIO (vegas-dev.com)
-> 📍 Поддерживается в проектах VEGAS

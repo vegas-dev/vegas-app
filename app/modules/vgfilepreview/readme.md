@@ -1,55 +1,68 @@
 ## VGFilePreview
 
-Модуль предпросмотра файлов для карточек/строк с атрибутом `data-vg-filepreview`.
+Модуль предпросмотра файлов для элементов с атрибутом `data-vg-filepreview`.
 
-### Возможности
+### Новые фичи
 
-- Определяет тип файла по пути/расширению и подставляет соответствующую SVG-иконку.
-- Заполняет поля карточки:
-  - имя файла;
-  - расширение;
-  - оригинальное имя (для медиа, если передано);
-  - размер (если доступен).
-- Отображает кнопку скачивания, если в `data-fields` есть поле `download`.
-- Для аудио в поле `name` добавляет inline-кнопку `play/pause` и воспроизводит файл без отдельного плеера/сайдбара.
-- Открывает предпросмотр по типам:
-  - изображения: модалка (`VGModal`);
-  - видео: модалка с автозапуском и навигацией prev/next по соседним видео;
-  - текст: модалка с содержимым;
-  - `md`: markdown-рендер;
-  - архивы (`zip`): просмотр содержимого и предпросмотр поддерживаемых файлов внутри;
-  - `pdf`: просмотрщик в модалке;
-  - office (`doc/docx/xls/xlsx/ppt/pptx/...`): модалка через web-viewer.
+- Inline-аудио в поле `.name`: play/pause, прогресс через CSS-переменную `--vg-filepreview-audio-inline-progress`, и контроль единственного активного аудио.
+- Унифицированная кнопка скачивания: модуль сам создает/инициализирует control в поле `download`, скачивает через `fetch + blob` и имеет fallback на прямую ссылку.
+- Режим `ui.nameOnly`: рендер только действий по имени файла (без кнопок/контейнера предпросмотра).
+- Автоопределение языка (`ru`/`en`) с приоритетом: `params.lang` -> `element[lang]` -> ближайший `[lang]` -> `<html lang>` -> `navigator.language`.
+- Видео-плейлист между соседними превью: `prev/next`, циклическая навигация и hotkeys `ArrowLeft/ArrowRight`.
+- ZIP-предпросмотр с кэшем: таблица содержимого архива + предпросмотр поддерживаемых файлов внутри архива (текст/изображения), включая deflate-raw через `DecompressionStream`.
+- Текстовый/Markdown modal с кэшем, безопасной обработкой ссылок и прерыванием прошлых запросов (`AbortController`).
+
+### Что умеет модуль
+
+- Определяет тип файла и подставляет SVG-иконку.
+- Заполняет поля карточки: `name`, `ext`, `size`, `original_name`, `icon`, `download`, `preview`.
+- Запускает предпросмотр по типам файлов:
+  - изображения (`png/jpg/webp/svg/...`);
+  - видео (`mp4/webm/mov/mkv/avi/m4v`);
+  - текст (`txt/md/csv/json/xml/yml/yaml/log/ini/conf/env`);
+  - `pdf`;
+  - office (`doc/docx/xls/xlsx/ppt/pptx/odt/ods/odp`);
+  - архивы (`zip`).
+- Для интерактивных рендеров автоматически вешает обработчики клика на `.name` (`is-preview-action`).
 
 ### Состояния и валидация
 
-- Проверяет путь до файла через helper.
-- Синхронизирует валидность:
-  - `data-vg-filepreview-valid`;
-  - `data-vg-filepreview-error`.
-- Ставит состояние рендера в `data-vg-filepreview-state`:
-  - `loading`;
-  - `ready`;
-  - `empty`;
-  - `error`.
+- Валидация пути через helper (`data-vg-filepreview-valid`, `data-vg-filepreview-error`).
+- Текущее состояние рендера в `data-vg-filepreview-state`:
+  - `loading`
+  - `ready`
+  - `empty`
+  - `error`
+- Выбранный рендерер в `data-vg-filepreview-renderer` (`image`, `video`, `pdf`, `office`, `zip`, `text`, `audio`).
 
-### Атрибуты и поля
+### Атрибуты и слоты
 
 - `data-vg-filepreview` — путь к файлу (обязательный).
-- `data-fields` — список полей, которые нужно заполнить.
-- Поддерживаемые поля:
-  - `icon`, `name`, `ext`, `size`, `original_name`, `preview`, `download`.
+- `data-fields` — список полей для синхронизации (например, `name,size,download`).
+- Поддерживаемые поля: `icon`, `name`, `ext`, `size`, `original_name`, `preview`, `download`.
+- Если поле `preview` не найдено, модуль создает `<div class="preview" data-vg-filepreview-slot="preview">` автоматически (кроме `ui.nameOnly`).
 
-Поле привязывается по CSS-классу внутри элемента модуля (например, `.name`, `.icon`, `.download`).
+### Параметры
 
-### Локализация
+```js
+new VGFilePreview(element, {
+  validate: true,
+  lang: 'ru',
+  ui: {
+    nameOnly: false
+  }
+});
+```
 
-Модуль использует i18n-ключи `filepreview.*` из `app/langs/*/{buttons,messages}.json`.
+- `validate` (`boolean`, default `true`) — проверка пути до файла.
+- `lang` (`'ru' | 'en'`) — язык кнопок/сообщений.
+- `ui.nameOnly` (`boolean`, default `false`) — не создавать UI-контейнер предпросмотра.
 
 ### Расширение
 
 Рендереры подключаются через `js/renderers/index.js`.
 
-1. Создать рендерер в `js/renderers/`.
-2. Реализовать `canRender(context)` и `render(context)`.
-3. Подключить рендерер в `js/renderers/index.js` в нужном порядке приоритета.
+1. Создайте рендерер в `js/renderers/`.
+2. Реализуйте `canRender(context)` и `render(context)`.
+3. Добавьте рендерер в `js/renderers/index.js` в нужном порядке приоритета.
+
