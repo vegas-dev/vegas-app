@@ -6,6 +6,7 @@
 * В VGFilePreview клик по `.vg-filepreview-audio-inline__name` теперь запускает/ставит на паузу аудио.
 * В VGFilePreview клик по картинке в `icon` (image/audio cover/video poster) открывает ImageModal.
 * В стилях VGFilePreview добавлен `.is-preview-action { cursor: pointer; }`.
+* В VGFilePreview добавлена конфигурация предпросмотра по группам через `this._params.preview.<group>.enable` (`audio`, `video`, `image`, `archive`, `text`, `office`, `pdf`), по умолчанию группы отключены; инициализация модуля не блокируется.
 
 ---
 # VEGAS-APP 1.1.4 (Апрель, 9, 2026)

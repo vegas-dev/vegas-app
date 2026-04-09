@@ -19,8 +19,16 @@ class VGFilePreview extends BaseModule {
 			validate: true,
 			lang: 'ru',
 			ui: {
-				nameOnly: false,
-				preview: false
+				nameOnly: false
+			},
+			preview: {
+				audio: {enable: true},
+				video: {enable: true},
+				image: {enable: false},
+				archive: {enable: true},
+				text: {enable: true},
+				office: {enable: false},
+				pdf: {enable: true}
 			}
 		}, params));
 
@@ -136,7 +144,9 @@ class VGFilePreview extends BaseModule {
 			image.addEventListener('error', () => {
 				this._renderDefaultIcon(iconField);
 			});
-			this._bindIconImageToModal(image, imageSrc);
+			if (this._isPreviewGroupEnabled('image')) {
+				this._bindIconImageToModal(image, imageSrc);
+			}
 			iconField.appendChild(image);
 			return;
 		}
@@ -151,7 +161,7 @@ class VGFilePreview extends BaseModule {
 
 		const nameField = this._editableFields.name;
 		if (nameField) {
-			if (this._isAudioFile()) {
+			if (this._isAudioFile() && this._isPreviewGroupEnabled('audio')) {
 				this._renderAudioNameField(nameField);
 				this._element.setAttribute('data-vg-filepreview-renderer', 'audio');
 			} else if (displayName) {
@@ -243,6 +253,10 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_toggleInlineAudio() {
+		if (!this._isPreviewGroupEnabled('audio')) {
+			return;
+		}
+
 		const src = this._fileUrl?.href || this._filePath || '';
 		if (!src || !this._inlineAudioButton) {
 			return;
@@ -510,6 +524,10 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_enrichVideoMetadata() {
+		if (!this._isPreviewGroupEnabled('video')) {
+			return;
+		}
+
 		if (this._videoMetaApplied || this._videoMetaPromise || !this._isVideoFile()) {
 			return;
 		}
@@ -547,7 +565,9 @@ class VGFilePreview extends BaseModule {
 				image.addEventListener('error', () => {
 					this._renderDefaultIcon(iconField);
 				});
-				this._bindIconImageToModal(image, this._videoCoverObjectUrl, image.alt);
+				if (this._isPreviewGroupEnabled('video')) {
+					this._bindIconImageToModal(image, this._videoCoverObjectUrl, image.alt);
+				}
 				iconField.appendChild(image);
 
 				this._videoMetaApplied = true;
@@ -631,7 +651,7 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_renderPreview() {
-		const isNameOnly = Boolean(this._params?.ui?.nameOnly) || !this._shouldRenderPreview();
+		const isNameOnly = Boolean(this._params?.ui?.nameOnly) || !this._shouldRenderPreviewForCurrentFile();
 		const previewContainer = this._resolvePreviewContainer({
 			autoCreate: !isNameOnly
 		});
@@ -658,6 +678,9 @@ class VGFilePreview extends BaseModule {
 		let rendered = false;
 		this._renderers.forEach((renderer) => {
 			if (rendered || typeof renderer?.canRender !== 'function' || typeof renderer?.render !== 'function') {
+				return;
+			}
+			if (!this._isRendererEnabled(renderer?.name)) {
 				return;
 			}
 
@@ -723,8 +746,86 @@ class VGFilePreview extends BaseModule {
 		return container;
 	}
 
-	_shouldRenderPreview() {
-		return Boolean(this._params?.ui?.preview);
+	_shouldRenderPreviewForCurrentFile() {
+		if (this._isAudioFile()) {
+			return this._isPreviewGroupEnabled('audio');
+		}
+
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		if (ext === '.pdf') {
+			return this._isPreviewGroupEnabled('pdf');
+		}
+
+		if (this._isVideoFile()) {
+			return this._isPreviewGroupEnabled('video');
+		}
+
+		if (this._isImageFile()) {
+			return this._isPreviewGroupEnabled('image');
+		}
+
+		if (this._isOfficeFile()) {
+			return this._isPreviewGroupEnabled('office');
+		}
+
+		if (this._isArchiveFile()) {
+			return this._isPreviewGroupEnabled('archive');
+		}
+
+		if (this._isTextFile()) {
+			return this._isPreviewGroupEnabled('text');
+		}
+
+		return false;
+	}
+
+	_isRendererEnabled(rendererName = '') {
+		const name = String(rendererName || '').trim();
+		const map = {
+			image: 'image',
+			video: 'video',
+			pdf: 'pdf',
+			office: 'office',
+			zip: 'archive',
+			text: 'text'
+		};
+		const group = map[name];
+		if (!group) {
+			return true;
+		}
+
+		return this._isPreviewGroupEnabled(group);
+	}
+
+	_isPreviewGroupEnabled(groupName = '') {
+		const group = String(groupName || '').trim();
+		if (!group) {
+			return false;
+		}
+
+		const preview = this._params?.preview;
+		if (!preview || typeof preview !== 'object' || Array.isArray(preview)) {
+			return false;
+		}
+
+		if (!Object.prototype.hasOwnProperty.call(preview, group)) {
+			return false;
+		}
+
+		const config = preview[group];
+		if (typeof config === 'boolean') {
+			return config;
+		}
+
+		if (!config || typeof config !== 'object' || Array.isArray(config)) {
+			return false;
+		}
+
+		if (!Object.prototype.hasOwnProperty.call(config, 'enable')) {
+			return false;
+		}
+
+		return Boolean(config.enable);
 	}
 
 	_getImageIconSrc() {
@@ -735,6 +836,26 @@ class VGFilePreview extends BaseModule {
 		}
 
 		return this._fileUrl?.href || this._filePath || '';
+	}
+
+	_isImageFile() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif', '.ico', '.tif', '.tiff', '.heic', '.heif'].includes(ext);
+	}
+
+	_isOfficeFile() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		return ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.odp'].includes(ext);
+	}
+
+	_isArchiveFile() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		return ['.zip'].includes(ext);
+	}
+
+	_isTextFile() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		return ['.txt', '.md', '.csv', '.json', '.xml', '.yml', '.yaml', '.log', '.ini', '.conf', '.env'].includes(ext);
 	}
 
 	_renderDefaultIcon(iconField) {
