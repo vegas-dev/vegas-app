@@ -26,71 +26,6 @@
 	color: var(--vg-filepreview-trigger-color);
 }
 
-.vg-filepreview-audio-sidebar {
-	@extend %vg-filepreview-vars;
-	--vg-sidebar-vertical-height: var(--vg-filepreview-audio-sidebar-vertical-height);
-	--vg-sidebar-vertical-width: var(--vg-filepreview-audio-sidebar-vertical-width);
-	background: var(--vg-filepreview-panel-bg);
-	color: var(--vg-filepreview-panel-color);
-	border-top: var(--vg-filepreview-panel-border);
-
-	&__header {
-		height: auto;
-		padding: var(--vg-filepreview-audio-sidebar-header-padding);
-		border-bottom: var(--vg-filepreview-panel-border);
-	}
-
-	&__body {
-		height: auto;
-		padding: var(--vg-filepreview-audio-sidebar-body-padding);
-		overflow: hidden;
-	}
-
-	&__meta {
-		min-width: 0;
-	}
-
-	&__title {
-		font-size: var(--vg-filepreview-audio-sidebar-title-size);
-		font-weight: var(--vg-filepreview-audio-sidebar-title-weight);
-		line-height: var(--vg-filepreview-audio-sidebar-title-line-height);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	&__subtitle {
-		font-size: var(--vg-filepreview-audio-sidebar-subtitle-size);
-		opacity: var(--vg-filepreview-audio-sidebar-subtitle-opacity);
-		line-height: var(--vg-filepreview-audio-sidebar-subtitle-line-height);
-		margin-top: var(--vg-filepreview-audio-sidebar-subtitle-margin-top);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	&__close {
-		border: 0;
-		width: var(--vg-filepreview-audio-sidebar-close-size);
-		height: var(--vg-filepreview-audio-sidebar-close-size);
-		border-radius: var(--vg-filepreview-audio-sidebar-close-radius);
-		cursor: pointer;
-		background: var(--vg-filepreview-audio-sidebar-close-bg);
-		color: var(--vg-filepreview-audio-sidebar-close-color);
-		font-size: var(--vg-filepreview-audio-sidebar-close-font-size);
-	}
-
-	&__audio {
-		width: 100%;
-		display: block;
-	}
-}
-
-.vg-filepreview-audio-trigger {
-	@extend %vg-filepreview-vars;
-	@include filepreview-trigger(var(--vg-filepreview-trigger-audio-bg));
-}
-
 .vg-filepreview-audio-inline {
 	@extend %vg-filepreview-vars;
 	display: inline-flex;
@@ -354,13 +289,11 @@
 	}
 }
 
-.vg-filepreview-audio-sidebar__navigation,
 .vg-filepreview-video-modal__navigation {
 	display: inline-flex;
 	gap: 8px;
 }
 
-.vg-filepreview-audio-sidebar__nav-btn,
 .vg-filepreview-video-modal__nav-btn {
 	border: 0;
 	border-radius: 8px;
