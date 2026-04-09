@@ -23,9 +23,7 @@ class VideoFilePreviewRenderer {
 
 	render(context = {}) {
 		const container = context?.previewContainer;
-		if (!container) {
-			return false;
-		}
+		const nameOnly = Boolean(context?.ui?.nameOnly);
 		const i18n = context?.i18n;
 
 		const src = context?.fileUrl?.href || context?.filePath || '';
@@ -53,18 +51,27 @@ class VideoFilePreviewRenderer {
 			});
 		};
 
+		const titleLink = context?.element?.querySelector('.name');
+		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-video-bind')) {
+			titleLink.setAttribute('data-vg-filepreview-video-bind', 'true');
+			titleLink.classList.add('is-preview-action');
+			titleLink.addEventListener('click', openVideo);
+		}
+
+		if (nameOnly) {
+			return Boolean(titleLink);
+		}
+
+		if (!container) {
+			return false;
+		}
+
 		const trigger = document.createElement('button');
 		trigger.type = 'button';
 		trigger.className = 'vg-filepreview-video-trigger';
 		trigger.textContent = i18n?.button('open_video') || '';
 		trigger.addEventListener('click', openVideo);
 		container.appendChild(trigger);
-
-		const titleLink = context?.element?.querySelector('.name');
-		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-video-bind')) {
-			titleLink.setAttribute('data-vg-filepreview-video-bind', 'true');
-			titleLink.addEventListener('click', openVideo);
-		}
 
 		return true;
 	}

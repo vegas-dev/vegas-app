@@ -27,9 +27,7 @@ class TextFilePreviewRenderer {
 
 	render(context = {}) {
 		const container = context?.previewContainer;
-		if (!container) {
-			return false;
-		}
+		const nameOnly = Boolean(context?.ui?.nameOnly);
 		const i18n = context?.i18n;
 
 		const src = context?.fileUrl?.href || context?.filePath || '';
@@ -56,18 +54,27 @@ class TextFilePreviewRenderer {
 			});
 		};
 
+		const titleLink = context?.element?.querySelector('.name');
+		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-text-bind')) {
+			titleLink.setAttribute('data-vg-filepreview-text-bind', 'true');
+			titleLink.classList.add('is-preview-action');
+			titleLink.addEventListener('click', openText);
+		}
+
+		if (nameOnly) {
+			return Boolean(titleLink);
+		}
+
+		if (!container) {
+			return false;
+		}
+
 		const trigger = document.createElement('button');
 		trigger.type = 'button';
 		trigger.className = 'vg-filepreview-text-trigger';
 		trigger.textContent = i18n?.button('open_text') || '';
 		trigger.addEventListener('click', openText);
 		container.appendChild(trigger);
-
-		const titleLink = context?.element?.querySelector('.name');
-		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-text-bind')) {
-			titleLink.setAttribute('data-vg-filepreview-text-bind', 'true');
-			titleLink.addEventListener('click', openText);
-		}
 
 		return true;
 	}

@@ -25,10 +25,8 @@ class OfficeFilePreviewRenderer {
 
 	render(context = {}) {
 		const container = context?.previewContainer;
+		const nameOnly = Boolean(context?.ui?.nameOnly);
 		const i18n = context?.i18n;
-		if (!container) {
-			return false;
-		}
 
 		const src = context?.fileUrl?.href || context?.filePath || '';
 		if (!src) {
@@ -52,18 +50,27 @@ class OfficeFilePreviewRenderer {
 			});
 		};
 
+		const titleLink = context?.element?.querySelector('.name');
+		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-office-bind')) {
+			titleLink.setAttribute('data-vg-filepreview-office-bind', 'true');
+			titleLink.classList.add('is-preview-action');
+			titleLink.addEventListener('click', openOffice);
+		}
+
+		if (nameOnly) {
+			return Boolean(titleLink);
+		}
+
+		if (!container) {
+			return false;
+		}
+
 		const trigger = document.createElement('button');
 		trigger.type = 'button';
 		trigger.className = 'vg-filepreview-office-trigger';
 		trigger.textContent = i18n?.button('open_office') || '';
 		trigger.addEventListener('click', openOffice);
 		container.appendChild(trigger);
-
-		const titleLink = context?.element?.querySelector('.name');
-		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-office-bind')) {
-			titleLink.setAttribute('data-vg-filepreview-office-bind', 'true');
-			titleLink.addEventListener('click', openOffice);
-		}
 
 		return true;
 	}

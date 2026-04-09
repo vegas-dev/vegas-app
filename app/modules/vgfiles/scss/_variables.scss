@@ -74,6 +74,11 @@ $files-map: (
 	info-padding: 8px,
 	info-border-bottom-color: var(--vg-secondary-bg),
 	info-hover-bg: rgba(var(--vg-secondary-bg-rgb), .4),
+	info-audio-progress-track: rgba(var(--vg-secondary-bg-rgb), .3),
+	info-audio-progress-fill: #000,
+	info-audio-progress-opacity: .33,
+	info-audio-row-min-height: 64px,
+	info-audio-image-size: 48px,
 
 	info-image-radius: 4px,
 	info-iteration-font-size: 16px,
@@ -83,6 +88,9 @@ $files-map: (
 	info-remove-icon-size: 16px,
 	info-row-remove-size: 22px,
 	info-row-remove-icon-size: 10px,
+	info-failing-actions-gap: 6px,
+	info-failing-actions-margin-start: 8px,
+	drop-failing-actions-gap: 6px,
 
 	// legacy (оставлено для совместимости со старым API темы)
 	info-mb: 10px,

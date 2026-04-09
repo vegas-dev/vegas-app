@@ -30,7 +30,7 @@
 	@extend %vg-filepreview-vars;
 	display: inline-flex;
 	align-items: center;
-	gap: var(--vg-filepreview-audio-inline-gap);
+	gap: 8px;
 	min-width: 0;
 
 	&__toggle {

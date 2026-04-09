@@ -485,7 +485,7 @@ class VGFiles extends VGFilesBase {
                     const fileRemove = Selectors.find('.file-remove', li);
                     if (fileRemove) {
                         fileRemove.innerHTML = '';
-                        fileRemove.appendChild(this._setButtonElement(file, true, 'failing'));
+                        fileRemove.appendChild(this._setFailingButtons(file));
                         Classes.add(li, CLASS_NAME_FAILING);
                     }
                 }
@@ -678,7 +678,14 @@ class VGFiles extends VGFilesBase {
         });
 
         if (this._params.ajax && this._params.removes.single.route) {
-            if (!id) return;
+            if (!id) {
+                this._files = this._files.filter(f => !(f.name === name && f.size === size));
+                this._updateStatsAfterRemove();
+                this._files.length ? this.build() : this.clear(true);
+                emitRemove();
+                this._resetFileInput();
+                return;
+            }
 
             const routeBase = this._params.removes.single.route;
             const routeSeparator = routeBase.includes('?') ? '&' : '?';
@@ -776,10 +783,6 @@ class VGFiles extends VGFilesBase {
             if (status === 'completed') icon = getSVG('check');
             else action = 'data-vg-reload';
         }
-        if (this._failingUploadedKeys.has(this._getFileKey(file))) {
-            icon = getSVG('spinner');
-            action = 'data-vg-reload';
-        }
 
         return this._tpl.button([
             this._tpl.i({}, icon, { isHTML: true })
@@ -792,6 +795,15 @@ class VGFiles extends VGFilesBase {
             'data-last-modified': file.lastModified || '',
             'data-id': file.id || ''
         }));
+    }
+
+    _setFailingButtons(file) {
+        const wrapper = this._tpl.div({ class: 'file-failing-actions' }, [
+            this._setButtonElement(file, true, 'failing'),
+            this._setButtonElement(file)
+        ]);
+
+        return wrapper;
     }
 
     _renderStat() {

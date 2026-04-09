@@ -23,6 +23,10 @@ $filepreview-map: (
 				toggle-bg: rgba(255, 255, 255, .12),
 				toggle-color: #fff,
 				name-line-height: 1.2,
+				progress-track: rgba(255, 255, 255, .06),
+				progress-fill: rgba(255, 255, 255, .16),
+				progress-radius: 6px,
+				progress-padding-x: 4px,
 		),
 		trigger: (
 				radius: 8px,

@@ -17,9 +17,7 @@ class ZipFilePreviewRenderer {
 
 	render(context = {}) {
 		const container = context?.previewContainer;
-		if (!container) {
-			return false;
-		}
+		const nameOnly = Boolean(context?.ui?.nameOnly);
 		const i18n = context?.i18n;
 
 		const src = context?.fileUrl?.href || context?.filePath || '';
@@ -62,18 +60,27 @@ class ZipFilePreviewRenderer {
 			});
 		};
 
+		const titleLink = context?.element?.querySelector('.name');
+		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-zip-bind')) {
+			titleLink.setAttribute('data-vg-filepreview-zip-bind', 'true');
+			titleLink.classList.add('is-preview-action');
+			titleLink.addEventListener('click', openArchive);
+		}
+
+		if (nameOnly) {
+			return Boolean(titleLink);
+		}
+
+		if (!container) {
+			return false;
+		}
+
 		const trigger = document.createElement('button');
 		trigger.type = 'button';
 		trigger.className = 'vg-filepreview-zip-trigger';
 		trigger.textContent = i18n?.button('open_archive') || '';
 		trigger.addEventListener('click', openArchive);
 		container.appendChild(trigger);
-
-		const titleLink = context?.element?.querySelector('.name');
-		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-zip-bind')) {
-			titleLink.setAttribute('data-vg-filepreview-zip-bind', 'true');
-			titleLink.addEventListener('click', openArchive);
-		}
 
 		return true;
 	}

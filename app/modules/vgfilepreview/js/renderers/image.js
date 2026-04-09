@@ -28,9 +28,7 @@ class ImageFilePreviewRenderer {
 
 	render(context = {}) {
 		const container = context?.previewContainer;
-		if (!container) {
-			return false;
-		}
+		const nameOnly = Boolean(context?.ui?.nameOnly);
 		const i18n = context?.i18n;
 
 		const src = context?.fileUrl?.href || context?.filePath || '';
@@ -50,6 +48,28 @@ class ImageFilePreviewRenderer {
 			});
 		};
 
+		const titleLink = context?.element?.querySelector('.name');
+		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-image-bind')) {
+			titleLink.setAttribute('data-vg-filepreview-image-bind', 'true');
+			titleLink.classList.add('is-preview-action');
+			titleLink.addEventListener('click', openImage);
+		}
+
+		const listImage = context?.element?.closest('.file')?.querySelector('.file-image .file-preview');
+		if (listImage && !listImage.hasAttribute('data-vg-filepreview-image-bind')) {
+			listImage.setAttribute('data-vg-filepreview-image-bind', 'true');
+			listImage.classList.add('is-preview-action');
+			listImage.addEventListener('click', openImage);
+		}
+
+		if (nameOnly) {
+			return Boolean(titleLink || listImage);
+		}
+
+		if (!container) {
+			return false;
+		}
+
 		const trigger = document.createElement('button');
 		trigger.type = 'button';
 		trigger.className = 'vg-filepreview-image-trigger';
@@ -64,12 +84,6 @@ class ImageFilePreviewRenderer {
 		thumbnail.loading = 'lazy';
 		thumbnail.addEventListener('click', openImage);
 		container.appendChild(thumbnail);
-
-		const titleLink = context?.element?.querySelector('.name');
-		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-image-bind')) {
-			titleLink.setAttribute('data-vg-filepreview-image-bind', 'true');
-			titleLink.addEventListener('click', openImage);
-		}
 
 		return true;
 	}

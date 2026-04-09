@@ -160,11 +160,16 @@ class FilePreviewHelper {
 		try {
 			const parsedUrl = new URL(normalizedPath, window.location.origin);
 			const pathname = parsedUrl.pathname || '';
-			const fileName = decodeURIComponent(pathname.split('/').pop() || '');
-			const ext = fileName.includes('.') ? `.${fileName.split('.').pop() || ''}` : '';
-
 			const params = parsedUrl.searchParams;
 			const originalName = this._readOriginalName(params);
+			let fileName = decodeURIComponent(pathname.split('/').pop() || '');
+
+			// blob/data urls often do not contain real filename; prefer explicit original name
+			if (!fileName || !fileName.includes('.')) {
+				fileName = originalName || fileName;
+			}
+
+			const ext = fileName.includes('.') ? `.${fileName.split('.').pop() || ''}` : '';
 			const sizeBytes = this._readSize(params);
 			const mediaByExt = ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.mp4', '.webm', '.mov', '.mkv', '.avi'];
 
@@ -178,14 +183,18 @@ class FilePreviewHelper {
 			};
 		} catch {
 			const cleanPath = normalizedPath.split('#')[0].split('?')[0];
-			const fileName = decodeURIComponent(cleanPath.split('/').pop() || '');
+			let fileName = decodeURIComponent(cleanPath.split('/').pop() || '');
+			const originalName = this._readOriginalName(null);
+			if (!fileName || !fileName.includes('.')) {
+				fileName = originalName || fileName;
+			}
 			const ext = fileName.includes('.') ? `.${fileName.split('.').pop() || ''}` : '';
 			const sizeBytes = this._readSize(null);
 
 			return {
 				name: fileName,
 				ext: ext.toLowerCase(),
-				originalName: '',
+				originalName: originalName || '',
 				isMedia: false,
 				sizeBytes,
 				sizeText: this._formatSize(sizeBytes)

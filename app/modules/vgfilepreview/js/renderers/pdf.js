@@ -17,10 +17,8 @@ class PdfFilePreviewRenderer {
 
 	render(context = {}) {
 		const container = context?.previewContainer;
+		const nameOnly = Boolean(context?.ui?.nameOnly);
 		const i18n = context?.i18n;
-		if (!container) {
-			return false;
-		}
 
 		const src = context?.fileUrl?.href || context?.filePath || '';
 		if (!src) {
@@ -49,18 +47,27 @@ class PdfFilePreviewRenderer {
 			});
 		};
 
+		const titleLink = context?.element?.querySelector('.name');
+		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-pdf-bind')) {
+			titleLink.setAttribute('data-vg-filepreview-pdf-bind', 'true');
+			titleLink.classList.add('is-preview-action');
+			titleLink.addEventListener('click', openPdf);
+		}
+
+		if (nameOnly) {
+			return Boolean(titleLink);
+		}
+
+		if (!container) {
+			return false;
+		}
+
 		const trigger = document.createElement('button');
 		trigger.type = 'button';
 		trigger.className = 'vg-filepreview-pdf-trigger';
 		trigger.textContent = i18n?.button('open_pdf') || '';
 		trigger.addEventListener('click', openPdf);
 		container.appendChild(trigger);
-
-		const titleLink = context?.element?.querySelector('.name');
-		if (titleLink && !titleLink.hasAttribute('data-vg-filepreview-pdf-bind')) {
-			titleLink.setAttribute('data-vg-filepreview-pdf-bind', 'true');
-			titleLink.addEventListener('click', openPdf);
-		}
 
 		return true;
 	}

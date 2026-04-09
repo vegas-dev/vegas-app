@@ -5,6 +5,8 @@ import {lang_messages} from "../../../utils/js/components/lang";
 import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
+import VGFilePreview from "../../vgfilepreview";
+import {extractAudioMetadata} from "../../../utils/js/components/audio-metadata";
 
 class VGFilesBase extends BaseModule {
 	constructor(element, params = {}, defaults = {}) {
@@ -22,7 +24,8 @@ class VGFilesBase extends BaseModule {
 		this._tpl = Html('dom');
 		this._files = [];
 		this._errors = new Set();
-		this._objectUrls = [];
+		this._fileObjectUrls = new Map();
+		this._audioMetaPromises = new Map();
 
 		this._nodes = {
 			stat: Selectors.find(`.${this._getClass('stat')}`, this._element),
@@ -190,19 +193,36 @@ class VGFilesBase extends BaseModule {
 		if (replace) {
 			filesToProcess = incoming;
 		} else {
-			const fileMap = new Map(this._files.map(f => [this._getFileKey(f), f]));
-			incoming.forEach(file => {
-				fileMap.set(this._getFileKey(file), file);
-			});
-			filesToProcess = Array.from(fileMap.values());
+			filesToProcess = this._mergeFilesByOrder(incoming, this._files, Boolean(this._params.prepend));
 		}
 
 		this._files = this._filterFiles(filesToProcess);
-		if (this._params.prepend) this._files.reverse();
 
 		this._renderErrors();
+		this._enrichAudioMetadata(this._files);
 
 		return this._files;
+	}
+
+	_mergeFilesByOrder(incoming = [], existing = [], prepend = false) {
+		const ordered = prepend
+			? [...incoming, ...existing]
+			: [...existing, ...incoming];
+
+		const seen = new Set();
+		const result = [];
+
+		ordered.forEach((file) => {
+			const key = this._getFileKey(file);
+			if (seen.has(key)) {
+				return;
+			}
+
+			seen.add(key);
+			result.push(file);
+		});
+
+		return result;
 	}
 
 	_getFileKey(file) {
@@ -477,41 +497,146 @@ class VGFilesBase extends BaseModule {
 
 		if (!this._params.info) Classes.add($list, 'list-row');
 
-		$list.innerHTML = '';
-
 		const $itemsTemplate = this._parseTemplate().children;
 		const $itemsTemplateClasses = this._parseTemplate().liClasses.filter(cls => cls !== 'file');
-		const fragment = document.createDocumentFragment();
+		const currentChildren = Array.from($list.children || []);
+		const existingByKey = new Map();
+		currentChildren.forEach((child) => {
+			const key = this._getInfoNodeKey(child);
+			if (key) {
+				if (!child.hasAttribute('data-file-key')) {
+					child.setAttribute('data-file-key', key);
+				}
+				existingByKey.set(key, child);
+			}
+		});
+
+		const nextNodes = [];
 
 		files.forEach((file, i) => {
-			let classes = $itemsTemplateClasses;
+			const fileKey = this._getFileKey(file);
+			const signature = this._getInfoItemSignature(file, i);
+			const existingNode = existingByKey.get(fileKey);
 
-			if (this._params.image) classes.push('with-image');
-			if (this._params.info) classes.push('with-info');
-			if (this._params.detach) classes.push('with-remove')
-			if (this._params.sortable.enabled) classes.push('with-sortable');
+			if (existingNode && existingNode.getAttribute('data-vg-info-signature') === signature) {
+				const iterationNode = existingNode.querySelector('.iteration');
+				if (iterationNode) {
+					iterationNode.textContent = `${i + 1}.`;
+				}
+				nextNodes.push(existingNode);
+				existingByKey.delete(fileKey);
+				return;
+			}
 
-			let parts = [];
-			$itemsTemplate.forEach(tmpl => {
-				const part = this._renderTemplatePart(tmpl.element, file, i);
-				if (part) parts.push(part);
-			});
+			if (existingNode) {
+				existingNode.remove();
+			}
 
-			const $li = this._tpl.li(
-				this._buildFileDataAttributes(file, {
-					'data-name': file.name,
-					'data-size': file.size ?? 0,
-					'data-type': file.type || '',
-					'data-id': file.id || '',
-					class: 'file ' + classes.join(' ') + ' '
-				}),
-				parts
-			);
-			fragment.appendChild($li);
+			const nextNode = this._createInfoListItem(file, i, $itemsTemplate, $itemsTemplateClasses, fileKey, signature);
+			nextNodes.push(nextNode);
+			existingByKey.delete(fileKey);
 		});
-		$list.appendChild(fragment);
+
+		if (existingByKey.size) {
+			const removedNodes = Array.from(existingByKey.values());
+			VGFilePreview.stopActiveInlineAudioIfDetached(removedNodes);
+			removedNodes.forEach((node) => node.remove());
+		}
+
+		nextNodes.forEach((node) => {
+			$list.appendChild(node);
+		});
+
+		this._initFilePreviewInInfo($list);
 
 		Classes.add(this._nodes.info, 'show')
+	}
+
+	_getInfoItemSignature(file, index) {
+		const displayName = this._resolveDisplayName(file);
+		const previewPath = this._resolveFilePreviewPath(file);
+		const id = file?.id || '';
+		const name = file?.name || '';
+		const size = file?.size ?? 0;
+		const type = file?.type || '';
+
+		return `${id}|${name}|${size}|${type}|${displayName}|${previewPath}`;
+	}
+
+	_getInfoNodeKey(node) {
+		if (!node || typeof node.getAttribute !== 'function') {
+			return '';
+		}
+
+		const fromAttr = String(node.getAttribute('data-file-key') || '').trim();
+		if (fromAttr) {
+			return fromAttr;
+		}
+
+		const name = String(node.getAttribute('data-name') || '').trim();
+		const size = String(node.getAttribute('data-size') || '').trim();
+		const type = String(node.getAttribute('data-type') || '').trim();
+		if (name && size && type) {
+			return `${name}-${size}-${type}`;
+		}
+
+		const raw = String(node.getAttribute('data-file') || '').trim();
+		if (!raw) {
+			return '';
+		}
+
+		try {
+			const parsed = JSON.parse(raw);
+			const pName = String(parsed?.name || '').trim();
+			const pSize = String(parsed?.size ?? '').trim();
+			const pType = String(parsed?.type || '').trim();
+			if (pName && pSize && pType) {
+				return `${pName}-${pSize}-${pType}`;
+			}
+		} catch {
+			return '';
+		}
+
+		return '';
+	}
+
+	_createInfoListItem(file, i, itemsTemplate, itemTemplateClasses, fileKey, signature) {
+		let classes = [...itemTemplateClasses];
+
+		if (this._params.image) classes.push('with-image');
+		if (this._params.info) classes.push('with-info');
+		if (this._params.detach) classes.push('with-remove')
+		if (this._params.sortable.enabled) classes.push('with-sortable');
+		const previewPath = this._resolveFilePreviewPath(file);
+		const displayName = this._resolveDisplayName(file);
+
+		let parts = [];
+		itemsTemplate.forEach(tmpl => {
+			const part = this._renderTemplatePart(tmpl.element, file, i);
+			if (part) parts.push(part);
+		});
+
+		const liAttrs = {
+			'data-name': file.name,
+			'data-size': file.size ?? 0,
+			'data-type': file.type || '',
+			'data-id': file.id || '',
+			'data-file-key': fileKey,
+			'data-vg-info-signature': signature,
+			class: 'file ' + classes.join(' ') + ' '
+		};
+
+		if (previewPath) {
+			liAttrs['data-vg-filepreview'] = previewPath;
+			liAttrs['data-fields'] = 'name,size,download';
+			liAttrs['data-original-name'] = file.name || '';
+			liAttrs['data-vg-filepreview-display-name'] = displayName || file.name || '';
+		}
+
+		return this._tpl.li(
+			this._buildFileDataAttributes(file, liAttrs),
+			parts
+		);
 	}
 
 	_renderTemplatePart(element, file, index = null, options = {}) {
@@ -568,10 +693,12 @@ class VGFilesBase extends BaseModule {
 
 	_renderUIInfo(file, i) {
 		if (this._params.info) {
+			const displayName = this._resolveDisplayName(file);
 			return  this._tpl.div({ class: 'file-info' }, [
 				this._tpl.span({ class: 'iteration' }, `${i + 1}.`),
-				this._tpl.span({ class: 'name' }, file.name),
-				this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
+				this._tpl.span({ class: 'name' }, displayName),
+				this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`),
+				this._tpl.span({ class: 'download' }, '')
 			]);
 		}
 	}
@@ -585,9 +712,18 @@ class VGFilesBase extends BaseModule {
 			return $container;
 		}
 
+		const customData = this._getFileCustomData(file);
+		const audioCover = String(customData.audioCover || '').trim();
+		if (audioCover) {
+			$container.appendChild(this._tpl.img(audioCover, this._resolveDisplayName(file), { class: 'file-preview' }));
+			return $container;
+		}
+
 		if (file?.type && file.type.startsWith('image/')) {
-			const objectUrl = URL.createObjectURL(file);
-			this._objectUrls.push(objectUrl);
+			const objectUrl = this._getFileObjectUrl(file);
+			if (!objectUrl) {
+				return $container;
+			}
 			$container.appendChild(this._tpl.img(objectUrl, file.name, { class: 'file-preview' }));
 			return $container;
 		}
@@ -597,8 +733,162 @@ class VGFilesBase extends BaseModule {
 		return $container;
 	}
 
+	_resolveDisplayName(file) {
+		const customData = this._getFileCustomData(file);
+		const metaTitle = String(customData.audioTitle || '').trim();
+		if (metaTitle) {
+			return metaTitle;
+		}
+
+		return String(file?.name || '').trim();
+	}
+
 	_getIconByFileType(file) {
 		return getSVG(file);
+	}
+
+	_resolveFilePreviewPath(file) {
+		const src = String(file?.src || file?.image || '').trim();
+		if (src) {
+			return src;
+		}
+
+		return this._getFileObjectUrl(file);
+	}
+
+	_getFileObjectUrl(file) {
+		if (!file || typeof File === 'undefined' || !(file instanceof File)) {
+			return '';
+		}
+
+		const key = this._getFileKey(file);
+		if (this._fileObjectUrls.has(key)) {
+			return this._fileObjectUrls.get(key);
+		}
+
+		const objectUrl = URL.createObjectURL(file);
+		this._fileObjectUrls.set(key, objectUrl);
+		return objectUrl;
+	}
+
+	_isAudioFile(file) {
+		if (!file) {
+			return false;
+		}
+
+		const fileType = String(file.type || '').toLowerCase();
+		if (fileType.startsWith('audio/')) {
+			return true;
+		}
+
+		const name = String(file.name || '').toLowerCase();
+		return /\.(mp3|m4a|aac|wav|ogg|flac|opus|wma)$/.test(name);
+	}
+
+	_setFileCustomDataValue(file, key, value) {
+		if (!file || !key) {
+			return;
+		}
+
+		if (!file.customData || typeof file.customData !== 'object' || Array.isArray(file.customData)) {
+			Object.defineProperty(file, 'customData', {
+				value: {},
+				writable: true,
+				enumerable: true
+			});
+		}
+
+		file.customData[key] = value;
+	}
+
+	_enrichAudioMetadata(files = []) {
+		if (!Array.isArray(files) || !files.length) {
+			return;
+		}
+
+		const pending = [];
+
+		files.forEach((file) => {
+			if (!this._isAudioFile(file)) {
+				return;
+			}
+
+			const fileKey = this._getFileKey(file);
+			if (this._audioMetaPromises.has(fileKey)) {
+				return;
+			}
+
+			const customData = this._getFileCustomData(file);
+			if (customData.audioTitle || customData.audioCover) {
+				return;
+			}
+
+			const task = extractAudioMetadata(file)
+				.then((meta) => {
+					if (!meta) {
+						return false;
+					}
+
+					let changed = false;
+
+					if (meta.title) {
+						this._setFileCustomDataValue(file, 'audioTitle', meta.title);
+						changed = true;
+					}
+
+					if (meta.pictureBlob) {
+						const coverKey = `cover:${fileKey}`;
+						let coverUrl = this._fileObjectUrls.get(coverKey);
+						if (!coverUrl) {
+							coverUrl = URL.createObjectURL(meta.pictureBlob);
+							this._fileObjectUrls.set(coverKey, coverUrl);
+						}
+						this._setFileCustomDataValue(file, 'audioCover', coverUrl);
+						changed = true;
+					}
+
+					return changed;
+				})
+				.catch(() => false)
+				.then((result) => {
+					this._audioMetaPromises.delete(fileKey);
+					return result;
+				});
+
+			this._audioMetaPromises.set(fileKey, task);
+			pending.push(task);
+		});
+
+		if (!pending.length) {
+			return;
+		}
+
+		Promise.allSettled(pending).then((results) => {
+			const hasChanges = results.some((item) => item.status === 'fulfilled' && item.value === true);
+			if (!hasChanges || !this._files.length) {
+				return;
+			}
+
+			this._renderUI(this._files);
+		});
+	}
+
+	_initFilePreviewInInfo(root) {
+		if (!this._nodes.info || !root) {
+			return;
+		}
+
+		const lang = this._params?.lang || document.documentElement.lang || 'ru';
+		const nodes = Selectors.findAll('[data-vg-filepreview]', root) || [];
+
+		nodes.forEach((node) => {
+			VGFilePreview.getOrCreateInstance(node, {
+				lang,
+				ui: {
+					nameOnly: true
+				}
+			});
+		});
 	}
 
 	_updateStat() {
@@ -680,8 +970,11 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_revokeUrls() {
-		this._objectUrls.forEach(url => URL.revokeObjectURL(url));
-		this._objectUrls = [];
+		this._fileObjectUrls.forEach((url) => {
+			URL.revokeObjectURL(url);
+		});
+		this._fileObjectUrls.clear();
+		this._audioMetaPromises.clear();
 	}
 
 	_resetFileInput() {

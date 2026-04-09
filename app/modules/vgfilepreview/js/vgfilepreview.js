@@ -14,7 +14,10 @@ class VGFilePreview extends BaseModule {
 
 		this._params = this._getParams(el, mergeDeepObject({
 			validate: true,
-			lang: 'ru'
+			lang: 'ru',
+			ui: {
+				nameOnly: false
+			}
 		}, params));
 
 		this._filePath = '';
@@ -31,6 +34,7 @@ class VGFilePreview extends BaseModule {
 		this._inlineAudioSrc = '';
 		this._inlineAudioButton = null;
 		this._inlineAudioIcon = null;
+		this._inlineAudioContainer = null;
 
 		this.init();
 	}
@@ -122,6 +126,7 @@ class VGFilePreview extends BaseModule {
 		if (nameField) {
 			if (this._isAudioFile()) {
 				this._renderAudioNameField(nameField);
+				this._element.setAttribute('data-vg-filepreview-renderer', 'audio');
 			} else if (this._fileMeta.name) {
 				nameField.classList.remove('vg-filepreview-audio-inline');
 				nameField.textContent = this._fileMeta.name;
@@ -154,7 +159,14 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_renderAudioNameField(nameField) {
-		const fileName = String(this._fileMeta?.name || '').trim();
+		const displayName = String(
+			this._element?.getAttribute('data-vg-filepreview-display-name')
+			|| this._fileMeta?.originalName
+			|| this._fileMeta?.name
+			|| ''
+		).trim();
+
+		const fileName = displayName;
 		if (!fileName) {
 			return;
 		}
@@ -186,6 +198,11 @@ class VGFilePreview extends BaseModule {
 
 		this._inlineAudioButton = button;
 		this._inlineAudioIcon = icon;
+		const rootFile = this._element?.classList?.contains('file')
+			? this._element
+			: this._element?.closest?.('.file');
+		this._inlineAudioContainer = rootFile || this._element || nameField;
+		this._setInlineAudioProgress(0);
 		const isCurrentAudioPlaying = VGFilePreview._activeAudioOwner === this && this._inlineAudio && !this._inlineAudio.paused;
 		this._syncInlineAudioIcon(isCurrentAudioPlaying);
 	}
@@ -204,7 +221,12 @@ class VGFilePreview extends BaseModule {
 			this._stopInlineAudio();
 			this._inlineAudio = new Audio(src);
 			this._inlineAudioSrc = src;
-			this._inlineAudio.addEventListener('ended', () => this._syncInlineAudioIcon(false));
+			this._inlineAudio.addEventListener('ended', () => {
+				this._syncInlineAudioIcon(false);
+				this._setInlineAudioProgress(0);
+			});
+			this._inlineAudio.addEventListener('timeupdate', () => this._syncInlineAudioProgress());
+			this._inlineAudio.addEventListener('loadedmetadata', () => this._syncInlineAudioProgress());
 		}
 
 		if (this._inlineAudio.paused) {
@@ -227,12 +249,14 @@ class VGFilePreview extends BaseModule {
 	_stopInlineAudio() {
 		if (!this._inlineAudio) {
 			this._syncInlineAudioIcon(false);
+			this._setInlineAudioProgress(0);
 			return;
 		}
 
 		this._inlineAudio.pause();
 		this._inlineAudio.currentTime = 0;
 		this._syncInlineAudioIcon(false);
+		this._setInlineAudioProgress(0);
 		if (VGFilePreview._activeAudioOwner === this) {
 			VGFilePreview._activeAudioOwner = null;
 		}
@@ -244,6 +268,32 @@ class VGFilePreview extends BaseModule {
 		}
 
 		this._inlineAudioIcon.innerHTML = isPlaying ? (getSVG('pause') || '') : (getSVG('play') || '');
+	}
+
+	_syncInlineAudioProgress() {
+		if (!this._inlineAudio) {
+			this._setInlineAudioProgress(0);
+			return;
+		}
+
+		const duration = Number(this._inlineAudio.duration || 0);
+		const currentTime = Number(this._inlineAudio.currentTime || 0);
+		if (!duration || !Number.isFinite(duration) || duration <= 0) {
+			this._setInlineAudioProgress(0);
+			return;
+		}
+
+		const progress = Math.max(0, Math.min(100, (currentTime / duration) * 100));
+		this._setInlineAudioProgress(progress);
+	}
+
+	_setInlineAudioProgress(percent) {
+		if (!this._inlineAudioContainer) {
+			return;
+		}
+
+		const normalized = Math.max(0, Math.min(100, Number(percent) || 0));
+		this._inlineAudioContainer.style.setProperty('--vg-filepreview-audio-inline-progress', `${normalized}%`);
 	}
 
 	_renderDownloadField() {
@@ -352,13 +402,18 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_renderPreview() {
-		const previewContainer = this._resolvePreviewContainer();
-		if (!previewContainer) {
+		const isNameOnly = Boolean(this._params?.ui?.nameOnly);
+		const previewContainer = this._resolvePreviewContainer({
+			autoCreate: !isNameOnly
+		});
+		if (!previewContainer && !isNameOnly) {
 			this._setState('error');
 			return;
 		}
 
-		previewContainer.innerHTML = '';
+		if (previewContainer) {
+			previewContainer.innerHTML = '';
+		}
 
 		const context = {
 			element: this._element,
@@ -367,7 +422,8 @@ class VGFilePreview extends BaseModule {
 			fileMeta: this._fileMeta,
 			previewContainer,
 			lang: this._lang,
-			i18n: this._i18n
+			i18n: this._i18n,
+			ui: this._params?.ui || {}
 		};
 
 		let rendered = false;
@@ -390,7 +446,7 @@ class VGFilePreview extends BaseModule {
 			}
 		});
 
-		if (!rendered) {
+		if (!rendered && !isNameOnly) {
 			this._element.removeAttribute('data-vg-filepreview-renderer');
 			this._setState('empty');
 			return;
@@ -398,7 +454,8 @@ class VGFilePreview extends BaseModule {
 		this._setState('ready');
 	}
 
-	_resolvePreviewContainer() {
+	_resolvePreviewContainer(params = {}) {
+		const autoCreate = !Object.prototype.hasOwnProperty.call(params, 'autoCreate') || Boolean(params.autoCreate);
 		const editablePreview = this._editableFields.preview;
 		if (editablePreview) {
 			editablePreview.setAttribute('data-vg-filepreview-slot', 'preview');
@@ -409,6 +466,10 @@ class VGFilePreview extends BaseModule {
 		if (existedPreview) {
 			this._editableFields.preview = existedPreview;
 			return existedPreview;
+		}
+
+		if (!autoCreate) {
+			return null;
 		}
 
 		const container = document.createElement('div');
@@ -422,6 +483,35 @@ class VGFilePreview extends BaseModule {
 
 	static init(element, params = {}) {
 		return VGFilePreview.getOrCreateInstance(element, params);
+	}
+
+	static stopActiveInlineAudio() {
+		const owner = VGFilePreview._activeAudioOwner;
+		if (owner && typeof owner._stopInlineAudio === 'function') {
+			owner._stopInlineAudio();
+		}
+
+		VGFilePreview._activeAudioOwner = null;
+	}
+
+	static stopActiveInlineAudioIfDetached(nodes = []) {
+		const owner = VGFilePreview._activeAudioOwner;
+		if (!owner || !owner._element || !Array.isArray(nodes) || !nodes.length) {
+			return;
+		}
+
+		const shouldStop = nodes.some((node) => {
+			if (!node || typeof node.contains !== 'function') {
+				return false;
+			}
+
+			return node === owner._element || node.contains(owner._element);
+		});
+
+		if (shouldStop) {
+			owner._stopInlineAudio();
+			VGFilePreview._activeAudioOwner = null;
+		}
 	}
 
 	_setState(state = '') {
