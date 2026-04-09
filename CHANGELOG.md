@@ -1,3 +1,13 @@
+# VEGAS-APP 1.1.5 (Апрель, 9, 2026)
+## Изменения
+* В VGFilePreview при `ui.preview=false` блок `.preview` отключается (очистка + скрытие), при этом inline-триггеры предпросмотра и открытие modal сохранены.
+* В VGFilePreview добавлена интеграция метаданных для audio/video. Audio: `title` и `cover` из ID3; Video: генерация poster-кадра в `icon`.
+* В VGFilePreview унифицировано поведение имени для audio/video: `name` показывает title из метаданных (если есть), иначе имя файла; `original_name` при наличии title показывает имя файла.
+* В VGFilePreview клик по `.vg-filepreview-audio-inline__name` теперь запускает/ставит на паузу аудио.
+* В VGFilePreview клик по картинке в `icon` (image/audio cover/video poster) открывает ImageModal.
+* В стилях VGFilePreview добавлен `.is-preview-action { cursor: pointer; }`.
+
+---
 # VEGAS-APP 1.1.4 (Апрель, 9, 2026)
 ## Новые фичи
 * В модуле VGFilePreview для изображений реализован показ самой картинки в слоте иконки (с fallback на стандартную иконку при ошибке загрузки).
@@ -5,6 +15,7 @@
 ## Изменения
 * В модуле VGFilePreview параметр `ui.preview` сделан опциональным и выключен по умолчанию.
 * В модуле VGFilePreview длинные названия файлов и original name ограничены: `min-width: 60px` и `text-overflow: ellipsis`, чтобы название не схлопывалось.
+
 
 ---
 
@@ -263,3 +274,4 @@
 * в модуль VGSidebar добавлен класс vg-sidebar-open в тело документа
 * исправлены некоторые ошибки
 ---
+

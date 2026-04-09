@@ -1,8 +1,11 @@
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
 import FilePreviewHelper from "../../../utils/js/components/file-preview";
+import {extractAudioMetadata} from "../../../utils/js/components/audio-metadata";
+import {extractVideoMetadata} from "../../../utils/js/components/video-metadata";
 import {getSVG} from "../../module-fn";
 import createFilePreviewRenderers from "./renderers";
+import ImageModal from "./renderers/image-modal";
 import {createFilePreviewI18n, resolveFilePreviewLang} from "./i18n";
 
 const NAME = 'filepreview';
@@ -36,6 +39,13 @@ class VGFilePreview extends BaseModule {
 		this._inlineAudioButton = null;
 		this._inlineAudioIcon = null;
 		this._inlineAudioContainer = null;
+		this._audioMetaPromise = null;
+		this._audioMetaApplied = false;
+		this._audioCoverObjectUrl = '';
+		this._videoMetaPromise = null;
+		this._videoMetaApplied = false;
+		this._videoCoverObjectUrl = '';
+		this._imageModal = null;
 
 		this.init();
 	}
@@ -103,19 +113,8 @@ class VGFilePreview extends BaseModule {
 		this._renderIcon();
 		this._renderTextFields();
 		this._renderDownloadField();
-
-		if (this._shouldRenderPreview()) {
-			this._renderPreview();
-			return this._editableFields;
-		}
-
-		const previewField = this._editableFields.preview;
-		if (previewField) {
-			previewField.innerHTML = '';
-		}
-
-		this._element.removeAttribute('data-vg-filepreview-renderer');
-		this._setState('ready');
+		this._enrichVideoMetadata();
+		this._renderPreview();
 
 		return this._editableFields;
 	}
@@ -137,6 +136,7 @@ class VGFilePreview extends BaseModule {
 			image.addEventListener('error', () => {
 				this._renderDefaultIcon(iconField);
 			});
+			this._bindIconImageToModal(image, imageSrc);
 			iconField.appendChild(image);
 			return;
 		}
@@ -145,14 +145,18 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_renderTextFields() {
+		const displayName = this._getDisplayName();
+		const fileName = this._getFileName();
+		const hasDataTitle = this._hasDataDrivenDisplayName();
+
 		const nameField = this._editableFields.name;
 		if (nameField) {
 			if (this._isAudioFile()) {
 				this._renderAudioNameField(nameField);
 				this._element.setAttribute('data-vg-filepreview-renderer', 'audio');
-			} else if (this._fileMeta.name) {
+			} else if (displayName) {
 				nameField.classList.remove('vg-filepreview-audio-inline');
-				nameField.textContent = this._fileMeta.name;
+				nameField.textContent = displayName;
 				this._applyNameClampStyles(nameField);
 			}
 		}
@@ -172,6 +176,12 @@ class VGFilePreview extends BaseModule {
 			return;
 		}
 
+		if (hasDataTitle && fileName) {
+			originalNameField.textContent = fileName;
+			this._applyNameClampStyles(originalNameField);
+			return;
+		}
+
 		if (this._fileMeta.originalName) {
 			originalNameField.textContent = this._fileMeta.originalName;
 			this._applyNameClampStyles(originalNameField);
@@ -184,14 +194,7 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_renderAudioNameField(nameField) {
-		const displayName = String(
-			this._element?.getAttribute('data-vg-filepreview-display-name')
-			|| this._fileMeta?.originalName
-			|| this._fileMeta?.name
-			|| ''
-		).trim();
-
-		const fileName = displayName;
+		const fileName = this._getDisplayName();
 		if (!fileName) {
 			return;
 		}
@@ -212,6 +215,11 @@ class VGFilePreview extends BaseModule {
 		text.className = 'vg-filepreview-audio-inline__name';
 		text.textContent = fileName;
 		this._applyNameClampStyles(text);
+		text.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			this._toggleInlineAudio();
+		});
 
 		button.addEventListener('click', (event) => {
 			event.preventDefault();
@@ -231,6 +239,7 @@ class VGFilePreview extends BaseModule {
 		this._setInlineAudioProgress(0);
 		const isCurrentAudioPlaying = VGFilePreview._activeAudioOwner === this && this._inlineAudio && !this._inlineAudio.paused;
 		this._syncInlineAudioIcon(isCurrentAudioPlaying);
+		this._enrichAudioMetadata(text);
 	}
 
 	_toggleInlineAudio() {
@@ -427,8 +436,202 @@ class VGFilePreview extends BaseModule {
 		document.body.removeChild(link);
 	}
 
+	_enrichAudioMetadata(nameField = null) {
+		if (this._audioMetaApplied || this._audioMetaPromise || !this._isAudioFile()) {
+			return;
+		}
+
+		const src = this._fileUrl?.href || this._filePath || '';
+		if (!src) {
+			return;
+		}
+
+		this._audioMetaPromise = this._createAudioFileFromSource(src)
+			.then((file) => {
+				if (!file) {
+					return null;
+				}
+				return extractAudioMetadata(file);
+			})
+			.then((meta) => {
+				if (!meta) {
+					return false;
+				}
+
+				let changed = false;
+				const title = String(meta.title || '').trim();
+				if (title) {
+					this._element.setAttribute('data-vg-filepreview-display-name', title);
+
+					if (nameField) {
+						nameField.textContent = title;
+						this._applyNameClampStyles(nameField);
+					}
+
+					const originalNameField = this._editableFields?.original_name;
+					if (originalNameField) {
+						originalNameField.textContent = this._getFileName();
+						this._applyNameClampStyles(originalNameField);
+					}
+
+					changed = true;
+				}
+
+				if (meta.pictureBlob instanceof Blob && this._editableFields?.icon) {
+					if (this._audioCoverObjectUrl) {
+						URL.revokeObjectURL(this._audioCoverObjectUrl);
+					}
+					this._audioCoverObjectUrl = URL.createObjectURL(meta.pictureBlob);
+
+					const iconField = this._editableFields.icon;
+					iconField.innerHTML = '';
+
+					const image = document.createElement('img');
+					image.src = this._audioCoverObjectUrl;
+					image.alt = title || this._fileMeta?.originalName || this._fileMeta?.name || '';
+					image.className = 'vg-filepreview-icon-image';
+					image.loading = 'lazy';
+					image.addEventListener('error', () => {
+						this._renderDefaultIcon(iconField);
+					});
+					this._bindIconImageToModal(image, this._audioCoverObjectUrl, title);
+					iconField.appendChild(image);
+
+					changed = true;
+				}
+
+				this._audioMetaApplied = true;
+				return changed;
+			})
+			.catch(() => false)
+			.finally(() => {
+				this._audioMetaPromise = null;
+			});
+	}
+
+	_enrichVideoMetadata() {
+		if (this._videoMetaApplied || this._videoMetaPromise || !this._isVideoFile()) {
+			return;
+		}
+
+		const src = this._fileUrl?.href || this._filePath || '';
+		if (!src) {
+			return;
+		}
+
+		this._videoMetaPromise = this._createMediaFileFromSource(src, this._fileMeta?.originalName || this._fileMeta?.name || 'video.mp4', 'video/mp4')
+			.then((file) => {
+				if (!file) {
+					return null;
+				}
+				return extractVideoMetadata(file);
+			})
+			.then((meta) => {
+				if (!meta || !(meta.posterBlob instanceof Blob) || !this._editableFields?.icon) {
+					return false;
+				}
+
+				if (this._videoCoverObjectUrl) {
+					URL.revokeObjectURL(this._videoCoverObjectUrl);
+				}
+				this._videoCoverObjectUrl = URL.createObjectURL(meta.posterBlob);
+
+				const iconField = this._editableFields.icon;
+				iconField.innerHTML = '';
+
+				const image = document.createElement('img');
+				image.src = this._videoCoverObjectUrl;
+				image.alt = this._fileMeta?.originalName || this._fileMeta?.name || '';
+				image.className = 'vg-filepreview-icon-image';
+				image.loading = 'lazy';
+				image.addEventListener('error', () => {
+					this._renderDefaultIcon(iconField);
+				});
+				this._bindIconImageToModal(image, this._videoCoverObjectUrl, image.alt);
+				iconField.appendChild(image);
+
+				this._videoMetaApplied = true;
+				return true;
+			})
+			.catch(() => false)
+			.finally(() => {
+				this._videoMetaPromise = null;
+			});
+	}
+
+	async _createAudioFileFromSource(src = '') {
+		const name = this._fileMeta?.originalName || this._fileMeta?.name || 'audio.mp3';
+		return this._createMediaFileFromSource(src, name, 'audio/mpeg');
+	}
+
+	async _createMediaFileFromSource(src = '', name = 'file', defaultType = 'application/octet-stream') {
+		try {
+			const response = await fetch(src, {
+				method: 'GET',
+				credentials: 'same-origin'
+			});
+			if (!response.ok) {
+				return null;
+			}
+
+			const blob = await response.blob();
+			if (!blob || !blob.size) {
+				return null;
+			}
+
+			return new File([blob], name, {
+				type: blob.type || defaultType,
+				lastModified: Date.now()
+			});
+		} catch {
+			return null;
+		}
+	}
+
+	_bindIconImageToModal(imageNode, src = '', title = '') {
+		if (!imageNode) {
+			return;
+		}
+
+		const modalSrc = String(src || '').trim();
+		if (!modalSrc) {
+			return;
+		}
+
+		const modalTitle = String(title || this._fileMeta?.originalName || this._fileMeta?.name || '').trim();
+		imageNode.setAttribute('data-vg-filepreview-image-modal-src', modalSrc);
+		imageNode.setAttribute('data-vg-filepreview-image-modal-title', modalTitle);
+		imageNode.classList.add('is-preview-action');
+
+		if (imageNode.hasAttribute('data-vg-filepreview-image-modal-bind')) {
+			return;
+		}
+
+		imageNode.setAttribute('data-vg-filepreview-image-modal-bind', 'true');
+		imageNode.addEventListener('click', (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+
+			const nodeSrc = String(imageNode.getAttribute('data-vg-filepreview-image-modal-src') || '').trim();
+			if (!nodeSrc) {
+				return;
+			}
+
+			const nodeTitle = String(imageNode.getAttribute('data-vg-filepreview-image-modal-title') || '').trim();
+			if (!this._imageModal) {
+				this._imageModal = ImageModal.getInstance();
+			}
+
+			this._imageModal.open({
+				src: nodeSrc,
+				title: nodeTitle,
+				defaultTitle: this._i18n?.message('image_title') || ''
+			});
+		});
+	}
+
 	_renderPreview() {
-		const isNameOnly = Boolean(this._params?.ui?.nameOnly);
+		const isNameOnly = Boolean(this._params?.ui?.nameOnly) || !this._shouldRenderPreview();
 		const previewContainer = this._resolvePreviewContainer({
 			autoCreate: !isNameOnly
 		});
@@ -482,20 +685,33 @@ class VGFilePreview extends BaseModule {
 
 	_resolvePreviewContainer(params = {}) {
 		const autoCreate = !Object.prototype.hasOwnProperty.call(params, 'autoCreate') || Boolean(params.autoCreate);
+		if (!autoCreate) {
+			const disabledPreview = this._editableFields.preview || this._element.querySelector('[data-vg-filepreview-slot="preview"]');
+			if (disabledPreview) {
+				disabledPreview.innerHTML = '';
+				disabledPreview.classList.remove('preview');
+				disabledPreview.setAttribute('hidden', 'hidden');
+				disabledPreview.setAttribute('aria-hidden', 'true');
+			}
+			return null;
+		}
+
 		const editablePreview = this._editableFields.preview;
 		if (editablePreview) {
+			editablePreview.classList.add('preview');
+			editablePreview.removeAttribute('hidden');
+			editablePreview.removeAttribute('aria-hidden');
 			editablePreview.setAttribute('data-vg-filepreview-slot', 'preview');
 			return editablePreview;
 		}
 
 		const existedPreview = this._element.querySelector('[data-vg-filepreview-slot="preview"]');
 		if (existedPreview) {
+			existedPreview.classList.add('preview');
+			existedPreview.removeAttribute('hidden');
+			existedPreview.removeAttribute('aria-hidden');
 			this._editableFields.preview = existedPreview;
 			return existedPreview;
-		}
-
-		if (!autoCreate) {
-			return null;
 		}
 
 		const container = document.createElement('div');
@@ -588,6 +804,42 @@ class VGFilePreview extends BaseModule {
 	_isAudioFile() {
 		const ext = String(this._fileMeta?.ext || '').toLowerCase();
 		return ['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a', '.opus', '.wma'].includes(ext);
+	}
+
+	_isVideoFile() {
+		const ext = String(this._fileMeta?.ext || '').toLowerCase();
+		return ['.mp4', '.webm', '.mov', '.mkv', '.avi', '.m4v', '.ogv'].includes(ext);
+	}
+
+	_getFileName() {
+		return String(this._fileMeta?.originalName || this._fileMeta?.name || '').trim();
+	}
+
+	_getDataDisplayName() {
+		return String(this._element?.getAttribute('data-vg-filepreview-display-name') || '').trim();
+	}
+
+	_hasDataDrivenDisplayName() {
+		const dataName = this._getDataDisplayName();
+		if (!dataName) {
+			return false;
+		}
+
+		const fileName = this._getFileName();
+		if (!fileName) {
+			return true;
+		}
+
+		return dataName !== fileName;
+	}
+
+	_getDisplayName() {
+		const dataName = this._getDataDisplayName();
+		if (dataName) {
+			return dataName;
+		}
+
+		return this._getFileName();
 	}
 }
 

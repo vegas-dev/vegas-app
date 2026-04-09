@@ -26,6 +26,10 @@
 	color: var(--vg-filepreview-trigger-color);
 }
 
+.is-preview-action {
+	cursor: pointer;
+}
+
 .vg-filepreview-audio-inline {
 	@extend %vg-filepreview-vars;
 	display: inline-flex;
