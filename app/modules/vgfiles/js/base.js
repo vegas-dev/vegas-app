@@ -529,6 +529,7 @@ class VGFilesBase extends BaseModule {
 			}
 
 			if (existingNode) {
+				VGFilePreview.stopActiveInlineAudioIfDetached([existingNode]);
 				existingNode.remove();
 			}
 
@@ -935,6 +936,23 @@ class VGFilesBase extends BaseModule {
 	}
 
 	clear(resetInput = true) {
+		const detachedNodes = [];
+		if (this._nodes.info) {
+			const $infoList = Selectors.find(`.${this._getClass('info-list')}`, this._element);
+			if ($infoList?.children?.length) {
+				detachedNodes.push(...Array.from($infoList.children));
+			}
+		}
+		if (this._nodes.drop) {
+			const $dropList = Selectors.find(`.${this._getClass('drop-list')}`, this._element);
+			if ($dropList?.children?.length) {
+				detachedNodes.push(...Array.from($dropList.children));
+			}
+		}
+		if (detachedNodes.length) {
+			VGFilePreview.stopActiveInlineAudioIfDetached(detachedNodes);
+		}
+
 		this._revokeUrls();
 		if (resetInput) {
 			this._resetFileInput();
