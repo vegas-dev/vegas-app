@@ -1,4 +1,13 @@
-﻿# VEGAS-APP 1.1.6 (Апрель, 10, 2026)
+﻿# VEGAS-APP 1.1.7 (Апрель, 13, 2026)
+## Новые фичи
+* В VGFilePreview добавлена поддержка атрибута `data-name` для явной установки отображаемого имени файла (в приоритете над `data-vg-filepreview-display-name`).
+
+## Изменения
+* Обновлена версия пакета в `package.json`: `1.1.6` -> `1.1.7`.
+
+---
+
+# VEGAS-APP 1.1.6 (Апрель, 10, 2026)
 ## Новые фичи
 * **VGToast**: добавлены встроенные модули VGToastDrag и VGToastResize с поддержкой параметров drag/resize (enable, threshold, edgeSize, minWidth/minHeight, debug).
 

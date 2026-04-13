@@ -937,6 +937,11 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_getDataDisplayName() {
+		const dataName = String(this._element?.getAttribute('data-name') || '').trim();
+		if (dataName) {
+			return dataName;
+		}
+
 		return String(this._element?.getAttribute('data-vg-filepreview-display-name') || '').trim();
 	}
 
