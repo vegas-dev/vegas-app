@@ -621,7 +621,7 @@ class VGFormSender extends BaseModule {
 				response = data.response.view
 			} else if (typeof response !== 'string') {
 				if (status === 'danger') {
-					response.title = lang_titles(this._params.lang, 'errors').title;
+					response.title = ('title' in response) ? response.title : lang_titles(this._params.lang, 'errors').title;
 
 					if ('code' in data && data.code !== 200) {
 						const messages = {
