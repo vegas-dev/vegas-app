@@ -68,6 +68,47 @@
 		cursor: pointer;
 	}
 
+	&[class*='vg-toast-effect-'] {
+		.vg-toast-wrapper {
+			transition: opacity .25s ease, transform .25s ease, filter .25s ease;
+			will-change: opacity, transform, filter;
+		}
+	}
+
+	&.vg-toast-effect-fade {
+		&:not(.shown) .vg-toast-wrapper {
+			opacity: 0;
+		}
+	}
+
+	&.vg-toast-effect-zoom {
+		&:not(.shown) .vg-toast-wrapper {
+			opacity: 0;
+			transform: scale(.92);
+		}
+	}
+
+	&.vg-toast-effect-blur {
+		&:not(.shown) .vg-toast-wrapper {
+			opacity: 0;
+			filter: blur(6px);
+		}
+	}
+
+	&.vg-toast-effect-slide-up {
+		&:not(.shown) .vg-toast-wrapper {
+			opacity: 0;
+			transform: translateY(14px);
+		}
+	}
+
+	&.vg-toast-effect-slide-down {
+		&:not(.shown) .vg-toast-wrapper {
+			opacity: 0;
+			transform: translateY(-14px);
+		}
+	}
+
 	&-button {
 		width: auto;
 		height: 100%;

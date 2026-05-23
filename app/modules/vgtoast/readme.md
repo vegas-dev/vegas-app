@@ -67,6 +67,7 @@ VGToast.run('Ошибка подключения', {
 | `animation.in` | `string` | `'animate__backInUp'` | Анимация появления |
 | `animation.out` | `string` | `'animate__backOutDown'` | Анимация исчезновения |
 | `animation.delay` | `number` | `300` | Длительность анимации (мс) |
+| `animation.effect` | `string \| string[]` | `'none'` | Доп. CSS-эффект отображения: `none`, `fade`, `zoom`, `blur`, `slide-up`, `slide-down` или кастомный класс |
 | `ajax.route` | `string` | `''` | URL для загрузки |
 | `ajax.target` | `string` | `''` | Селектор контейнера (если используется) |
 | `ajax.method` | `string` | `'get'` | HTTP-метод |
@@ -90,6 +91,16 @@ VGToast.run('Появилось!', {
 ```
 
 ### 2. AJAX-уведомление
+### 2.1. Дополнительные эффекты отображения
+```js
+VGToast.run('Сообщение', {
+    animation: {
+        in: 'animate__fadeIn',
+        out: 'animate__fadeOut',
+        effect: ['zoom', 'blur']
+    }
+});
+```
 
 ```js
 VGToast.run('Загрузка...', { 

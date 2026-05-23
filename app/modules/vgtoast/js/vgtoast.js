@@ -35,6 +35,15 @@ const CLASS_NAME_SHOW = 'show';
  * @constant {string} CLASS_NAME_SHOWN - Класс, добавляемый после завершения анимации появления.
  */
 const CLASS_NAME_SHOWN = 'shown';
+const EFFECT_CLASS_PREFIX = 'vg-toast-effect-';
+const EFFECT_PRESET_MAP = {
+	none: '',
+	fade: `${EFFECT_CLASS_PREFIX}fade`,
+	zoom: `${EFFECT_CLASS_PREFIX}zoom`,
+	blur: `${EFFECT_CLASS_PREFIX}blur`,
+	'slide-up': `${EFFECT_CLASS_PREFIX}slide-up`,
+	'slide-down': `${EFFECT_CLASS_PREFIX}slide-down`,
+};
 
 // События
 const EVENT_KEY_HIDE     = `${NAME_KEY}.hide`;
@@ -67,6 +76,7 @@ const EVENT_KEY_POINTERCANCEL_INTERACTION = `pointercancel.interaction.${NAME_KE
  * @property {string} animation.in - Анимация входа (Animate.css).
  * @property {string} animation.out - Анимация выхода.
  * @property {number} animation.delay - Длительность анимации.
+ * @property {string|string[]} animation.effect - Доп. визуальный эффект (preset или css-класс).
  * @property {Object} ajax - Настройки AJAX.
  * @property {string} ajax.route - URL для загрузки.
  * @property {string} ajax.target - Селектор контейнера.
@@ -112,6 +122,7 @@ const defaultParams = {
 		in: 'animate__backInUp',
 		out: 'animate__backOutDown',
 		delay: 300,
+		effect: 'none',
 	},
 	ajax: {
 		route: '',
@@ -160,6 +171,7 @@ class VGToast extends BaseModule {
 		this._dragHandler.setOptions(this._interactionConfig.drag);
 		this._resizeHandler.setOptions(this._interactionConfig.resize);
 		this._animation(this._element, VGToast.NAME_KEY, this._params.animation);
+		this._applyAnimationEffects();
 		this._dismissElement();
 		this._addEventListeners();
 
@@ -270,6 +282,7 @@ class VGToast extends BaseModule {
 		const instance = VGToast.getOrCreateInstance(target, params);
 		if (params.animation) {
 			instance._animation(target, VGToast.NAME_KEY, params.animation);
+			instance._applyAnimationEffects();
 		}
 
 		execute(callback, [instance]);
@@ -549,6 +562,37 @@ class VGToast extends BaseModule {
 		}
 
 		return {...defaults};
+	}
+
+	_applyAnimationEffects() {
+		const classList = this._element.classList;
+		const effectClasses = [...classList].filter(className => className.startsWith(EFFECT_CLASS_PREFIX));
+		effectClasses.forEach(className => classList.remove(className));
+
+		const nextClasses = this._resolveAnimationEffectClasses(this._params.animation?.effect);
+		nextClasses.forEach(className => classList.add(className));
+	}
+
+	_resolveAnimationEffectClasses(effectValue) {
+		const values = Array.isArray(effectValue) ? effectValue : [effectValue];
+		const normalized = values
+			.filter(Boolean)
+			.map(effect => this._resolveAnimationEffectClass(effect))
+			.filter(Boolean);
+
+		return Array.from(new Set(normalized));
+	}
+
+	_resolveAnimationEffectClass(effectValue) {
+		if (typeof effectValue !== 'string') return '';
+		const key = effectValue.trim().toLowerCase();
+		if (!key) return '';
+
+		if (Object.prototype.hasOwnProperty.call(EFFECT_PRESET_MAP, key)) {
+			return EFFECT_PRESET_MAP[key];
+		}
+
+		return effectValue.trim();
 	}
 
 	_clearTimeout() {
