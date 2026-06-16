@@ -73,7 +73,7 @@ class VGRollup extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
 
-		this._params = this._getParams(element, mergeDeepObject({
+		const defaultParams = {
 			lang: document.documentElement.lang || 'ru',
 			content: 'text',
 			cnt: 0,
@@ -87,8 +87,8 @@ class VGRollup extends BaseModule {
 			more: ' еще ',
 			button: {
 				enabled: true,
-				more: "Показать",
-				less: "Свернуть",
+				more: 'Показать',
+				less: 'Свернуть',
 				classes: ''
 			},
 			callbacks: {
@@ -96,7 +96,17 @@ class VGRollup extends BaseModule {
 				expand: () => {},
 				collapse: () => {}
 			}
-		}, params));
+		};
+
+		let lang = Manipulator.get(element, 'data-lang') || ('lang' in params) ? params.lang : defaultParams.lang;
+
+		// Локализация текстов кнопок
+		defaultParams.button.more = lang_buttons(lang, NAME)['show'];
+		defaultParams.button.less = lang_buttons(lang, NAME)['less'];
+		defaultParams.more        = lang_buttons(lang, NAME)['more'];
+
+
+		this._params = this._getParams(element, mergeDeepObject(defaultParams, params));
 
 		/**
 		 * CSS-классы, используемые модулем.
@@ -140,11 +150,6 @@ class VGRollup extends BaseModule {
 		 * @type {boolean}
 		 */
 		this.isOffset = false;
-
-		// Локализация текстов кнопок
-		this._params.button.more = lang_buttons(this._params.lang, NAME)['show'];
-		this._params.button.less = lang_buttons(this._params.lang, NAME)['less'];
-		this._params.more = lang_buttons(this._params.lang, NAME)['more'];
 
 		this.build();
 	}
