@@ -306,7 +306,7 @@ class VGModal extends BaseModule {
 
 			this._params = this._getParams(relatedTarget, this._params);
 			this._route((status, data) => {
-				EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data});
+				EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data, relatedTarget: relatedTarget});
 				this._syncInteractiveBounds();
 			});
 		}

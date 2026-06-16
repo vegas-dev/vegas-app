@@ -141,7 +141,7 @@ class VGFormSender extends BaseModule {
 					closeModalsBeforeModal: true
 				},
 				toast: {
-					closeModalsBeforeToast: false
+					closeModalsBeforeToast: true
 				}
 			},
 			ajax: {

@@ -186,6 +186,8 @@ class VGToast extends BaseModule {
 
 		/** @private */
 		this._timeout = null;
+		this._hideTimeout = null;
+		this._isHiding = false;
 	}
 
 	/**
@@ -330,32 +332,38 @@ class VGToast extends BaseModule {
 	show(relatedTarget) {
 		if (isDisabled(this._element)) return;
 
+		const element = this._element;
 		this._clearTimeout();
+		this._clearHideTimeout();
+		this._isHiding = false;
 		this._disableInteractionHandlers();
 
 		this._params = this._getParams(relatedTarget || {}, this._params);
 		this._route((status, data) => {
-			EventHandler.trigger(this._element, EVENT_KEY_LOADED, { stats: status, data });
+			if (this._element !== element) return;
+			EventHandler.trigger(element, EVENT_KEY_LOADED, { stats: status, data });
 		});
 
-		const showEvent = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget });
+		const showEvent = EventHandler.trigger(element, EVENT_KEY_SHOW, { relatedTarget });
 		if (showEvent.defaultPrevented) return;
 
-		this._element.classList.remove(CLASS_NAME_SHOWN);
-		this._element.classList.add(CLASS_NAME_SHOW);
+		element.classList.remove(CLASS_NAME_SHOWN);
+		element.classList.add(CLASS_NAME_SHOW);
 		document.body.classList.add(CLASS_NAME_OPEN);
 
 		this._setPlacement();
 
 		const completeCallBack = () => {
-			this._element.classList.add(CLASS_NAME_SHOWN);
+			if (this._element !== element || this._isHiding) return;
+
+			element.classList.add(CLASS_NAME_SHOWN);
 			this._toggleInteractionHandlers();
 			this._syncInteractiveBounds();
 			this._scheduleHide();
-			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
+			EventHandler.trigger(element, EVENT_KEY_SHOWN, { relatedTarget });
 		};
 
-		this._queueCallback(completeCallBack, this._element, true, this._params.animation.delay);
+		this._queueCallback(completeCallBack, element, true, this._params.animation.delay);
 	}
 
 	/**
@@ -363,33 +371,46 @@ class VGToast extends BaseModule {
 	 * @returns {void}
 	 */
 	hide() {
-		if (isDisabled(this._element)) return;
-		this._clearTimeout();
+		if (isDisabled(this._element) || this._isHiding) return;
 
-		const hideEvent = EventHandler.trigger(this._element, EVENT_KEY_HIDE);
+		const element = this._element;
+		this._clearTimeout();
+		this._clearHideTimeout();
+
+		const hideEvent = EventHandler.trigger(element, EVENT_KEY_HIDE);
 		if (hideEvent.defaultPrevented) return;
 
-		this._element.classList.remove(CLASS_NAME_SHOWN);
+		this._isHiding = true;
+		element.classList.remove(CLASS_NAME_SHOWN);
 		this._disableInteractionHandlers();
 
-		setTimeout(() => {
-			this._element.classList.remove(CLASS_NAME_SHOW);
+		this._hideTimeout = setTimeout(() => {
+			this._hideTimeout = null;
+			if (this._element !== element) return;
+
+			element.classList.remove(CLASS_NAME_SHOW);
 			if (this._params.stack.enable) {
 				this._setPlacement();
 			}
 
 			const completeCallback = () => {
+				if (this._element !== element) return;
+
 				if (!Selectors.find('.vg-toast.show')) {
 					document.body.classList.remove(CLASS_NAME_OPEN);
 				}
-				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 
-				if (!this._params.static) {
+				const shouldDispose = !this._params.static;
+				this._isHiding = false;
+				EventHandler.trigger(element, EVENT_KEY_HIDDEN);
+
+				if (this._element !== element) return;
+				if (shouldDispose) {
 					this.dispose();
 				}
 			};
 
-			this._queueCallback(completeCallback, this._element, false, this._params.animation.delay);
+			this._queueCallback(completeCallback, element, false, this._params.animation.delay);
 		}, this._params.animation.delay);
 	}
 
@@ -398,7 +419,10 @@ class VGToast extends BaseModule {
 	 * @override
 	 */
 	dispose() {
+		if (!this._element) return;
+
 		this._clearTimeout();
+		this._clearHideTimeout();
 		this._disableInteractionHandlers();
 		if (!this._params.static) {
 			this._element.remove();
@@ -423,7 +447,7 @@ class VGToast extends BaseModule {
 	 * @returns {boolean}
 	 */
 	_isShown() {
-		return this._element.classList.contains(CLASS_NAME_SHOW);
+		return !!this._element && this._element.classList.contains(CLASS_NAME_SHOW);
 	}
 
 	/**
@@ -621,6 +645,13 @@ class VGToast extends BaseModule {
 		if (this._timeout) {
 			clearTimeout(this._timeout);
 			this._timeout = null;
+		}
+	}
+
+	_clearHideTimeout() {
+		if (this._hideTimeout) {
+			clearTimeout(this._hideTimeout);
+			this._hideTimeout = null;
 		}
 	}
 
