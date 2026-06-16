@@ -1,4 +1,17 @@
-﻿# VEGAS-APP 1.2.0 (Июнь, 16, 2026)
+﻿# VEGAS-APP 1.2.2 (Июнь, 16, 2026)
+## Новые фичи
+* В VGFiles добавлена настройка кнопок подтверждения удаления через `removes.buttons`, `removes.single.buttons` и `removes.all.buttons`.
+* В VGFormSender добавлены опции `alert.modal.closeModalsBeforeModal` и `alert.toast.closeModalsBeforeToast` для управления закрытием открытых модалок перед показом alert-modal или toast.
+
+## Изменения
+* В VGFormSender при `alert.modal.closeModalsBeforeModal = false` новая alert-modal открывается поверх существующей модалки, получает класс `vg-modal-stacked` и повышенный `z-index`.
+* В VGFormSender закрытие открытых Bootstrap/VGModal модалок вынесено в общий helper.
+* В VGFormSender служебный параметр `closeModalsBeforeToast` не передается в настройки VGToast.
+* Обновлена версия пакета в `package.json`: `1.2.1` -> `1.2.2`.
+
+---
+
+# VEGAS-APP 1.2.0 (Июнь, 16, 2026)
 ## Новые фичи
 * В VGToast добавлен параметр `type` со встроенными SVG-иконками для типов `success`, `error`, `warning`, `info`.
 * В VGFormSender добавлен новый режим алертов `alert.type = 'toast'` с интеграцией через `VGToast`.

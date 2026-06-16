@@ -67,6 +67,7 @@ const NAME_KEY = 'vg.fs';
  * @type {string}
  */
 const CLASS_NAME_ALERT  = 'vg-form-sender-alert';
+const CLASS_NAME_MODAL_STACKED = 'vg-modal-stacked';
 
 /**
  * Событие: успешная отправка формы
@@ -136,7 +137,12 @@ class VGFormSender extends BaseModule {
 				errors: true,
 				title: true,
 				delay: 0,
-				toast: {}
+				modal: {
+					closeModalsBeforeModal: true
+				},
+				toast: {
+					closeModalsBeforeToast: false
+				}
 			},
 			ajax: {
 				route: '',
@@ -527,25 +533,12 @@ class VGFormSender extends BaseModule {
 	 */
 	_alertModal(data, status) {
 		const _this = this;
+		const closeModalsBeforeModal = _this._params.alert.modal?.closeModalsBeforeModal;
+		const isStackedModal = !closeModalsBeforeModal && _this._hasOpenedModals();
 
-		// Закрытие всех открытых модальных окон
-		[...document.getElementsByClassName('modal')].forEach(function (element) {
-			if (element && element.classList.contains('show')) {
-				if (typeof bootstrap !== 'undefined') {
-					let mBS = bootstrap.Modal?.getOrCreateInstance(element);
-					mBS.hide();
-				} else {
-					console.warn(lang_messages(_this._params.lang, NAME).bootstrap_not_found)
-				}
-			}
-		});
-
-		[...document.getElementsByClassName('vg-modal')].forEach(function (element) {
-			if (element && element.classList.contains('show')) {
-				const mVG = VGModal.getOrCreateInstance(element);
-				mVG.hide([mVG]);
-			}
-		});
+		if (closeModalsBeforeModal) {
+			_this._closeOpenedModals();
+		}
 
 		let id = _this._params.classes.general + '-' + makeRandomString(),
 			$modal = Selectors.find('.' + _this._params.classes.alertModal);
@@ -561,6 +554,9 @@ class VGFormSender extends BaseModule {
 			}, function (self) {
 				let element = self._element;
 				element.classList.add(_this._params.classes.alertModal);
+				if (isStackedModal) {
+					_this._setStackedModalState(element);
+				}
 
 				let $content = Selectors.find('.vg-modal-content', element);
 				if ($content) $content.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status);
@@ -577,6 +573,64 @@ class VGFormSender extends BaseModule {
 				}
 			});
 		}, _this._params.timeout);
+	}
+
+	/**
+	 * Проверка наличия открытых модальных окон
+	 * @returns {boolean}
+	 * @private
+	 */
+	_hasOpenedModals() {
+		return Boolean(Selectors.find('.modal.show, .vg-modal.show'));
+	}
+
+	/**
+	 * Помечает alert-modal как вторую модалку и поднимает ее над уже открытыми
+	 * @param {HTMLElement} element
+	 * @private
+	 */
+	_setStackedModalState(element) {
+		if (!element) return;
+
+		element.classList.add(CLASS_NAME_MODAL_STACKED);
+		element.style.zIndex = this._getNextModalZIndex();
+	}
+
+	/**
+	 * Вычисление z-index выше всех открытых модалок
+	 * @returns {string}
+	 * @private
+	 */
+	_getNextModalZIndex() {
+		const indexes = Selectors.findAll('.modal.show, .vg-modal.show')
+			.map((element) => Number.parseInt(window.getComputedStyle(element).zIndex, 10))
+			.filter((index) => Number.isFinite(index));
+
+		return String((indexes.length ? Math.max(...indexes) : 1040) + 10);
+	}
+
+	/**
+	 * Закрытие всех открытых модальных окон
+	 * @private
+	 */
+	_closeOpenedModals() {
+		[...document.getElementsByClassName('modal')].forEach((element) => {
+			if (element && element.classList.contains('show')) {
+				if (typeof bootstrap !== 'undefined' && bootstrap.Modal?.getOrCreateInstance) {
+					const mBS = bootstrap.Modal.getOrCreateInstance(element);
+					mBS.hide();
+				} else {
+					console.warn(lang_messages(this._params.lang, NAME).bootstrap_not_found)
+				}
+			}
+		});
+
+		[...document.getElementsByClassName('vg-modal')].forEach((element) => {
+			if (element && element.classList.contains('show')) {
+				const mVG = VGModal.getOrCreateInstance(element);
+				mVG.hide([mVG]);
+			}
+		});
 	}
 
 	/**
@@ -619,6 +673,10 @@ class VGFormSender extends BaseModule {
 		const response = this._prepareAlertResponse(status, data);
 		const toastParams = this._getToastParams(status);
 
+		if (this._params.alert.toast?.closeModalsBeforeToast) {
+			this._closeOpenedModals();
+		}
+
 		if (response.title) {
 			VGToast.run([response.title, response.message], toastParams);
 			return;
@@ -638,6 +696,7 @@ class VGFormSender extends BaseModule {
 		const toastType = status === 'danger' ? 'error' : status;
 		const delay = this._params.alert.delay > 0 ? this._params.alert.delay : 3000;
 		const flatToastParams = {};
+		const {closeModalsBeforeToast, ...toastParams} = this._params.alert.toast || {};
 		const allowedKeys = [
 			'static',
 			'placement',
@@ -666,7 +725,7 @@ class VGFormSender extends BaseModule {
 			enableButtonClose: true,
 			autohide: this._params.alert.delay > 0,
 			delay: delay
-		}, flatToastParams, this._params.alert.toast || {});
+		}, flatToastParams, toastParams);
 	}
 
 	/**

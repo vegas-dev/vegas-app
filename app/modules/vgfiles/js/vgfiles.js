@@ -53,8 +53,9 @@ class VGFiles extends VGFilesBase {
                 retryDelay: 1000,
             },
             removes: {
-                all: { route: '', alert: true, toast: true, confirm: null },
-                single: { route: '', alert: true, toast: true, confirm: null }
+                buttons: null,
+                all: { route: '', alert: true, toast: true, confirm: null, buttons: null },
+                single: { route: '', alert: true, toast: true, confirm: null, buttons: null }
             },
             sortable: {
                 enabled: false,
@@ -604,8 +605,29 @@ class VGFiles extends VGFilesBase {
         });
     }
 
-    _confirmRemove(type, trigger, ajax, message) {
-        const buttons = {
+    _isPlainObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    _mergeButtonConfigs(...configs) {
+        return configs.reduce((acc, config) => {
+            if (!this._isPlainObject(config)) return acc;
+
+            Object.entries(config).forEach(([key, value]) => {
+                if (this._isPlainObject(acc[key]) && this._isPlainObject(value)) {
+                    acc[key] = this._mergeButtonConfigs(acc[key], value);
+                    return;
+                }
+
+                acc[key] = Array.isArray(value) ? value.slice() : value;
+            });
+
+            return acc;
+        }, {});
+    }
+
+    _getDefaultRemoveConfirmButtons() {
+        return {
             agree: {
                 text: lang_buttons(this._params.lang, NAME)['agree'],
                 class: ["btn-danger"],
@@ -615,6 +637,18 @@ class VGFiles extends VGFilesBase {
                 class: ["btn-outline-danger"],
             },
         };
+    }
+
+    _getRemoveConfirmButtons(type) {
+        return this._mergeButtonConfigs(
+            this._getDefaultRemoveConfirmButtons(),
+            this._params?.removes?.buttons,
+            this._params?.removes?.[type]?.buttons
+        );
+    }
+
+    _confirmRemove(type, trigger, ajax, message) {
+        const buttons = this._getRemoveConfirmButtons(type);
 
         const confirmParams = {
             type,
