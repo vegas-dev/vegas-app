@@ -32,6 +32,7 @@
 import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal/js/vgmodal";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
+import VGToast from "../../vgtoast/js/vgtoast";
 import VGHideShowPass from "./hideshowpass";
 import {lang_titles, lang_messages} from "../../../utils/js/components/lang";
 import Html from "../../../utils/js/components/templater";
@@ -133,7 +134,8 @@ class VGFormSender extends BaseModule {
 				enabled: true,
 				type: 'modal',
 				errors: true,
-				delay: 0
+				delay: 0,
+				toast: {}
 			},
 			ajax: {
 				route: '',
@@ -510,6 +512,10 @@ class VGFormSender extends BaseModule {
 		if (this._params.alert.type === 'collapse') {
 			this._alertCollapse(data, status)
 		}
+
+		if (this._params.alert.type === 'toast') {
+			this._alertToast(data, status)
+		}
 	}
 
 	/**
@@ -603,6 +609,65 @@ class VGFormSender extends BaseModule {
 	}
 
 	/**
+	 * Показ алерта в виде toast
+	 * @param {Object} data - Данные для отображения
+	 * @param {string} status - Статус (success/error)
+	 * @private
+	 */
+	_alertToast(data, status) {
+		const response = this._prepareAlertResponse(status, data);
+		const toastParams = this._getToastParams(status);
+
+		if (response.title) {
+			VGToast.run([response.title, response.message], toastParams);
+			return;
+		}
+
+		VGToast.run(response.message, toastParams);
+	}
+
+	/**
+	 * Сборка параметров toast из alert.* и alert.toast
+	 * @param {string} status - Статус алерта
+	 * @returns {Object}
+	 * @private
+	 */
+	_getToastParams(status) {
+		const theme = status === 'error' ? 'danger' : status;
+		const delay = this._params.alert.delay > 0 ? this._params.alert.delay : 3000;
+		const flatToastParams = {};
+		const allowedKeys = [
+			'static',
+			'placement',
+			'autohide',
+			'delay',
+			'enableClickToast',
+			'enableButtonClose',
+			'keyboard',
+			'theme',
+			'type',
+			'drag',
+			'resize',
+			'stack',
+			'animation',
+			'ajax'
+		];
+
+		allowedKeys.forEach((key) => {
+			if (key in this._params.alert) {
+				flatToastParams[key] = this._params.alert[key];
+			}
+		});
+
+		return mergeDeepObject({
+			theme: theme || 'dark',
+			enableButtonClose: true,
+			autohide: this._params.alert.delay > 0,
+			delay: delay
+		}, flatToastParams, this._params.alert.toast || {});
+	}
+
+	/**
 	 * Формирование содержимого алерта (заголовок, текст, иконка)
 	 * @param {HTMLElement} $element - Родительский элемент
 	 * @param {string} status - Статус (success/danger и т.д.)
@@ -611,15 +676,51 @@ class VGFormSender extends BaseModule {
 	 * @returns {HTMLElement} - DOM-элемент с контентом
 	 */
 	setDataRelationStatus($element, status, data, type) {
-		let response = normalizeData(data.response) || data,
-			$alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-content', $element);
+		let $alert = Selectors.find('.'+ CLASS_NAME_ALERT +'-content', $element);
+		const response = this._prepareAlertResponse(status, data);
+		const title = response.title
+			? Html('string').h4({class: CLASS_NAME_ALERT +'-content--title'}, response.title)
+			: '';
+		const content = title + response.message;
+
+		if (!$alert) {
+			const elm = Html('dom');
+
+			$alert = elm.div({
+				class: CLASS_NAME_ALERT + '-' + type
+			}, [
+				elm.div({class: CLASS_NAME_ALERT + '-content'}, [
+					elm.i({class: CLASS_NAME_ALERT + '-content--icon'}, getSVG(status), {isHTML: true}),
+					elm.div({class: CLASS_NAME_ALERT + '-content--text'}, content, {isHTML: true})
+				]),
+			]);
+		} else {
+			let text = Selectors.find('.vg-modal-body', $element);
+			text.innerHTML = content;
+		}
+
+		return $alert;
+	}
+
+	/**
+	 * Подготовка содержимого алерта
+	 * @param {string} status - Статус алерта
+	 * @param {Object|string} data - Данные ответа
+	 * @returns {{title: string, message: string}}
+	 * @private
+	 */
+	_prepareAlertResponse(status, data) {
+		let response = normalizeData(data?.response) || data;
 
 		if (isObject(data)) {
-			let view = '';
+			if (isObject(data.response) && 'view' in data.response) {
+				return {
+					title: '',
+					message: data.response.view
+				};
+			}
 
-			if ('view' in data.response) {
-				response = data.response.view
-			} else if (typeof response !== 'string') {
+			if (typeof response !== 'string') {
 				if (status === 'danger') {
 					response.title = ('title' in response) ? response.title : lang_titles(this._params.lang, 'errors').title;
 
@@ -646,7 +747,7 @@ class VGFormSender extends BaseModule {
 						if (isObject(errors)) {
 							for (const error in errors) {
 								if (Array.isArray(errors[error])) {
-									errors[error].forEach((t) => response.message.push(t))
+									errors[error].forEach((text) => response.message.push(text))
 								} else {
 									response.message.push(errors[error]);
 								}
@@ -656,42 +757,31 @@ class VGFormSender extends BaseModule {
 				}
 
 				const elm = Html('string');
-
-				view = elm.h4({class: CLASS_NAME_ALERT +'-content--title'}, response.title);
+				let message = '';
 
 				if (Array.isArray(response.message)) {
-					response.message.forEach(message => {
-						view += elm.div({
+					response.message.forEach((text) => {
+						message += elm.div({
 							class: CLASS_NAME_ALERT +'-content--message'
-						}, message);
+						}, text);
 					})
 				} else {
-					view += elm.div({
+					message = elm.div({
 						class: CLASS_NAME_ALERT +'-content--message'
 					}, response.message);
 				}
 
-				response = view;
+				return {
+					title: response.title || '',
+					message: message
+				};
 			}
 		}
 
-		if (!$alert) {
-			const elm = Html('dom');
-
-			$alert = elm.div({
-				class: CLASS_NAME_ALERT + '-' + type
-			}, [
-				elm.div({class: CLASS_NAME_ALERT + '-content'}, [
-					elm.i({class: CLASS_NAME_ALERT + '-content--icon'}, getSVG(status), {isHTML: true}),
-					elm.div({class: CLASS_NAME_ALERT + '-content--text'}, response, {isHTML: true})
-				]),
-			]);
-		} else {
-			let text = Selectors.find('.vg-modal-body', $element);
-			text.innerHTML = response;
-		}
-
-		return $alert;
+		return {
+			title: '',
+			message: typeof response === 'string' ? response : ''
+		};
 	}
 
 	/**
