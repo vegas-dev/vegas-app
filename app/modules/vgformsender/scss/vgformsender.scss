@@ -22,6 +22,18 @@
 
 	&--content {
 		position: relative;
+
+		&-pass {
+			&:focus-within {
+				input {
+					padding-right: 5rem;
+				}
+
+				.vg-form-sender--hide-show-pass {
+					right: 44px;
+				}
+			}
+		}
 	}
 
 	&--hide-show-pass {
@@ -43,6 +55,18 @@
 	&.was-validated {
 		.vg-form-sender--hide-show-pass {
 			right: 34px;
+		}
+
+		.vg-form-sender--content-pass {
+			&:focus-within {
+				input {
+					padding-right: 6.25rem;
+				}
+
+				.vg-form-sender--hide-show-pass {
+					right: 64px;
+				}
+			}
 		}
 	}
 }

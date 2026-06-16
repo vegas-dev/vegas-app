@@ -20,7 +20,9 @@ class VGHideShowPass extends BaseModule{
 	constructor(el, params = {}) {
 		super(el, params);
 
-		this._params = this._getParams(el, mergeDeepObject({}, params));
+		this._params = this._getParams(el, mergeDeepObject({
+			parentClass: 'vg-form-sender--content-pass'
+		}, params));
 	}
 
 	static get NAME() {
@@ -63,6 +65,9 @@ class VGHideShowPass extends BaseModule{
 	build(isShow = false) {
 		let classes = this._params.classes.join(' '), elm = '';
 		const HTML = Html('string');
+		if (this._element.parentElement && this._params.parentClass) {
+			this._element.parentElement.classList.add(this._params.parentClass);
+		}
 
 		if (!isShow) {
 			elm = HTML.component('eye', {class: classes});
