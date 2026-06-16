@@ -1,4 +1,19 @@
-﻿# VEGAS-APP 1.1.7 (Апрель, 13, 2026)
+﻿# VEGAS-APP 1.2.0 (Июнь, 16, 2026)
+## Новые фичи
+* В VGToast добавлен параметр `type` со встроенными SVG-иконками для типов `success`, `error`, `warning`, `info`.
+* В VGFormSender добавлен новый режим алертов `alert.type = 'toast'` с интеграцией через `VGToast`.
+
+## Изменения
+* В VGToast добавлена мапа типов уведомлений на набор иконок `getSVG`, включая `error -> danger`.
+* Вставка SVG-иконок в VGToast переведена на безопасную схему через `Sanitize.toSafeHtmlString()` и DOM fragment вместо прямого `innerHTML`.
+* В VGFormSender выделена общая подготовка содержимого алертов в `_prepareAlertResponse()`, чтобы единообразно собирать `title/message` для modal, collapse и toast.
+* В VGFormSender добавлена сборка toast-параметров из `alert.*` и `alert.toast`, включая проброс `theme`, `type`, `placement`, `autohide`, `delay`, `drag`, `resize`, `stack`, `animation`, `ajax`.
+* В VGRollup исправлена инициализация локализованных текстов: язык и подписи кнопок теперь подставляются до слияния параметров, с учётом `data-lang` и `params.lang`.
+* Обновлена версия пакета в `package.json`: `1.1.7` -> `1.2.0`.
+
+---
+
+# VEGAS-APP 1.1.7 (Апрель, 13, 2026)
 ## Новые фичи
 * В VGFilePreview добавлена поддержка атрибута `data-name` для явной установки отображаемого имени файла (в приоритете над `data-vg-filepreview-display-name`).
 
@@ -296,5 +311,9 @@
 * в модуль VGSidebar добавлен класс vg-sidebar-open в тело документа
 * исправлены некоторые ошибки
 ---
+
+
+
+
 
 

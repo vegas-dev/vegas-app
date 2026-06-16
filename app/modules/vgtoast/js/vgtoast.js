@@ -1,6 +1,7 @@
 ﻿import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
-import {dismissTrigger} from "../../module-fn";
+import {dismissTrigger, getSVG} from "../../module-fn";
+import Sanitize from "../../../utils/js/components/sanitize";
 import {execute, isDisabled, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
 import Selectors from "../../../utils/js/dom/selectors";
 import VGToastDrag from "./vgtoast.drag";
@@ -57,6 +58,12 @@ const EVENT_KEY_CLICK_DATA_API  = `click.${NAME_KEY}.data.api`;
 const EVENT_KEY_POINTERDOWN_INTERACTION = `pointerdown.interaction.${NAME_KEY}`;
 const EVENT_KEY_POINTERUP_INTERACTION = `pointerup.interaction.${NAME_KEY}`;
 const EVENT_KEY_POINTERCANCEL_INTERACTION = `pointercancel.interaction.${NAME_KEY}`;
+const TOAST_ICON_MAP = {
+	success: 'success',
+	error: 'danger',
+	warning: 'warning',
+	info: 'info',
+};
 
 /**
  * @typedef {Object} ToastParams
@@ -68,6 +75,7 @@ const EVENT_KEY_POINTERCANCEL_INTERACTION = `pointercancel.interaction.${NAME_KE
  * @property {boolean} enableButtonClose - Добавить кнопку закрытия.
  * @property {boolean} keyboard - Закрывать по Esc.
  * @property {string} theme - Тема: 'dark', 'light' и т.д.
+ * @property {('success'|'error'|'warning'|'info'|null)} type - Тип уведомления для вывода иконки.
  * @property {Object} stack - Настройки стека уведомлений.
  * @property {boolean} stack.enable - Разрешить стек.
  * @property {number} stack.max - Макс. количество тостов одновременно.
@@ -99,6 +107,7 @@ const defaultParams = {
 	enableButtonClose: false,
 	keyboard: true,
 	theme: 'dark',
+	type: null,
 	stack: {
 		enable: true,
 		max: 5
@@ -241,9 +250,21 @@ class VGToast extends BaseModule {
 
 		// Иконка (если задан тип)
 		if (params.type) {
-			const icon = document.createElement('div');
-			icon.classList.add('vg-toast-icon');
-			wrapper.append(icon);
+			const iconName = TOAST_ICON_MAP[params.type];
+			const iconSvg = iconName ? getSVG(iconName) : '';
+
+			if (iconSvg) {
+				const icon = document.createElement('div');
+				icon.classList.add('vg-toast-icon');
+				const safeIconSvg = Sanitize.toSafeHtmlString(iconSvg);
+				const fragment = document.createRange().createContextualFragment(safeIconSvg);
+				const svgElement = fragment.firstElementChild;
+
+				if (svgElement) {
+					icon.append(svgElement);
+				}
+				wrapper.append(icon);
+			}
 		}
 
 		const content = document.createElement('div');
