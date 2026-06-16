@@ -1,4 +1,4 @@
-/**
+﻿/**
  * VGFormSender Module
  *
  * Этот модуль отвечает за отправку форм с поддержкой AJAX, валидации, отображения уведомлений
@@ -134,6 +134,7 @@ class VGFormSender extends BaseModule {
 				enabled: true,
 				type: 'modal',
 				errors: true,
+				title: true,
 				delay: 0,
 				toast: {}
 			},
@@ -634,6 +635,7 @@ class VGFormSender extends BaseModule {
 	 */
 	_getToastParams(status) {
 		const theme = status === 'error' ? 'danger' : status;
+		const toastType = status === 'danger' ? 'error' : status;
 		const delay = this._params.alert.delay > 0 ? this._params.alert.delay : 3000;
 		const flatToastParams = {};
 		const allowedKeys = [
@@ -645,7 +647,6 @@ class VGFormSender extends BaseModule {
 			'enableButtonClose',
 			'keyboard',
 			'theme',
-			'type',
 			'drag',
 			'resize',
 			'stack',
@@ -661,6 +662,7 @@ class VGFormSender extends BaseModule {
 
 		return mergeDeepObject({
 			theme: theme || 'dark',
+			type: toastType || null,
 			enableButtonClose: true,
 			autohide: this._params.alert.delay > 0,
 			delay: delay
@@ -772,7 +774,7 @@ class VGFormSender extends BaseModule {
 				}
 
 				return {
-					title: response.title || '',
+					title: this._params.alert.title ? response.title || '' : '',
 					message: message
 				};
 			}
@@ -873,3 +875,4 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 })
 
 export default VGFormSender;
+

@@ -291,6 +291,7 @@ class VGToast extends BaseModule {
 
 		// Кнопка закрытия
 		if (params.enableButtonClose) {
+			target.classList.add('vg-toast-has-button');
 			const button = document.createElement('div');
 			button.classList.add('vg-toast-button');
 			button.innerHTML = '<button class="vg-btn-close" data-vg-dismiss="toast"></button>';
