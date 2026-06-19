@@ -17,7 +17,7 @@ const NAME_KEY = 'vg.modal';
 
 const ESCAPE_KEY = 'Escape';
 
-const OPEN_SELECTOR = '.vg-modal.show';
+const OPEN_SELECTOR = '.vg-modal.show:not([data-vg-persistent="true"])';
 const SELECTOR_DIALOG = '.vg-modal-dialog';
 const SELECTOR_MODAL_BODY = '.vg-modal-body';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]';
@@ -65,6 +65,7 @@ class VGModal extends BaseModule {
 
 		this._params = this._getParams(element, mergeDeepObject({
 			backdrop: true,
+			persistent: false,
 			focus: true,
 			keyboard: true,
 			fields: [],
@@ -77,6 +78,10 @@ class VGModal extends BaseModule {
 				minWidth: 300,
 				minHeight: 160,
 				debug: false,
+			},
+			state: {
+				enable: true,
+				key: '',
 			},
 			drag: {
 				enable: false,
@@ -117,6 +122,7 @@ class VGModal extends BaseModule {
 
 		this._button = null;
 		this._dialog = Selectors.find(SELECTOR_DIALOG, this._element);
+		this._content = Selectors.find('.vg-modal-content', this._dialog);
 		this._isShown = false;
 		this._isTransitioning = false;
 		this._scrollBar = new ScrollBarHelper();
@@ -131,6 +137,11 @@ class VGModal extends BaseModule {
 
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGModal.NAME_KEY, this._params.animation);
+		if (this._params.persistent) {
+			this._element.setAttribute('data-vg-persistent', 'true');
+		} else {
+			this._element.removeAttribute('data-vg-persistent');
+		}
 	}
 
 	static get NAME() {
@@ -234,7 +245,21 @@ class VGModal extends BaseModule {
 		this._addFieldsInModal(relatedTarget);
 		this._adjustDialog();
 
-		Backdrop.show(() => this._showElement(relatedTarget));
+		if (this._params.backdrop) {
+			Backdrop.show(() => {
+				const backdrop = Selectors.find('.vg-backdrop');
+				if (backdrop) {
+					EventHandler.one(backdrop, 'mousedown.vg.backdrop', () => {
+						this.hide();
+					});
+				}
+
+				this._showElement(relatedTarget);
+			});
+			return;
+		}
+
+		this._showElement(relatedTarget);
 	}
 
 	hide(openedModals = [], isLeaveBackDrop = false) {
@@ -246,8 +271,6 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = true;
 
-		document.body.classList.remove(CLASS_NAME_OPEN);
-
 		setTimeout(() => {
 			this._element.classList.remove(CLASS_NAME_SHOW);
 			this._queueCallback(() => this._hideModal(openedModals, isLeaveBackDrop), this._element, this._isAnimatedFade());
@@ -256,16 +279,31 @@ class VGModal extends BaseModule {
 
 	_hideModal(openedModals, isLeaveBackDrop) {
 		if (!isLeaveBackDrop) {
+			this._saveInteractionState();
 			this._disableInteractionHandlers();
 			this._element.style.display = 'none';
 			this._element.removeAttribute('aria-modal');
 			this._element.removeAttribute('role');
 			this._isTransitioning = false;
 
-			if (openedModals.length) return;
+			const remainingOpenModals = Selectors.findAll(OPEN_SELECTOR).filter(modal => modal !== this._element);
+			if (remainingOpenModals.length || openedModals.length) {
+				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+				return;
+			}
+
+			document.body.classList.remove(CLASS_NAME_OPEN);
 
 			if (this._params.hash) {
 				history.pushState("", document.title, window.location.pathname + window.location.search);
+			}
+
+			if (!this._params.backdrop) {
+				this._resetAdjustments();
+				this._scrollBar.reset();
+
+				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
+				return;
 			}
 
 			Backdrop.hide(() => {
@@ -305,6 +343,8 @@ class VGModal extends BaseModule {
 			this._syncInteractiveBounds();
 
 			this._params = this._getParams(relatedTarget, this._params);
+			this._restoreInteractionState();
+			this._syncInteractiveBounds();
 			this._route((status, data) => {
 				EventHandler.trigger(this._element, EVENT_KEY_LOADED, {stats: status, data: data, relatedTarget: relatedTarget});
 				this._syncInteractiveBounds();
@@ -314,10 +354,13 @@ class VGModal extends BaseModule {
 		this._queueCallback(transitionComplete, this._dialog, this._isAnimatedFade())
 	}
 
-	_toggleInteractionHandlers() {
-		this._interactionConfig = this._resolveInteractionConfig();
+	_bindInteractionHandlers() {
 		this._dragHandler.setOptions(this._interactionConfig.drag);
 		this._resizeHandler.setOptions(this._interactionConfig.resize);
+	}
+	_toggleInteractionHandlers() {
+		this._interactionConfig = this._resolveInteractionConfig();
+		this._bindInteractionHandlers();
 
 		if (this._interactionConfig.drag.enable) {
 			this._dragHandler.enable();
@@ -369,6 +412,118 @@ class VGModal extends BaseModule {
 		}
 
 		return {...defaults};
+	}
+
+	_getStateConfig() {
+		return this._normalizeStateParams(this._params.state);
+	}
+
+	_normalizeStateParams(paramsValue, defaults = { enable: true, key: '' }) {
+		if (typeof paramsValue === 'boolean') {
+			return {...defaults, enable: paramsValue};
+		}
+
+		if (paramsValue && typeof paramsValue === 'object') {
+			const hasEnable = Object.prototype.hasOwnProperty.call(paramsValue, 'enable');
+			const key = typeof paramsValue.key === 'string' ? paramsValue.key.trim() : '';
+			return {
+				...defaults,
+				...paramsValue,
+				key,
+				enable: hasEnable ? Boolean(paramsValue.enable) : true,
+			};
+		}
+
+		return {...defaults};
+	}
+
+	_getStateStorageKey(stateConfig = this._getStateConfig()) {
+		if (!stateConfig.enable) return '';
+
+		if (typeof stateConfig.key === 'string' && stateConfig.key.trim()) {
+			return stateConfig.key.trim();
+		}
+
+		if (!this._element || !this._element.id) return '';
+
+		return `vg.modal.state:${window.location.pathname}:${this._element.id}`;
+	}
+
+	_captureInteractionState() {
+		const dialogStyle = this._dialog ? this._dialog.style : null;
+		const contentElement = this._content || Selectors.find('.vg-modal-content', this._dialog);
+		const contentStyle = contentElement ? contentElement.style : null;
+
+		return {
+			dialog: dialogStyle ? {
+				position: dialogStyle.position,
+				margin: dialogStyle.margin,
+				left: dialogStyle.left,
+				top: dialogStyle.top,
+				width: dialogStyle.width,
+				height: dialogStyle.height,
+				transform: dialogStyle.transform,
+				maxWidth: dialogStyle.maxWidth,
+				maxHeight: dialogStyle.maxHeight,
+				minHeight: dialogStyle.minHeight,
+			overflow: dialogStyle.overflow,
+			pointerEvents: dialogStyle.pointerEvents,
+			transition: dialogStyle.transition,
+			willChange: dialogStyle.willChange,
+		} : {},
+			content: contentStyle ? {
+				height: contentStyle.height,
+				maxHeight: contentStyle.maxHeight,
+				overflow: contentStyle.overflow,
+			} : {},
+		};
+	}
+
+	_applyInteractionState(state) {
+		if (!state || typeof state !== 'object') return;
+
+		const dialogState = state.dialog && typeof state.dialog === 'object' ? state.dialog : {};
+		const contentState = state.content && typeof state.content === 'object' ? state.content : {};
+		if (this._dialog) {
+			Object.keys(dialogState).forEach(propertyName => {
+				this._dialog.style[propertyName] = dialogState[propertyName] || '';
+			});
+		}
+
+		const contentElement = this._content || Selectors.find('.vg-modal-content', this._dialog);
+		if (contentElement) {
+			Object.keys(contentState).forEach(propertyName => {
+				contentElement.style[propertyName] = contentState[propertyName] || '';
+			});
+		}
+	}
+
+	_saveInteractionState() {
+		const stateConfig = this._getStateConfig();
+		const storageKey = this._getStateStorageKey(stateConfig);
+		if (!stateConfig.enable || !storageKey || typeof window === 'undefined' || !window.localStorage) return;
+
+		try {
+			window.localStorage.setItem(storageKey, JSON.stringify(this._captureInteractionState()));
+		} catch (error) {
+		}
+	}
+
+	_restoreInteractionState() {
+		const stateConfig = this._getStateConfig();
+		const storageKey = this._getStateStorageKey(stateConfig);
+		if (!stateConfig.enable || !storageKey || typeof window === 'undefined' || !window.localStorage) return false;
+
+		try {
+			const rawState = window.localStorage.getItem(storageKey);
+			if (!rawState) return false;
+
+			const parsedState = JSON.parse(rawState);
+			this._applyInteractionState(parsedState);
+			return true;
+		} catch (error) {
+			return false;
+		}
 	}
 
 	_isAnimatedFade() {
@@ -480,21 +635,26 @@ dismissTrigger(VGModal);
 /**
  * Data API implementation
  */
-EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-	const target = Selectors.getElementFromSelector(this);
+	EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+		const target = Selectors.getElementFromSelector(this);
 
 	if (['A', 'AREA'].includes(this.tagName)) event.preventDefault();
 
-	EventHandler.one(target, EVENT_KEY_SHOW, showEvent => {
-		if (showEvent.defaultPrevented) return;
+		EventHandler.one(target, EVENT_KEY_SHOW, showEvent => {
+			if (showEvent.defaultPrevented) return;
+		});
+
+		const alreadyOpen = Selectors.find(OPEN_SELECTOR);
+		if (alreadyOpen) {
+			const alreadyOpenInstance = VGModal.getInstance(alreadyOpen);
+			if (alreadyOpenInstance && !alreadyOpenInstance._params.persistent) {
+				alreadyOpenInstance.hide([alreadyOpen]);
+			}
+		}
+
+		const data = VGModal.getOrCreateInstance(target);
+		data.toggle(this);
 	});
-
-	const alreadyOpen = Selectors.find(OPEN_SELECTOR);
-	if (alreadyOpen) VGModal.getInstance(alreadyOpen).hide([alreadyOpen]);
-
-	const data = VGModal.getOrCreateInstance(target);
-	data.toggle(this);
-});
 
 EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function () {
 	let targetHash = window.location.hash.slice(1);

@@ -20,6 +20,7 @@
 	height: 100%;
 	z-index: var(--vg-modal-z-index);
 	display: none;
+	pointer-events: none;
 	overflow-x: hidden;
 	overflow-y: auto;
 	outline: 0;

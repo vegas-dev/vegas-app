@@ -1,5 +1,4 @@
 import { execute } from "../functions";
-import EventHandler from "../dom/event";
 import Html from "../components/templater";
 import { Classes } from "../dom/manipulator";
 import ScrollBarHelper from "./scrollbar";
@@ -8,7 +7,6 @@ const NAME = 'backdrop';
 const CLASS_NAME = 'vg-backdrop';
 const CLASS_NAME_FADE = 'fade';
 const CLASS_NAME_SHOW = 'show';
-const EVENT_MOUSEDOWN = `mousedown.vg.${NAME}`;
 
 const backdropDelay = 150;
 
@@ -66,10 +64,6 @@ class Backdrop {
 			setTimeout(() => {
 				Classes.add(this._backdrop, CLASS_NAME_FADE);
 			}, backdropDelay);
-		});
-
-		EventHandler.on(this._backdrop, EVENT_MOUSEDOWN, () => {
-			this.hide();
 		});
 	}
 

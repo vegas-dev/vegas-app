@@ -127,6 +127,7 @@ class VGModalResize {
 		this._dialogElement.style.left = `${left}px`;
 		this._dialogElement.style.top = `${top}px`;
 		this._updateDebugValues();
+
 	}
 
 	_onPointerDown(event) {
@@ -216,6 +217,7 @@ class VGModalResize {
 		this._dialogElement.style.width = `${width}px`;
 		this._dialogElement.style.height = `${height}px`;
 		this._updateDebugValues();
+
 	}
 
 	_onPointerUp(event) {

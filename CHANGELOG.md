@@ -7,6 +7,7 @@
 * В VGFormSender при `alert.modal.closeModalsBeforeModal = false` новая alert-modal открывается поверх существующей модалки, получает класс `vg-modal-stacked` и повышенный `z-index`.
 * В VGFormSender закрытие открытых Bootstrap/VGModal модалок вынесено в общий helper.
 * В VGFormSender служебный параметр `closeModalsBeforeToast` не передается в настройки VGToast.
+* В VGModal persistent-модалка помечается отдельным признаком и не влияет на расчёт открытых модалок, а клик по backdrop закрывает именно активную модалку.
 * Обновлена версия пакета в `package.json`: `1.2.1` -> `1.2.2`.
 
 ---
