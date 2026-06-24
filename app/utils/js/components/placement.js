@@ -1,9 +1,4 @@
-import {mergeDeepObject, normalizeData} from "../functions";
-import {Classes} from "../dom/manipulator";
-
-/**
- * Класс Placement, определяет и устанавливает местоположение элемента на странице.
- */
+import {mergeDeepObject} from "../functions";
 
 class Placement {
 	constructor(config) {
@@ -16,20 +11,9 @@ class Placement {
 		this.placement = config.placement || 'bottom';
 		this.fallbackPlacements = config.fallbackPlacements || [];
 
-		this._builtInPlacements = {
-			top: 'top',
-			'top-start': 'top-start',
-			'top-end': 'top-end',
-			bottom: 'bottom',
-			'bottom-start': 'bottom-start',
-			'bottom-end': 'bottom-end',
-			left: 'left',
-			'left-start': 'left-start',
-			'left-end': 'left-end',
-			right: 'right',
-			'right-start': 'right-start',
-			'right-end': 'right-end'
-		};
+		this.clamp = config.clamp === true;
+		this.clampPadding = config.clampPadding ?? 8;
+		this.isMerge = config.isMerge !== false;
 	}
 
 	_getPlacementRect(element) {
@@ -38,6 +22,7 @@ class Placement {
 
 	_getViewportRect() {
 		const doc = document.documentElement;
+
 		return {
 			width: doc.clientWidth,
 			height: doc.clientHeight,
@@ -60,56 +45,102 @@ class Placement {
 			const fallbacks = [this.placement, ...this.fallbackPlacements];
 			let best = null;
 
-			for (let p of fallbacks) {
-				let pos = this._calculatePosition(p, refRect, dropRect, xOffset, yOffset);
-				let overflow = this._calculateOverflow(pos, viewRect);
+			for (const p of fallbacks) {
+				const position = this._calculatePosition(p, refRect, dropRect, xOffset, yOffset);
+				const overflow = this._calculateOverflow(position, dropRect, viewRect);
 
 				if (!best || overflow < best.overflow) {
-					best = { placement: p, position: pos, overflow };
+					best = { placement: p, position, overflow };
+
 					if (overflow === 0) break;
 				}
 			}
 
 			placement = best.placement;
-			this._setStyles(best.position);
+
+			const finalPosition = this.clamp
+				? this._clampPosition(best.position, dropRect, viewRect)
+				: best.position;
+
+			this._setStyles(finalPosition);
 		} else {
-			const pos = this._calculatePosition(placement, refRect, dropRect, xOffset, yOffset);
-			this._setStyles(pos);
+			const position = this._calculatePosition(placement, refRect, dropRect, xOffset, yOffset);
+
+			const finalPosition = this.clamp
+				? this._clampPosition(position, dropRect, viewRect)
+				: position;
+
+			this._setStyles(finalPosition);
 		}
 
 		this.drop.setAttribute('data-vg-placement', placement);
 	}
 
 	_calculatePosition(placement, refRect, dropRect, xOffset = 0, yOffset = 0) {
-		let top, left;
+		let top;
+		let left;
 
 		switch (placement) {
 			case 'top':
+				top = refRect.top - dropRect.height - yOffset;
+				left = refRect.left + (refRect.width - dropRect.width) / 2;
+				break;
+
 			case 'top-start':
 				top = refRect.top - dropRect.height - yOffset;
-				left = placement === 'top-start' ? refRect.left + xOffset : refRect.left + (refRect.width - dropRect.width) / 2;
+				left = refRect.left + xOffset;
 				break;
+
 			case 'top-end':
 				top = refRect.top - dropRect.height - yOffset;
 				left = refRect.right - dropRect.width - xOffset;
 				break;
+
 			case 'bottom':
+				top = refRect.bottom + yOffset;
+				left = refRect.left + (refRect.width - dropRect.width) / 2;
+				break;
+
 			case 'bottom-start':
 				top = refRect.bottom + yOffset;
-				left = placement === 'bottom-start' ? refRect.left + xOffset : refRect.left + (refRect.width - dropRect.width) / 2;
+				left = refRect.left + xOffset;
 				break;
+
 			case 'bottom-end':
 				top = refRect.bottom + yOffset;
 				left = refRect.right - dropRect.width - xOffset;
 				break;
+
 			case 'left':
 				top = refRect.top + (refRect.height - dropRect.height) / 2;
 				left = refRect.left - dropRect.width - xOffset;
 				break;
+
+			case 'left-start':
+				top = refRect.top + yOffset;
+				left = refRect.left - dropRect.width - xOffset;
+				break;
+
+			case 'left-end':
+				top = refRect.bottom - dropRect.height - yOffset;
+				left = refRect.left - dropRect.width - xOffset;
+				break;
+
 			case 'right':
 				top = refRect.top + (refRect.height - dropRect.height) / 2;
 				left = refRect.right + xOffset;
 				break;
+
+			case 'right-start':
+				top = refRect.top + yOffset;
+				left = refRect.right + xOffset;
+				break;
+
+			case 'right-end':
+				top = refRect.bottom - dropRect.height - yOffset;
+				left = refRect.right + xOffset;
+				break;
+
 			default:
 				top = refRect.bottom + yOffset;
 				left = refRect.left + xOffset;
@@ -118,22 +149,62 @@ class Placement {
 		return { top, left };
 	}
 
-	_calculateOverflow(pos, viewRect) {
+	_calculateOverflow(pos, dropRect, viewRect) {
 		let overflow = 0;
-		if (pos.left < viewRect.left) overflow += viewRect.left - pos.left;
-		if (pos.top < viewRect.top) overflow += viewRect.top - pos.top;
-		if (pos.left + this.drop.offsetWidth > viewRect.right) overflow += (pos.left + this.drop.offsetWidth) - viewRect.right;
-		if (pos.top + this.drop.offsetHeight > viewRect.bottom) overflow += (pos.top + this.drop.offsetHeight) - viewRect.bottom;
+
+		if (pos.left < viewRect.left) {
+			overflow += viewRect.left - pos.left;
+		}
+
+		if (pos.top < viewRect.top) {
+			overflow += viewRect.top - pos.top;
+		}
+
+		if (pos.left + dropRect.width > viewRect.right) {
+			overflow += (pos.left + dropRect.width) - viewRect.right;
+		}
+
+		if (pos.top + dropRect.height > viewRect.bottom) {
+			overflow += (pos.top + dropRect.height) - viewRect.bottom;
+		}
+
 		return overflow;
 	}
 
+	_clampPosition(pos, dropRect, viewRect) {
+		const padding = this.clampPadding;
+
+		const maxTop = viewRect.bottom - dropRect.height - padding;
+		const maxLeft = viewRect.right - dropRect.width - padding;
+
+		return {
+			top: Math.min(
+				Math.max(pos.top, viewRect.top + padding),
+				maxTop
+			),
+			left: Math.min(
+				Math.max(pos.left, viewRect.left + padding),
+				maxLeft
+			)
+		};
+	}
+
 	_setStyles(pos) {
-		mergeDeepObject(this.drop.style, {
-			position: 'absolute',
-			top: `${pos.top}px`,
-			left: `${pos.left}px`,
-			margin: 0
-		})
+		if (!pos || !this.drop) return;
+
+		if (this.isMerge) {
+			mergeDeepObject(this.drop.style, {
+				position: 'absolute',
+				top: `${pos.top + window.pageYOffset}px`,
+				left: `${pos.left + window.pageXOffset}px`,
+				margin: '0'
+			});
+		} else {
+			this.drop.style.position = 'absolute';
+			this.drop.style.top = `${pos.top + window.pageYOffset}px`;
+			this.drop.style.left = `${pos.left + window.pageXOffset}px`;
+			this.drop.style.margin = '0';
+		}
 	}
 
 	_setPlacement() {

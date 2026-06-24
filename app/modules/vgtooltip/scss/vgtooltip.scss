@@ -1,0 +1,64 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGTooltip
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-tooltip {
+	@include mix-vars('tooltip', $tooltip-map );
+	position: absolute;
+	z-index: var(--vg-tooltip-zindex);
+	pointer-events: none;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity .15s ease, transform .15s ease, visibility .15s ease;
+	transform: none !important;
+
+	&.show {
+		opacity: 1;
+		visibility: visible;
+	}
+
+	&-inner {
+		position: relative;
+		max-width: var(--vg-tooltip-max-width);
+		padding: var(--vg-tooltip-padding);
+		font-size: var(--vg-tooltip-font-size);
+		line-height: var(--vg-tooltip-line-height);
+		color: var(--vg-tooltip-color);
+		background: var(--vg-tooltip-background);
+		border-radius: var(--vg-tooltip-border-radius);
+		box-shadow: var(--vg-tooltip-box-shadow);
+		word-break: var(--vg-tooltip-word-break);
+	}
+
+	&-arrow {
+		position: absolute;
+		width: var(--vg-tooltip-arrow-width);
+		height: var(--vg-tooltip-arrow-height);
+		background: var(--vg-tooltip-background, #222);
+		transform: rotate(45deg);
+	}
+
+	&-popover {
+		.vg-tooltip-inner {
+			padding: 0;
+
+			&--title {
+				padding: var(--vg-tooltip-padding);
+				border-bottom: 1px solid var(--vg-tooltip-border-color);
+			}
+
+			&--content {
+				padding: var(--vg-tooltip-padding);
+			}
+		}
+	}
+}

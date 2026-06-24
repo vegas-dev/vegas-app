@@ -318,7 +318,7 @@ class VGToast extends BaseModule {
 	/**
 	 * Переключает состояние (показать/скрыть)
 	 * @param {Element} [relatedTarget] - Элемент, вызвавший тост.
-	 * @returns {VGToast}
+	 * @returns {void}
 	 */
 	toggle(relatedTarget) {
 		return this._isShown() ? this.hide() : this.show(relatedTarget);
