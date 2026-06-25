@@ -28,8 +28,7 @@ class VGAlert {
 		this.lang = lang;
 		this._defaultParams = {
 			render: {
-				type: "modal", // modal or overlay,
-				dismiss: false,
+				type: "modal",
 			},
 			ajax: {
 				route: "",
@@ -57,6 +56,7 @@ class VGAlert {
 			theme: "danger",
 			buttons: {},
 			message: {},
+			hide: false,
 		};
 		this._elementsDefault = {
 			buttons: {
@@ -99,105 +99,21 @@ class VGAlert {
 		if (isAlertOpen) return Promise.reject({ accepted: false, reason: lang_messages(context.lang, NAME_KEY).reason });
 		isAlertOpen = true;
 
-		const getContainer = () => {
-			if (context._params.render.type === "overlay") {
-				return {
-					element: context._buildOverlay().element,
-					render: context._buildOverlay().render,
-					type: 'overlay'
-				}
-			} else if (context._params.render.type === "modal") {
-				return {
-					element: context._buildModal()._element,
-					render: context._buildModal(),
-					type: 'modal'
-				}
-			}
-		};
+		let modal = context._buildModal();
+		modal.show();
 
-		const container = getContainer().element;
-		const render = getContainer().render;
-		const type = getContainer().type;
-
-		console.log(container);
-		console.log(render);
-		console.log(type);
-
-		if (type === 'modal') {
-			render.show();
-		}
-
-		const agreeBtn = Selectors.find(`[${DATA_AGREE}]`, container);
-		const cancelBtn = Selectors.find(`[${DATA_CANCEL}]`, container);
+		const container = modal._element;
 
 		return new Promise((resolve, reject) => {
-			const handleAgree = (e) => {
-				e.preventDefault();
-				cleanup();
-				resolve({
-					accepted: true,
-					timestamp: new Date(),
-				});
-
-				console.log('asd')
-
-				console.log(type)
-				console.log(container)
-				console.log(render)
-
-				if (type === 'modal') {
-					console.log('trigger')
-					render.hide();
+			context._attachHandlers(
+				container,
+				resolve,
+				reject,
+				() => {
+					modal.hide();
+					isAlertOpen = false;
 				}
-				if (type === 'overlay' && context._params.render.dismiss) {
-					container.remove();
-					render.hide();
-				}
-			};
-
-			const handleCancel = (e) => {
-				e.preventDefault();
-				if (type === 'modal') render.hide();
-				if (type === 'overlay') render.remove();
-			};
-
-			const handleKeydown = (e) => {
-				if (e.key === "Enter" && agreeBtn) {
-					e.preventDefault();
-					handleAgree(e);
-				}
-				if (e.key === "Escape") {
-					e.preventDefault();
-					handleCancel(e);
-				}
-			};
-
-			const cleanup = () => {
-				isAlertOpen = false;
-				document.removeEventListener("keydown", handleKeydown);
-				if (agreeBtn) agreeBtn.removeEventListener("click", handleAgree);
-				if (cancelBtn) cancelBtn.removeEventListener("click", handleCancel);
-			};
-
-			if (context._params.mode === "confirm") {
-				if (agreeBtn) agreeBtn.addEventListener("click", handleAgree);
-				if (cancelBtn) cancelBtn.addEventListener("click", handleCancel);
-			}
-
-			if (context._params.mode === "info") {
-				if (cancelBtn) cancelBtn.addEventListener("click", handleCancel);
-			}
-
-			document.addEventListener("keydown", handleKeydown);
-			container.addEventListener("vg.modal.hide", () => {
-				cleanup();
-				reject({
-					accepted: false,
-					timestamp: new Date(),
-				});
-			});
-
-			container.focus();
+			);
 		});
 	}
 
@@ -213,6 +129,110 @@ class VGAlert {
 
 		const instance = VGAlertConfirm.getOrCreateInstance(elem, context._params);
 		instance.run(VGAlert);
+	}
+
+	static overlay(target, options = {}, lang = 'ru') {
+		const modalContainer = target.closest('.vg-modal');
+		if (!modalContainer) return;
+
+		const modal = VGModal.getOrCreateInstance(modalContainer);
+		const container = Selectors.find('.vg-modal-content', modal._element);
+
+		const params = new Params(options, target);
+		const context = new VGAlert(params._params, lang);
+		const isHideModal = context._params.hide || false;
+		const overlay = context._buildOverlay(container);
+
+		return new Promise((resolve, reject) => {
+			context._attachHandlers(
+				overlay,
+				resolve,
+				reject,
+				() => {
+					overlay.remove();
+				},
+				() => {
+					if (modal && isHideModal) {
+						modal.hide();
+					}
+				}
+			);
+		});
+	}
+
+	_attachHandlers(root, resolve, reject, close, agree) {
+		const agreeBtn = Selectors.find(`[${DATA_AGREE}]`, root);
+		const cancelBtn = Selectors.find(`[${DATA_CANCEL}]`, root);
+
+		const cleanup = () => {
+			document.removeEventListener(
+				"keydown",
+				handleKeydown
+			);
+
+			agreeBtn?.removeEventListener(
+				"click",
+				handleAgree
+			);
+
+			cancelBtn?.removeEventListener(
+				"click",
+				handleCancel
+			);
+		};
+
+		const handleAgree = (e) => {
+			e.preventDefault();
+
+			cleanup();
+
+			resolve({
+				accepted: true,
+				timestamp: new Date()
+			});
+
+			agree();
+			close();
+		};
+
+		const handleCancel = (e) => {
+			e.preventDefault();
+
+			cleanup();
+
+			reject({
+				accepted: false,
+				timestamp: new Date()
+			});
+
+			close();
+		};
+
+		const handleKeydown = (e) => {
+
+			if (e.key === "Enter") {
+				handleAgree(e);
+			}
+
+			if (e.key === "Escape") {
+				handleCancel(e);
+			}
+		};
+
+		agreeBtn?.addEventListener(
+			"click",
+			handleAgree
+		);
+
+		cancelBtn?.addEventListener(
+			"click",
+			handleCancel
+		);
+
+		document.addEventListener(
+			"keydown",
+			handleKeydown
+		);
 	}
 
 	_setParams(params) {
@@ -286,13 +306,7 @@ class VGAlert {
 		);
 	}
 
-	_buildOverlay() {
-		let targetContainers = ['.vg-modal', '.vg-sidebar'];
-		const containerWrap = this._params.relatedTarget.closest(targetContainers.join(', '));
-
-		const modal = VGModal.getOrCreateInstance(containerWrap);
-		const container = Selectors.find('.vg-modal-content', modal._element) || containerWrap;
-
+	_buildOverlay(container) {
 		const overlay = document.createElement('div');
 
 		overlay.className = `${CLASS_NAME_ALERT}-overlay`;
@@ -300,10 +314,7 @@ class VGAlert {
 
 		container.append(overlay);
 
-		return {
-			element: overlay,
-			render: modal,
-		};
+		return overlay;
 	}
 
 	_createButton(container, key) {
@@ -361,8 +372,6 @@ class VGAlertConfirm extends BaseModule {
 	run(AlertClass) {
 		if (this._params.mode !== "confirm") return;
 
-		this._params.relatedTarget = this._element;
-
 		AlertClass.call(this._params)
 			.then((resolve) => {
 				if (!resolve.accepted) return Promise.reject(resolve);
@@ -397,16 +406,29 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, functi
 
 	if (!isVisible(target) || !isElement(target)) return;
 
-	VGAlert.confirm(target, {
-		buttons: {
-			agree: {
-				class: ["btn-primary"],
+	let renderType = target.getAttribute('data-render-type') || '';
+	if (renderType && renderType === 'overlay') {
+		VGAlert.overlay(
+			target,
+			{
+				message: {
+					title: 'Удалить?',
+					description: 'Действие необратимо'
+				}
+			}
+		);
+	} else {
+		VGAlert.confirm(target, {
+			buttons: {
+				agree: {
+					class: ["btn-primary"],
+				},
+				cancel: {
+					class: ["btn-outline-primary"],
+				},
 			},
-			cancel: {
-				class: ["btn-outline-primary"],
-			},
-		},
-	});
+		});
+	}
 });
 
 export default VGAlert;
