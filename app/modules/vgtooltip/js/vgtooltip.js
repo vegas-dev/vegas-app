@@ -14,6 +14,8 @@ const CLASS_NAME_OPEN = 'vg-tooltip-open';
 const CLASS_NAME_SHOW = 'show';
 const CLASS_NAME_SHOWN = 'shown';
 
+const SELECTOR_OPEN_TRIGGER = `${SELECTOR_DATA_TOGGLE}.${CLASS_NAME_SHOW}, ${SELECTOR_DATA_TOGGLE_POPOVER}.${CLASS_NAME_SHOW}`;
+
 const EVENT_KEY_HIDE = `${NAME_KEY}.hide`;
 const EVENT_KEY_HIDDEN = `${NAME_KEY}.hidden`;
 const EVENT_KEY_SHOW = `${NAME_KEY}.show`;
@@ -24,6 +26,21 @@ const EVENT_KEY_MOUSEENTER = `mouseenter.${NAME_KEY}`;
 const EVENT_KEY_MOUSELEAVE = `mouseleave.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DISMISS = `click.dismiss.${NAME_KEY}`;
 const EVENT_KEY_KEYDOWN = `keydown.dismiss.${NAME_KEY}`;
+
+const PLACEMENT_CLASSES = [
+	'top',
+	'top-start',
+	'top-end',
+	'bottom',
+	'bottom-start',
+	'bottom-end',
+	'left',
+	'left-start',
+	'left-end',
+	'right',
+	'right-start',
+	'right-end'
+];
 
 const defaultParams = {
 	title: '',
@@ -76,8 +93,6 @@ class VGTooltip extends BaseModule {
 				this._setPlacement();
 			}
 		};
-
-		this._addEventListeners();
 	}
 
 	static get NAME() {
@@ -360,20 +375,7 @@ class VGTooltip extends BaseModule {
 
 		const placement = this._tooltip.getAttribute('data-vg-placement');
 
-		this._tooltip.classList.remove(
-			'top',
-			'top-start',
-			'top-end',
-			'bottom',
-			'bottom-start',
-			'bottom-end',
-			'left',
-			'left-start',
-			'left-end',
-			'right',
-			'right-start',
-			'right-end'
-		);
+		this._tooltip.classList.remove(...PLACEMENT_CLASSES);
 
 		if (placement) {
 			this._tooltip.classList.add(placement);
@@ -413,32 +415,40 @@ class VGTooltip extends BaseModule {
 			this._hideTimeout = null;
 		}
 	}
-
-	_addEventListeners() {
-		EventHandler.on(document, EVENT_KEY_KEYDOWN, event => {
-			if (!this._params.keyboard) return;
-
-			if (event.key === 'Escape' && this._isShown()) {
-				this.hide();
-			}
-		});
-
-		EventHandler.on(document, EVENT_KEY_CLICK_DISMISS, event => {
-			if (!this._params.closeOnOutsideClick) return;
-			if (!this._params.trigger.includes('click') && !this._params.popover) return;
-			if (!this._isShown()) return;
-
-			if (
-				this._tooltip?.contains(event.target) ||
-				this._element.contains(event.target)
-			) {
-				return;
-			}
-
-			this.hide();
-		});
-	}
 }
+
+const getShownInstances = () => {
+	return Selectors.findAll(SELECTOR_OPEN_TRIGGER)
+		.map(element => VGTooltip.getInstance(element))
+		.filter(Boolean);
+};
+
+EventHandler.on(document, EVENT_KEY_KEYDOWN, event => {
+	if (event.key !== 'Escape') return;
+
+	getShownInstances().forEach(instance => {
+		if (!instance._params.keyboard || !instance._isShown()) return;
+
+		instance.hide();
+	});
+});
+
+EventHandler.on(document, EVENT_KEY_CLICK_DISMISS, event => {
+	getShownInstances().forEach(instance => {
+		if (!instance._params.closeOnOutsideClick) return;
+		if (!instance._params.trigger.includes('click') && !instance._params.popover) return;
+		if (!instance._isShown()) return;
+
+		if (
+			instance._tooltip?.contains(event.target) ||
+			instance._element.contains(event.target)
+		) {
+			return;
+		}
+
+		instance.hide();
+	});
+});
 
 EventHandler.on(document, EVENT_KEY_MOUSEENTER, SELECTOR_DATA_TOGGLE, function () {
 	const instance = VGTooltip.getOrCreateInstance(this);

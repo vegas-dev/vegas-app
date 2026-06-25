@@ -15,6 +15,8 @@
 - Интеграция с промисами (`Promise`)
 - Защита от **множественных одновременных вызовов**
 - Поддержка **клавиатурных сокращений** (Enter, Escape)
+- Два режима рендера: обычный **`modal`** и вложенный **`overlay`**
+- Возможность закрывать родительскую модалку/сайдбар через `render.dismiss`
 
 ---
 
@@ -34,6 +36,36 @@ import VGAlert from "./app/modules/vgalert/js/vgalert.js";
 
 ### 2. `info` — Информационное сообщение
 Показывает только кнопку **ОК** (или "Продолжить").
+
+---
+
+## 🖼 Рендер (`render`)
+
+`VGAlert` поддерживает два варианта отображения:
+
+| Параметр | Значение | Описание |
+|--------|--------|----------|
+| `render.type` | `modal` | Обычный alert в отдельной модалке |
+| `render.type` | `overlay` | Alert-оверлей внутри текущей `.vg-modal` или `.vg-sidebar` |
+| `render.dismiss` | `true` / `false` | Для `overlay`: после закрытия alert дополнительно закрывает родительский контейнер |
+
+### Пример: alert поверх открытой модалки
+
+```js
+VGAlert.call({
+    render: {
+        type: "overlay",
+        dismiss: true
+    },
+    relatedTarget: button,
+    message: {
+        title: "Удалить запись",
+        description: "Действие будет выполнено в текущем окне."
+    }
+});
+```
+
+`relatedTarget` нужен для `overlay`, чтобы модуль нашёл ближайшую `.vg-modal` или `.vg-sidebar`, куда надо встроить alert.
 
 ---
 
@@ -94,6 +126,22 @@ VGAlert.call({
 });
 ```
 
+### Пример 3: Обработка результата через `Promise`
+```js
+VGAlert.call({
+    message: {
+        title: "Подтвердите действие",
+        description: "Продолжить?"
+    }
+}).then((result) => {
+    console.log(result.accepted); // true
+    console.log(result.timestamp);
+}).catch((error) => {
+    console.log(error.accepted); // false
+    console.log(error.timestamp);
+});
+```
+
 ---
 
 ## 🔌 Работа с AJAX
@@ -123,7 +171,7 @@ VGAlert.confirm(element, {
 
 ## 🔔 События
 
-Модуль генерирует события:
+Модуль генерирует события на элементе-триггере, у которого есть `[data-vg-toggle="alert"]`:
 
 | Событие | Описание |
 |--------|--------|
@@ -133,10 +181,16 @@ VGAlert.confirm(element, {
 | `vg.alert.loaded` | Получен ответ от сервера (если был AJAX) |
 
 ```js 
-document.addEventListener('vg.alert.accept', function(e) { 
-    console.log('Подтверждено:', e.vgalert); 
+const buttons = document.querySelectorAll('[data-vg-toggle="alert"]');
+
+buttons.forEach((button) => {
+    button.addEventListener('vg.alert.accept', function (e) {
+        console.log('Подтверждено:', e.vgalert);
+    });
 });
 ```
+
+Если нужен общий глобальный обработчик, событие можно слушать и на `document`, так как оно всплывает.
 
 ---
 
@@ -152,6 +206,10 @@ document.addEventListener('vg.alert.accept', function(e) {
 { 
     mode: "confirm", 
     theme: "danger", 
+    render: {
+        type: "modal",
+        dismiss: false
+    },
     modal: { 
         centered: false,
         backdrop: true, 
@@ -197,6 +255,7 @@ VGAlert.call(params, 'en');
 - `class` — массив CSS-классов
 - `attr` — любые дополнительные атрибуты
 - `element` — готовый HTML-код кнопки
+- `toggle` — служебный атрибут кнопки (`data-vg-alert-agree` / `data-vg-alert-cancel`), обычно задаётся модулем автоматически
 
 ### Пример: кнопка-ссылка
 ```js

@@ -101,27 +101,23 @@ class VGAlert {
 
 		const getContainer = () => {
 			if (context._params.render.type === "overlay") {
+				const overlay = context._buildOverlay();
 				return {
-					element: context._buildOverlay().element,
-					render: context._buildOverlay().render,
+					element: overlay.element,
+					render: overlay.render,
 					type: 'overlay'
 				}
 			} else if (context._params.render.type === "modal") {
+				const modal = context._buildModal();
 				return {
-					element: context._buildModal()._element,
-					render: context._buildModal(),
+					element: modal._element,
+					render: modal,
 					type: 'modal'
 				}
 			}
 		};
 
-		const container = getContainer().element;
-		const render = getContainer().render;
-		const type = getContainer().type;
-
-		console.log(container);
-		console.log(render);
-		console.log(type);
+		const {element: container, render, type} = getContainer();
 
 		if (type === 'modal') {
 			render.show();
@@ -131,6 +127,21 @@ class VGAlert {
 		const cancelBtn = Selectors.find(`[${DATA_CANCEL}]`, container);
 
 		return new Promise((resolve, reject) => {
+			const closeAlert = () => {
+				if (type === 'modal') {
+					render.hide();
+					return;
+				}
+
+				if (type === 'overlay') {
+					container.remove();
+
+					if (context._params.render.dismiss) {
+						render.hide();
+					}
+				}
+			};
+
 			const handleAgree = (e) => {
 				e.preventDefault();
 				cleanup();
@@ -138,27 +149,17 @@ class VGAlert {
 					accepted: true,
 					timestamp: new Date(),
 				});
-
-				console.log('asd')
-
-				console.log(type)
-				console.log(container)
-				console.log(render)
-
-				if (type === 'modal') {
-					console.log('trigger')
-					render.hide();
-				}
-				if (type === 'overlay' && context._params.render.dismiss) {
-					container.remove();
-					render.hide();
-				}
+				closeAlert();
 			};
 
 			const handleCancel = (e) => {
 				e.preventDefault();
-				if (type === 'modal') render.hide();
-				if (type === 'overlay') render.remove();
+				cleanup();
+				reject({
+					accepted: false,
+					timestamp: new Date(),
+				});
+				closeAlert();
 			};
 
 			const handleKeydown = (e) => {
@@ -189,13 +190,16 @@ class VGAlert {
 			}
 
 			document.addEventListener("keydown", handleKeydown);
-			container.addEventListener("vg.modal.hide", () => {
-				cleanup();
-				reject({
-					accepted: false,
-					timestamp: new Date(),
-				});
-			});
+
+			if (type === 'modal') {
+				container.addEventListener("vg.modal.hide", () => {
+					cleanup();
+					reject({
+						accepted: false,
+						timestamp: new Date(),
+					});
+				}, {once: true});
+			}
 
 			container.focus();
 		});
