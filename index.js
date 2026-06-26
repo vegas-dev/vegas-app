@@ -9,6 +9,7 @@ export { default as VGLoadMore }     from './app/modules/vgloadmore';
 export { default as VGModal }        from './app/modules/vgmodal';
 export { default as VGNav }          from './app/modules/vgnav';
 export { default as VGNestable }     from './app/modules/vgnestable';
+export { default as VGRangeSlider }  from './app/modules/vgrangeslider';
 export { default as VGRollup }       from './app/modules/vgrollup';
 export { default as VGSelect }       from './app/modules/vgselect';
 export { default as VGSidebar }      from './app/modules/vgsidebar';

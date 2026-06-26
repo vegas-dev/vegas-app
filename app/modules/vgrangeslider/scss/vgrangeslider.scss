@@ -1,0 +1,16 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGRangeSlider
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@import "../../../utils/scss/functions";
+@import "../../../utils/scss/mixin";
+@import "../../../utils/scss/variables";
+@import "variables";
+
+.vg-range-slider {
+	@include mix-vars('range-slider', $range-slider-map);
+}
