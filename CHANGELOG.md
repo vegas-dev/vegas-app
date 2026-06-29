@@ -2,11 +2,20 @@
 ## Новые фичи
 * Добавлен новый модуль `VGTooltip` с режимами `tooltip` и `popover`, Data API, автопозиционированием, fallback placement, закрытием по `Esc` и клику вне элемента.
 * В `VGAlert` добавлен режим рендера `render.type = 'overlay'` для встраивания alert поверх текущей `.vg-modal` или `.vg-sidebar`.
+* Добавлен новый модуль `VGRangeSlider` с single/range режимами, Data API, tooltip, label, hidden-input синхронизацией, внешними output-target, методами `getValue()/setValue()/enable()/disable()` и событиями `vg.rangeslider.*`.
+* В `VGRangeSlider` добавана система скинов: `ruler` со шкалой и делениями, а также `status` с цветовыми состояниями на базе utility-переменных `$success`, `$warning`, `$danger`.
+* Добавлен и экспортирован `VGDynamicTable`: основной модуль таблицы с local/remote режимами, callback/event API, сортировкой, фильтрами, поиском, пагинацией, sticky header, clone-sticky header, summary/footer, row actions и persistent state.
 
 ## Изменения
 * В `VGAlert` рендер modal/overlay унифицирован: контейнер и экземпляр рендера создаются один раз, удалены отладочные `console.log`, закрытие вынесено в общий helper.
 * В `VGAlert` отмена confirm теперь корректно отклоняет `Promise`, а обработчик `vg.modal.hide` подписывается только для modal-режима и срабатывает один раз.
 * В `VGTooltip` глобальные обработчики `Esc` и клика вне элемента переведены на работу со всеми открытыми экземплярами, а сброс placement-классов вынесен в общий список.
+* В `VGRangeSlider` исправлены ошибки инициализации и синхронизации: вставка DOM для `input[type="range"]`, работа с вложенными data-параметрами (`output.*`, `name.*`, `input.*`, `label.words`, `status.*`), форматирование пустого prefix/suffix и merged tooltip в range-режиме.
+* В `VGRangeSlider` доработаны стили и геометрия: размеры вынесены в переменные, позиционирование fill/tooltip/шкалы переведено на pixel-based расчёт с учётом ширины thumb, настроены z-index слои, связана геометрия `ruler`, скрыты обычные labels для `ruler`-скина и добавлено dim-active поведение для делений.
+* В `VGRangeSlider` `status`-skin расширен поддержкой `status.by = from|to|avg`, `labelWords` и пробросом статуса (`tone`, `label`, `percent`, `sourceValue`) в события и callback detail.
+* В `VGDynamicTable` подключён публичный export через `index.js`, `Editable` переведён на получение инстанса таблицы через `Data.get(...)`, а инициализация переведена на `EventHandler.on(...)`.
+* В `VGDynamicTable` доработаны sticky-сценарии и таблица-обёртка: стили sticky header вынесены на уровень модуля, добавлен clone sticky header с синхронизацией scroll/select-all/drag-sort interactions, скорректированы fixed-column, striped и hover состояния.
+* В `VGDynamicTable` обновлены pagination и интеграции: локальный импорт `VGDropdown`, scroll-to-top при пагинации, summary node, persistent/view state, remote/local action callbacks и события `vgdt:*`.
 * Обновлена документация `VGAlert` и `VGTooltip`, из директории `app/modules/vgalert/js/old/` удалены устаревшие файлы.
 * Обновлена версия пакета в `package.json`: `1.2.4` -> `1.2.5`.
 

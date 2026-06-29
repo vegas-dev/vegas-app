@@ -1,0 +1,60 @@
+.skeleton-row td {
+	padding: var(--vg-dynamic-table-skeleton-padding);
+	background: var(--vg-dynamic-table-skeleton-row-bg);
+	border-bottom-color: var(--vg-dynamic-table-skeleton-border-color);
+	height: var(--vgdt-skeleton-row-height, auto);
+}
+
+.skeleton-cell {
+	display: flex;
+	align-items: center;
+	min-height: var(--vg-dynamic-table-cell-row-content-height);
+	width: 100%;
+}
+
+.skeleton-line {
+	width: 100%;
+	height: var(--vg-dynamic-table-skeleton-line-height);
+	border-radius: var(--vg-dynamic-table-skeleton-radius);
+	position: relative;
+	overflow: hidden;
+	background: linear-gradient(
+					90deg,
+					var(--vg-dynamic-table-skeleton-gradient-1) 25%,
+					var(--vg-dynamic-table-skeleton-gradient-2) 50%,
+					var(--vg-dynamic-table-skeleton-gradient-1) 75%
+	);
+	background-size: 160% 100%;
+	animation: skeleton-shimmer var(--vg-dynamic-table-skeleton-duration) ease-in-out infinite;
+	animation-delay: var(--skeleton-delay, 0s);
+}
+
+.skeleton-line::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		110deg,
+		transparent 0%,
+		var(--vg-dynamic-table-skeleton-glow) 45%,
+		transparent 100%
+	);
+	transform: translateX(-120%);
+	animation: skeleton-glow calc(var(--vg-dynamic-table-skeleton-duration) * 1.15) linear infinite;
+	animation-delay: var(--skeleton-delay, 0s);
+}
+
+@keyframes skeleton-shimmer {
+	0% {
+		background-position: 160% 0;
+	}
+	100% {
+		background-position: -160% 0;
+	}
+}
+
+@keyframes skeleton-glow {
+	100% {
+		transform: translateX(120%);
+	}
+}
