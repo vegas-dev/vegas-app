@@ -1,4 +1,4 @@
-import BaseModule from "../../base-module";
+﻿import BaseModule from "../../base-module";
 import fixedColumnsMethods from "./fixed";
 import viewportMethods from "./viewport";
 import summaryFooterMethods from "./summary-footer";
@@ -17,7 +17,7 @@ import EventHandler from "../../../utils/js/dom/event";
 import {mergeDeepObject} from "../../../utils/js/functions";
 
 /**
- * Константы
+ * РљРѕРЅСЃС‚Р°РЅС‚С‹
  */
 const NAME = 'dynamicTable';
 const NAME_KEY = 'vg.' + NAME;
@@ -26,7 +26,7 @@ const MAIN_SELECTOR_CLASS = 'vg-dynamic-table';
 const SELECTOR_DATA_TOGGLE = '[data-vg-table]';
 
 /**
- * Карта колбеков
+ * РљР°СЂС‚Р° РєРѕР»Р±РµРєРѕРІ
  */
 const ACTION_CALLBACK_MAP = {
 	init: 'onInit',
@@ -142,6 +142,11 @@ class VGDynamicTable extends BaseModule {
 			perPage: -1,
 			frame: 0,
 			lastScrollTop: -1,
+			rowHeight: 44,
+		};
+		this._virtualSpacers = {
+			top: null,
+			bottom: null,
 		};
 		this._boundVirtualScroll = this._handleVirtualScroll.bind(this);
 		this._expandable = null;
@@ -249,17 +254,6 @@ class VGDynamicTable extends BaseModule {
 			trigger,
 			filtersState,
 		});
-	}
-
-	setTheme(theme) {
-		const normalized = this._normalizeTheme(theme);
-		this._params.theme = normalized;
-		this._element.setAttribute('data-theme', normalized);
-		this._writePersistentState('theme', normalized);
-		if (this._parent) {
-			this._applyTheme();
-		}
-		return normalized;
 	}
 
 	setLocale(locale) {
@@ -518,7 +512,6 @@ class VGDynamicTable extends BaseModule {
 		this._ensureTableViewport(directParent);
 		this._bindViewportPan();
 		this._restorePersistentState();
-		this._applyTheme();
 		this._ensureLiveRegion();
 		this._ensureSummaryNode();
 		this._ensurePanHintNode();
@@ -560,10 +553,6 @@ class VGDynamicTable extends BaseModule {
 		this._bindTableStateActions();
 		this._bindPopState();
 		this._refreshStickyAndFixedLayout();
-
-		if (this._isRemote) {
-			this.initRequester();
-		}
 
 		if (paginationEnabled) {
 			this.setPagination();
@@ -668,10 +657,6 @@ class VGDynamicTable extends BaseModule {
 	}
 
 	_setRemotePagination() {
-		if (!this._requester) {
-			this.initRequester();
-		}
-
 		const page = this._getInitialPage();
 		const perPage = this._getInitialPerPage();
 		this._pageState = { page, perPage };
@@ -724,7 +709,7 @@ class VGDynamicTable extends BaseModule {
 		if (!body) {
 			return [];
 		}
-		return Array.from(body.rows);
+		return Array.from(body.rows).filter((row) => String(row.getAttribute('data-virtual-spacer') || '') !== '1');
 	}
 
 	_getTotalPages(perPage) {
@@ -750,6 +735,8 @@ class VGDynamicTable extends BaseModule {
 			this._virtualState.lastPage = page;
 			this._virtualState.lastPerPage = perPage;
 			this._applyVirtualWindow(page, perPage);
+		} else {
+			this._teardownVirtualWindow();
 		}
 		this._refreshExpandable();
 		this._renderFooterFromCurrentState();
@@ -781,6 +768,14 @@ class VGDynamicTable extends BaseModule {
 		this._virtualState.bound = true;
 	}
 
+	_teardownVirtualizationBinding() {
+		if (!this._tableViewport || !this._virtualState.bound) {
+			return;
+		}
+		this._tableViewport.removeEventListener('scroll', this._boundVirtualScroll);
+		this._virtualState.bound = false;
+	}
+
 	_handleVirtualScroll() {
 		if (!this._isVirtualEnabled()) {
 			return;
@@ -808,13 +803,18 @@ class VGDynamicTable extends BaseModule {
 
 	_applyVirtualWindow(page, perPage) {
 		if (!this._isVirtualEnabled() || !this._tableViewport) {
+			this._teardownVirtualWindow();
 			return;
 		}
 
 		this._initVirtualization();
+		const body = this._getBody();
+		if (!body) {
+			this._teardownVirtualWindow();
+			return;
+		}
 		const options = this._params.virtual || {};
-		const rowHeightRaw = this._element.getAttribute('data-virtual-row-height');
-		const rowHeight = Math.max(24, this._normalizePositiveInt(rowHeightRaw !== null ? rowHeightRaw : options.rowheight, 44));
+		const rowHeight = this._resolveVirtualRowHeight(page, perPage, options);
 		const overscanRaw = this._element.getAttribute('data-virtual-overscan');
 		const overscan = Math.max(0, this._normalizePositiveInt(overscanRaw !== null ? overscanRaw : options.overscan, 8));
 		const visibleCount = Math.max(1, Math.ceil((this._tableViewport.clientHeight || 0) / rowHeight));
@@ -825,7 +825,15 @@ class VGDynamicTable extends BaseModule {
 		const windowStart = Math.max(pageStart, pageStart + scrolledRows - overscan);
 		const windowEnd = Math.min(pageEnd, pageStart + scrolledRows + visibleCount + overscan);
 
-		if (this._virtualState.start === windowStart && this._virtualState.end === windowEnd) {
+		const topSpacerHeight = Math.max(0, (windowStart - pageStart) * rowHeight);
+		const bottomSpacerHeight = Math.max(0, (pageEnd - windowEnd) * rowHeight);
+		if (
+			this._virtualState.start === windowStart
+			&& this._virtualState.end === windowEnd
+			&& this._virtualState.page === page
+			&& this._virtualState.perPage === perPage
+		) {
+			this._syncVirtualSpacers(body, windowStart, windowEnd, topSpacerHeight, bottomSpacerHeight);
 			return;
 		}
 
@@ -845,10 +853,137 @@ class VGDynamicTable extends BaseModule {
 			}
 			row.hidden = index < windowStart || index >= windowEnd;
 		}
+		this._syncVirtualSpacers(body, windowStart, windowEnd, topSpacerHeight, bottomSpacerHeight);
 		this._virtualState.start = windowStart;
 		this._virtualState.end = windowEnd;
 		this._virtualState.page = page;
 		this._virtualState.perPage = perPage;
+		this._virtualState.rowHeight = rowHeight;
+	}
+
+	_resolveVirtualRowHeight(page, perPage, options = {}) {
+		const attrRowHeight = this._element.getAttribute('data-virtual-row-height');
+		if (attrRowHeight !== null && String(attrRowHeight).trim() !== '') {
+			return Math.max(24, this._normalizePositiveInt(attrRowHeight, 44));
+		}
+
+		const optionRowHeight = this._normalizePositiveInt(options.rowheight, 0);
+		const pageStart = Math.max(0, (page - 1) * perPage);
+		const pageEnd = Math.min(pageStart + perPage, this._rows.length);
+		const measuredHeight = this._measureVirtualRowHeight(pageStart, pageEnd);
+		if (measuredHeight > 0) {
+			return measuredHeight;
+		}
+		if (optionRowHeight > 0) {
+			return Math.max(24, optionRowHeight);
+		}
+		const cachedHeight = this._normalizePositiveInt(this._virtualState.rowHeight, 44);
+		return Math.max(24, cachedHeight);
+	}
+
+	_measureVirtualRowHeight(pageStart, pageEnd) {
+		const samples = [];
+		for (let index = pageStart; index < pageEnd; index += 1) {
+			const row = this._rows[index];
+			if (!row || row.hidden) {
+				continue;
+			}
+			const rect = row.getBoundingClientRect();
+			const height = Math.round(rect && rect.height ? rect.height : 0);
+			if (height > 0) {
+				samples.push(height);
+			}
+			if (samples.length >= 6) {
+				break;
+			}
+		}
+		if (!samples.length) {
+			return 0;
+		}
+		const total = samples.reduce((sum, value) => sum + value, 0);
+		return Math.max(24, Math.round(total / samples.length));
+	}
+
+	_syncVirtualSpacers(body, windowStart, windowEnd, topHeight, bottomHeight) {
+		const columns = this._getRenderedColumnsCount();
+		const topSpacer = this._ensureVirtualSpacer('top', columns);
+		const bottomSpacer = this._ensureVirtualSpacer('bottom', columns);
+		const firstVisibleRow = this._rows[windowStart] || null;
+		const afterVisibleRow = this._rows[windowEnd] || null;
+
+		this._updateVirtualSpacer(topSpacer, topHeight, columns);
+		this._updateVirtualSpacer(bottomSpacer, bottomHeight, columns);
+
+		if (firstVisibleRow) {
+			body.insertBefore(topSpacer, firstVisibleRow);
+		} else if (!topSpacer.parentElement) {
+			body.appendChild(topSpacer);
+		}
+
+		if (afterVisibleRow) {
+			body.insertBefore(bottomSpacer, afterVisibleRow);
+		} else {
+			body.appendChild(bottomSpacer);
+		}
+	}
+
+	_ensureVirtualSpacer(position, columns) {
+		const current = this._virtualSpacers && this._virtualSpacers[position]
+			? this._virtualSpacers[position]
+			: null;
+		if (current && current.isConnected) {
+			this._syncVirtualSpacerColumns(current, columns);
+			return current;
+		}
+
+		const spacer = document.createElement('tr');
+		spacer.setAttribute('data-virtual-spacer', '1');
+		spacer.setAttribute('data-virtual-spacer-position', position);
+		spacer.setAttribute('data-group-header', '1');
+		spacer.setAttribute('aria-hidden', 'true');
+		const cell = document.createElement('td');
+		cell.setAttribute('data-virtual-spacer-cell', '1');
+		cell.colSpan = Math.max(1, columns);
+		spacer.appendChild(cell);
+		this._virtualSpacers[position] = spacer;
+		return spacer;
+	}
+
+	_syncVirtualSpacerColumns(spacer, columns) {
+		if (!spacer || !spacer.cells || !spacer.cells[0]) {
+			return;
+		}
+		spacer.cells[0].colSpan = Math.max(1, columns);
+	}
+
+	_updateVirtualSpacer(spacer, height, columns) {
+		if (!spacer || !spacer.cells || !spacer.cells[0]) {
+			return;
+		}
+		const safeHeight = Math.max(0, Math.round(height));
+		this._syncVirtualSpacerColumns(spacer, columns);
+		const cell = spacer.cells[0];
+		cell.style.height = `${safeHeight}px`;
+		spacer.hidden = safeHeight <= 0;
+	}
+
+	_teardownVirtualWindow() {
+		this._teardownVirtualizationBinding();
+		if (this._virtualState.frame && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+			window.cancelAnimationFrame(this._virtualState.frame);
+		}
+		this._virtualState.start = 0;
+		this._virtualState.end = 0;
+		this._virtualState.page = -1;
+		this._virtualState.perPage = -1;
+		this._virtualState.frame = 0;
+		this._virtualState.lastScrollTop = -1;
+		Object.keys(this._virtualSpacers || {}).forEach((key) => {
+			const spacer = this._virtualSpacers[key];
+			if (spacer && spacer.parentElement) {
+				spacer.parentElement.removeChild(spacer);
+			}
+		});
 	}
 
 
@@ -868,12 +1003,6 @@ class VGDynamicTable extends BaseModule {
 	}
 
 	_restorePersistentState() {
-		const storedTheme = this._readPersistentState('theme');
-		if (storedTheme) {
-			this._params.theme = this._normalizeTheme(storedTheme);
-			this._element.setAttribute('data-theme', this._params.theme);
-		}
-
 		const storedLocale = this._readPersistentState('locale');
 		if (storedLocale) {
 			this._params.locale = String(storedLocale).toLowerCase().trim();
@@ -899,7 +1028,6 @@ class VGDynamicTable extends BaseModule {
 		}
 
 		const attrNameMap = {
-			theme: 'data-persistence-theme',
 			locale: 'data-persistence-locale',
 			filtersApplyMode: 'data-persistence-filters-apply-mode',
 		};
@@ -968,165 +1096,6 @@ class VGDynamicTable extends BaseModule {
 		const body = document.createElement('tbody');
 		this._element.appendChild(body);
 		return body;
-	}
-
-	async _loadRemotePage(page, perPage, userOnChange = null) {
-		if (!this._requester) {
-			return;
-		}
-
-		const safePage = this._normalizePositiveInt(page, 1);
-		const safePerPage = this._clampPerPage(perPage, this._getInitialPerPage());
-		const requestToken = ++this._requestToken;
-		if (this._requestAbortController && typeof this._requestAbortController.abort === 'function') {
-			this._requestAbortController.abort();
-		}
-		const requestAbortController = typeof AbortController === 'function'
-			? new AbortController()
-			: null;
-		this._requestAbortController = requestAbortController;
-		const requestStartedAt = Date.now();
-		this._emitAction('beforeload', {
-			page: safePage,
-			perPage: safePerPage,
-			params: Object.assign({}, this._remoteParams),
-		});
-		this._renderLoadingSkeleton();
-
-		try {
-			const sortOptions = this._params.sortable || {};
-			const requestParams = {
-				page: safePage,
-				per_page: safePerPage,
-			};
-			Object.assign(requestParams, this._remoteParams);
-
-			const responseMode = this._getRemoteResponseMode();
-			if (responseMode !== 'data') {
-				const viewParam = this._getRemoteViewParamName();
-				const viewValue = this._getRemoteViewParamValue();
-				if (viewParam && viewValue && !Object.prototype.hasOwnProperty.call(requestParams, viewParam)) {
-					requestParams[viewParam] = viewValue;
-				}
-
-				const fieldsParam = this._getRemoteFieldsParamName();
-				if (fieldsParam && this._fields.length && !Object.prototype.hasOwnProperty.call(requestParams, fieldsParam)) {
-					requestParams[fieldsParam] = this._fields.join(',');
-				}
-			}
-			if (sortOptions.enable && this._sortState.field) {
-				const remoteFieldParam = 'sort';
-				const remoteDirParam = 'dir';
-				const sorts = this._getNormalizedSorts(this._sortState.sorts);
-				if (sorts.length > 0) {
-					requestParams[remoteFieldParam] = sorts.map((item) => item.field).join(',');
-					requestParams[remoteDirParam] = sorts.map((item) => item.dir).join(',');
-				} else {
-					requestParams[remoteFieldParam] = this._sortState.field;
-					requestParams[remoteDirParam] = this._sortState.dir;
-				}
-			}
-
-			const mappedRequestParams = this._mapRemoteRequestParams(requestParams);
-			const response = await this._requester.get(mappedRequestParams, {
-				endpoint: this._getRemoteDataRoute(),
-				signal: requestAbortController ? requestAbortController.signal : undefined,
-			});
-			await this._waitMinLoadingDelay(requestStartedAt);
-
-			if (requestToken !== this._requestToken) {
-				return;
-			}
-
-			const rows = this._extractRemoteRows(response);
-			const meta = this._extractRemoteMeta(response);
-			this._lastRemoteMeta = meta;
-			this._renderSummary(meta);
-
-			const viewRowsHtml = this._extractRemoteViewRowsHtml(response);
-			const didRenderView = this._renderRemoteViewIfConfigured(viewRowsHtml, rows);
-			if (!didRenderView) {
-				this._renderRemoteRows(rows);
-			}
-			this._refreshExpandable();
-			this._renderFooterFromRows(rows, meta);
-			this._updatePanHintVisibility();
-			this._refreshStickyAndFixedLayout();
-
-			const nextPage = this._normalizePositiveInt(meta.page, safePage);
-			const nextPerPage = this._clampPerPage(meta.per_page, safePerPage);
-			const totalPages = this._normalizePositiveInt(meta.pages, 1);
-			this._pageState = { page: nextPage, perPage: nextPerPage };
-			this._storePage(nextPage);
-			this._storePerPage(nextPerPage);
-
-			const nextSort = typeof meta.sort === 'string' ? meta.sort.trim() : this._sortState.field;
-			const nextDir = meta && typeof meta.dir === 'string' ? meta.dir : this._sortState.dir;
-			if (nextSort) {
-				const metaSorts = this._parseSortsFromStrings(nextSort, nextDir);
-				this._sortState = Object.assign({}, this._sortState, {
-					field: metaSorts[0] ? metaSorts[0].field : nextSort,
-					dir: metaSorts[0] ? metaSorts[0].dir : this._normalizeSortDir(nextDir),
-					sorts: metaSorts,
-				});
-				if (this._sortable) {
-					this._sortable.setState({
-						sorts: this._sortState.sorts,
-					});
-				}
-			}
-
-			if (this._pagination) {
-				this._pagination.setMeta({
-					page: nextPage,
-					perPage: nextPerPage,
-					totalPages,
-				});
-			}
-
-			if (typeof userOnChange === 'function') {
-				userOnChange({
-					page: nextPage,
-					perPage: nextPerPage,
-					totalPages,
-				});
-			}
-			this._syncUrlState();
-			this._emitAction('dataloaded', {
-				page: nextPage,
-				perPage: nextPerPage,
-				totalPages,
-				rows,
-				view: viewRowsHtml,
-				meta,
-			});
-		} catch (error) {
-			if (error && error.name === 'AbortError') {
-				return;
-			}
-			await this._waitMinLoadingDelay(requestStartedAt);
-			if (requestToken !== this._requestToken) {
-				return;
-			}
-			this._renderSummary({ total: 0 });
-			this._clearFooter();
-			const errorMessage = this._getTableMessage('stateError', 'Упс! Что то пошло не так');
-			if (typeof console !== 'undefined' && typeof console.error === 'function') {
-				console.error('VGDynamicTable: remote data load failed', error);
-			}
-			this._renderStateRow(errorMessage, 'error');
-			this._refreshStickyAndFixedLayout();
-			this._emitAction('error', {
-				page: safePage,
-				perPage: safePerPage,
-				error,
-				message: errorMessage,
-			});
-		} finally {
-			if (this._requestAbortController === requestAbortController) {
-				this._requestAbortController = null;
-			}
-		}
 	}
 
 	_getRemoteResponseMode() {
@@ -1310,7 +1279,7 @@ class VGDynamicTable extends BaseModule {
 			if (Array.isArray(rows) && rows.length) {
 				return false;
 			}
-			const message = this._getTableMessage('stateEmpty', 'Ничего нет');
+			const message = this._getTableMessage('stateEmpty', 'РќРёС‡РµРіРѕ РЅРµС‚');
 			this._renderStateRow(message, 'empty');
 			return true;
 		}
@@ -1318,7 +1287,7 @@ class VGDynamicTable extends BaseModule {
 		const body = this._getBody();
 		body.innerHTML = viewRowsHtml;
 		if (!this._hasRenderableRowsInBody(body)) {
-			this._renderStateRow(this._getTableMessage('stateEmpty', 'Ничего нет'), 'empty');
+			this._renderStateRow(this._getTableMessage('stateEmpty', 'РќРёС‡РµРіРѕ РЅРµС‚'), 'empty');
 			return true;
 		}
 		this._setFixedColumnsSuppressed(false);
@@ -3684,26 +3653,11 @@ class VGDynamicTable extends BaseModule {
 		this._syncCloneStickyHeader();
 	}
 
-	_applyTheme() {
-		const theme = this._normalizeTheme(this._params.theme || this._element.getAttribute('data-theme') || 'auto');
-
-		this._parent.classList.remove('theme-auto', 'theme-light', 'theme-dark');
-		this._parent.classList.add(`theme-${theme}`);
-	}
-
-	_normalizeTheme(value) {
-		const normalized = String(value || 'auto').toLowerCase().trim();
-		if (normalized === 'light' || normalized === 'dark') {
-			return normalized;
-		}
-		return 'auto';
-	}
-
 	_renderRemoteRows(rows) {
 		const body = this._getBody();
 
 		if (!rows.length) {
-			const message = this._getTableMessage('stateEmpty', 'Ничего нет');
+			const message = this._getTableMessage('stateEmpty', 'РќРёС‡РµРіРѕ РЅРµС‚');
 			this._renderStateRow(message, 'empty');
 			return;
 		}
@@ -3725,7 +3679,7 @@ class VGDynamicTable extends BaseModule {
 		const body = this._getBody();
 		const columns = this._getRenderedColumnsCount();
 		const retryButton = state === 'error'
-			? `<div class="vgdt-state-actions"><button type="button" class="vgdt-state-reset" data-state-retry>${this._escapeHtml(this._getTableMessage('retry', 'Повторить'))}</button></div>`
+			? `<div class="vgdt-state-actions"><button type="button" class="vgdt-state-reset" data-state-retry>${this._escapeHtml(this._getTableMessage('retry', 'РџРѕРІС‚РѕСЂРёС‚СЊ'))}</button></div>`
 			: '';
 		const illustration = this._buildStateIllustrationMarkup(state);
 		body.innerHTML = `<tr><td colspan="${columns}" data-table-state="${state}"><div class="vgdt-state">${illustration}<div class="vgdt-state-text">${this._escapeHtml(message)}</div>${retryButton}</div></td></tr>`;
@@ -3872,3 +3826,4 @@ EventHandler.on(document, 'DOMContentLoaded', () => {
 });
 
 export default VGDynamicTable;
+

@@ -1,3 +1,17 @@
+# VEGAS-APP 1.2.6 (Июнь, 29, 2026)
+## Новые фичи
+* В `BaseModule` добавлены универсальные route/fetch helpers: `requestRoute()` и `buildRouteUrl()` с нормализацией `headers`, `credentials`, query-параметров, JSON/FormData body и единым форматом ошибок ответа.
+* В `VGDynamicTable` remote-режим переведён на декларативную request-конфигурацию: добавлена поддержка `data-request-method`, `data-request-credentials`, `data-request-params` и построения export URL через общую route-конфигурацию.
+
+## Изменения
+* В `VGDynamicTable` удалён отдельный request helper `app/modules/vgdynamictable/js/request.js`, а remote-загрузка и export унифицированы через новый transport в `BaseModule`.
+* В `VGDynamicTable` доработана виртуализация: добавлены верхний и нижний spacer-rows, динамическое измерение высоты строк, корректный teardown scroll-binding и исключение spacer-строк из обычного row-цикла.
+* В `VGDynamicTable` упрощена тема таблицы: базовые light-токены перенесены в основной набор переменных, удалены отдельные `theme-light/theme-dark/theme-auto` ветки, для virtual spacer-строк добавлены нейтральные стили.
+* Добавлена документация для `VGDynamicTable`, а документация `VGRangeSlider` оформлена как полноценный README с API, Data API, событиями, skin-режимами и примерами интеграции.
+* Обновлена версия пакета в `package.json`: `1.2.5` -> `1.2.6`.
+
+---
+
 # VEGAS-APP 1.2.5 (Июнь, 25, 2026)
 ## Новые фичи
 * Добавлен новый модуль `VGTooltip` с режимами `tooltip` и `popover`, Data API, автопозиционированием, fallback placement, закрытием по `Esc` и клику вне элемента.

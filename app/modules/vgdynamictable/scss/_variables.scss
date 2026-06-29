@@ -20,17 +20,30 @@ $dynamic-table-map: (
 		border-radius: 14px,
 		box-shadow: none,
 		border-width: 1px,
+		background: transparent,
+		border-color: transparent,
 	),
 	cell: (
 		padding: $sizes-3 $sizes-4,
 		font-size: $sizes-3,
 		row-content-height: 20px,
+		border-color: transparent,
+		text-color: #1f1f1f,
 	),
 	header: (
 		font-weight: 600,
+		background: #f7f4ef,
+		text-color: #1f1f1f,
 	),
 	bordered: (
 		border-width: 1px,
+		border-color: rgba(0, 0, 0, 0.1),
+	),
+	striped: (
+		background: rgba(0, 0, 0, 0.03),
+	),
+	hover: (
+		background: rgba(0, 0, 0, 0.05),
 	),
 	table: (
 		min-width: 640px,
@@ -69,62 +82,6 @@ $dynamic-table-map: (
 		jump-width: 64px,
 		jump-gap: 6px,
 		jump-button-min-width: 54px,
-	),
-	sortable: (
-		header-padding-right: 1.8rem,
-		controls-right: 0.6rem,
-		controls-gap: 0,
-		arrow-width: 14px,
-		arrow-height: 10px,
-		arrow-line-height: 0.7rem,
-		arrow-font-size: 0.55rem,
-		arrow-opacity: 0.35,
-		arrow-active-opacity: 1,
-		arrow-color: currentColor,
-		column-highlight-background: rgb(18 22 26 / 50%),
-	),
-	fixed: (
-		shadow-width: 14px,
-		cell-background: rgba(247, 244, 239, 0.92),
-	),
-	skeleton: (
-		padding: 12px 14px,
-		line-height: 10px,
-		radius: 999px,
-		duration: 1.2s,
-	),
-);
-
-$dynamic-table-theme-light-map: (
-	wrap: (
-		background: transparent,
-		border-color: transparent,
-	),
-	cell: (
-		border-color: transparent,
-		text-color: #1f1f1f,
-	),
-	header: (
-		background: #f7f4ef,
-		text-color: #1f1f1f,
-	),
-	striped: (
-		background: rgba(0, 0, 0, 0.03),
-	),
-	bordered: (
-		border-color: rgba(0, 0, 0, 0.1),
-	),
-	hover: (
-		background: rgba(0, 0, 0, 0.05),
-	),
-	sortable: (
-		column-highlight-background: rgba(191, 153, 92, 0.14),
-	),
-	fixed: (
-		shadow-color: rgba(0, 0, 0, 0.16),
-		cell-background: rgba(247, 244, 239, 0.92),
-	),
-	pagination: (
 		border-color: rgba(0, 0, 0, 0.08),
 		toolbar-bg: #faf8f4,
 		label-color: #5f5a52,
@@ -141,66 +98,33 @@ $dynamic-table-theme-light-map: (
 		per-page-border-color: rgba(0, 0, 0, 0.12),
 		per-page-text: #2e2a24,
 	),
+	sortable: (
+		header-padding-right: 1.8rem,
+		controls-right: 0.6rem,
+		controls-gap: 0,
+		arrow-width: 14px,
+		arrow-height: 10px,
+		arrow-line-height: 0.7rem,
+		arrow-font-size: 0.55rem,
+		arrow-opacity: 0.35,
+		arrow-active-opacity: 1,
+		arrow-color: currentColor,
+		column-highlight-background: rgba(191, 153, 92, 0.14),
+	),
+	fixed: (
+		shadow-width: 14px,
+		shadow-color: rgba(0, 0, 0, 0.16),
+		cell-background: rgba(247, 244, 239, 0.92),
+	),
 	skeleton: (
+		padding: 12px 14px,
+		line-height: 10px,
+		radius: 999px,
+		duration: 1.2s,
 		row-bg: rgba(255, 255, 255, 0.5),
 		border-color: rgba(0, 0, 0, 0.04),
 		glow: rgba(255, 255, 255, 0.55),
 		gradient-1: #ebe6df,
 		gradient-2: #f5f1ea,
-	),
-);
-
-$dynamic-table-theme-dark-map: (
-	wrap: (
-		background: #171819,
-		border-color: rgba(255, 255, 255, 0.12),
-	),
-	cell: (
-		border-color: rgba(255, 255, 255, 0.08),
-		text-color: #e9edf2,
-	),
-	header: (
-		background: #24272b,
-		text-color: #f3f6fa,
-	),
-	striped: (
-		background: rgba(255, 255, 255, 0.03),
-	),
-	bordered: (
-		border-color: rgba(255, 255, 255, 0.12),
-	),
-	hover: (
-		background: rgba(255, 255, 255, 0.06),
-	),
-	sortable: (
-		column-highlight-background: rgba(244, 208, 146, 0.14),
-	),
-	fixed: (
-		shadow-color: rgba(0, 0, 0, 0.45),
-		cell-background: rgba(36, 39, 43, 0.94),
-	),
-	pagination: (
-		border-color: rgba(255, 255, 255, 0.14),
-		toolbar-bg: #202327,
-		label-color: #c7ccd4,
-		button-border: 1px solid rgba(255, 255, 255, 0.18),
-		button-border-color: rgba(255, 255, 255, 0.18),
-		button-bg: #2a2e34,
-		button-text: #e8ebef,
-		button-hover-bg: #343a42,
-		button-hover-border: rgba(255, 255, 255, 0.3),
-		button-active-bg: #f4f6fa,
-		button-active-text: #1d2127,
-		button-active-border: #f4f6fa,
-		per-page-bg: #2a2e34,
-		per-page-border-color: rgba(255, 255, 255, 0.18),
-		per-page-text: #e8ebef,
-	),
-	skeleton: (
-		row-bg: rgba(255, 255, 255, 0.02),
-		border-color: rgba(255, 255, 255, 0.08),
-		glow: rgba(255, 255, 255, 0.12),
-		gradient-1: #2c3239,
-		gradient-2: #3a424c,
 	),
 );

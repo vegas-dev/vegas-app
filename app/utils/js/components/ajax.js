@@ -1,6 +1,116 @@
-import { mergeDeepObject, noop, normalizeData } from "../functions";
+import { isObject, noop, normalizeData } from "../functions";
 
 class Ajax {
+	static _toRouteQueryParamValue(value) {
+		if (!Array.isArray(value)) {
+			return value;
+		}
+
+		return value
+			.map((item) => String(item || '').trim())
+			.filter((item) => item !== '')
+			.join(',');
+	}
+
+	static buildRouteUrl(route, options = {}) {
+		const target = String(route || '').trim();
+		if (!target) {
+			throw new Error('Request endpoint is empty');
+		}
+
+		const baseParams = isObject(options.baseParams) ? options.baseParams : {};
+		const params = isObject(options.params) ? options.params : {};
+		const url = new URL(target, window.location.origin);
+		const merged = { ...baseParams, ...params };
+
+		Object.keys(merged).forEach((key) => {
+			const value = this._toRouteQueryParamValue(merged[key]);
+			if (value === undefined || value === null || value === '') {
+				return;
+			}
+
+			url.searchParams.set(key, String(value));
+		});
+
+		return url;
+	}
+
+	static async requestRoute(options = {}) {
+		const method = String(options.method || 'GET').toUpperCase().trim() || 'GET';
+		const headers = isObject(options.headers) ? { ...options.headers } : {};
+		const credentials = String(options.credentials || 'same-origin').trim() || 'same-origin';
+		const baseParams = isObject(options.baseParams) ? options.baseParams : {};
+		const params = isObject(options.params) ? options.params : {};
+		const hasBody = options.body !== undefined && options.body !== null;
+		const isGetLike = method === 'GET' || method === 'HEAD';
+		const route = String(options.route || options.endpoint || '').trim();
+		const url = this.buildRouteUrl(route, {
+			baseParams,
+			params: isGetLike ? params : {},
+		});
+		const requestOptions = {
+			method,
+			credentials,
+			headers,
+			signal: options.signal || undefined,
+		};
+
+		if (!isGetLike && hasBody) {
+			const body = options.body;
+			const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
+			if (isFormData) {
+				delete requestOptions.headers['Content-Type'];
+				requestOptions.body = body;
+			} else if (typeof body === 'string') {
+				if (!requestOptions.headers['Content-Type']) {
+					requestOptions.headers['Content-Type'] = 'application/json';
+				}
+				requestOptions.body = body;
+			} else {
+				if (!requestOptions.headers['Content-Type']) {
+					requestOptions.headers['Content-Type'] = 'application/json';
+				}
+				requestOptions.body = JSON.stringify(body);
+			}
+		}
+
+		const response = await fetch(url.toString(), requestOptions);
+		const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+		const expectsJson = options.responseType === 'json'
+			|| (options.responseType !== 'text' && contentType.includes('application/json'));
+		const payload = await (async () => {
+			if (expectsJson) {
+				try {
+					return await response.json();
+				} catch (error) {
+					return await response.text();
+				}
+			}
+
+			return response.text();
+		})();
+
+		if (!response.ok) {
+			const apiError = payload && typeof payload === 'object' && payload.error && typeof payload.error === 'object'
+				? payload.error
+				: {};
+			const fallbackMessage = typeof payload === 'string' && payload.trim()
+				? payload
+				: response.statusText;
+			const message = String(apiError.message || fallbackMessage || 'Request failed');
+			const error = new Error(message);
+			error.status = response.status;
+			error.code = apiError.code || 'REQUEST_FAILED';
+			error.details = Array.isArray(apiError.details) ? apiError.details : [];
+			error.requestId = apiError.request_id || response.headers.get('X-Request-Id') || '';
+			error.response = payload;
+			throw error;
+		}
+
+		return payload;
+	}
+
 	/**
 	 * Конфигурация запроса
 	 * @param {Object} options
@@ -121,7 +231,7 @@ class Ajax {
 			method,
 			headers,
 			signal,
-			withCredentials,
+			credentials: withCredentials ? 'include' : 'same-origin',
 			...(body !== undefined && { body }),
 		};
 
@@ -157,7 +267,6 @@ class Ajax {
 						() => {}
 					);
 				} else {
-					console.log(data)
 					onSuccess(data);
 				}
 			})

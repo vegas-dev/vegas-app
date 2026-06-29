@@ -1,4 +1,38 @@
 const tableRemoteMethods = {
+    _getRemoteRouteRequestConfig(route = '') {
+        const requestOptions = this._params.request || {};
+        const attrMethod = this._element.getAttribute('data-request-method');
+        const attrCredentials = this._element.getAttribute('data-request-credentials');
+        const attrParams = this._element.getAttribute('data-request-params');
+        let paramsFromAttr = {};
+
+        if (attrParams !== null && String(attrParams).trim() !== '') {
+            try {
+                const parsed = JSON.parse(attrParams);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    paramsFromAttr = parsed;
+                }
+            } catch (error) {
+                paramsFromAttr = {};
+            }
+        }
+
+        return {
+            route: route || this._getRemoteDataRoute(),
+            method: attrMethod !== null ? attrMethod : requestOptions.method,
+            credentials: attrCredentials !== null ? attrCredentials : requestOptions.credentials,
+            headers: requestOptions.headers && typeof requestOptions.headers === 'object'
+                ? Object.assign({}, requestOptions.headers)
+                : { 'Accept': 'application/json' },
+            baseParams: Object.assign(
+                {},
+                requestOptions.params && typeof requestOptions.params === 'object' ? requestOptions.params : {},
+                paramsFromAttr
+            ),
+            responseType: 'json',
+        };
+    },
+
     _isRemoteCacheEnabled() {
         const requestOptions = this._params.request || {};
         const requestCacheOptions = requestOptions.cache && typeof requestOptions.cache === 'object'
@@ -288,7 +322,7 @@ const tableRemoteMethods = {
     },
 
     exportRemote(format = 'csv', options = {}) {
-        if (!this._requester || !this._isRemote) {
+        if (!this._isRemote) {
             return '';
         }
         const requestOptions = this._params.request || {};
@@ -315,7 +349,11 @@ const tableRemoteMethods = {
             || this._getRemoteDataRoute()
         ).trim();
         const exportEndpoint = endpoint || this._getRemoteDataRoute();
-        const exportUrl = this._requester.buildUrl(mappedRequestParams, exportEndpoint).toString();
+        const exportUrl = this._buildRouteUrl(
+            mappedRequestParams,
+            exportEndpoint,
+            this._getRemoteRouteRequestConfig(exportEndpoint)
+        ).toString();
         if (options.open !== false && typeof window !== 'undefined' && typeof window.open === 'function') {
             window.open(exportUrl, '_blank', 'noopener');
         }
@@ -331,7 +369,7 @@ const tableRemoteMethods = {
     },
 
     async _loadRemotePage(page, perPage, userOnChange = null, requestMeta = null) {
-        if (!this._requester) {
+        if (!this._isRemote) {
             return;
         }
 
@@ -414,10 +452,17 @@ const tableRemoteMethods = {
         }
 
         try {
-            const response = cachedResponse || await this._requester.get(mappedRequestParams, {
-                endpoint,
-                signal: requestAbortController ? requestAbortController.signal : undefined,
-            });
+            const response = cachedResponse || await this._route(Object.assign(
+                {},
+                this._getRemoteRouteRequestConfig(endpoint),
+                {
+                    route: endpoint,
+                    method: 'GET',
+                    params: mappedRequestParams,
+                    signal: requestAbortController ? requestAbortController.signal : undefined,
+                    responseType: 'json',
+                }
+            ));
             if (!cachedResponse) {
                 await this._waitMinLoadingDelay(requestStartedAt);
             }

@@ -55,6 +55,10 @@ class BaseModule {
 	 * @param callback
 	 */
 	_route(callback) {
+		if (typeof callback !== 'function') {
+			return this._requestRoute(callback);
+		}
+
 		let $content = null,
 			timeout = this._params.ajax.timeout || 0;
 
@@ -134,6 +138,79 @@ class BaseModule {
 				ajax.delete(this._params.ajax.route, ajaxData);
 			}
 		}, timeout);
+	}
+
+	_requestRoute(options = {}) {
+		const config = this._normalizeRouteRequestOptions(options);
+		return Ajax.requestRoute(config);
+	}
+
+	_buildRouteUrl(params = {}, endpoint = '', options = {}) {
+		const config = this._normalizeRouteRequestOptions(Object.assign({}, options, {
+			params,
+			route: endpoint || options.route || '',
+		}));
+		return Ajax.buildRouteUrl(config.route, {
+			params: config.params,
+			baseParams: config.baseParams,
+		});
+	}
+
+	_normalizeRouteRequestOptions(options = {}) {
+		const requestOptions = this._params && isObject(this._params.request)
+			? this._params.request
+			: {};
+		const ajaxOptions = this._params && isObject(this._params.ajax)
+			? this._params.ajax
+			: {};
+		const source = isObject(options) ? options : {};
+		const route = String(
+			source.route
+			|| source.endpoint
+			|| requestOptions.route
+			|| ajaxOptions.route
+			|| ''
+		).trim();
+		const method = String(
+			source.method
+			|| requestOptions.method
+			|| ajaxOptions.method
+			|| 'GET'
+		).toUpperCase().trim() || 'GET';
+		const credentials = String(
+			source.credentials
+			|| requestOptions.credentials
+			|| 'same-origin'
+		).trim() || 'same-origin';
+		const headers = mergeDeepObject(
+			{
+				'Accept': 'application/json',
+				'X-Requested-With': 'XMLHttpRequest',
+			},
+			isObject(requestOptions.headers) ? requestOptions.headers : {},
+			isObject(source.headers) ? source.headers : {}
+		);
+		const baseParams = mergeDeepObject(
+			{},
+			isObject(requestOptions.params) ? requestOptions.params : {},
+			isObject(source.baseParams) ? source.baseParams : {},
+			isObject(source.paramsBase) ? source.paramsBase : {}
+		);
+		const params = isObject(source.params) ? source.params : {};
+		const body = source.body !== undefined
+			? source.body
+			: (source.data !== undefined ? source.data : null);
+		return {
+			route,
+			method,
+			credentials,
+			headers,
+			baseParams,
+			params,
+			body,
+			signal: source.signal || null,
+			responseType: String(source.responseType || source.parse || 'auto').toLowerCase().trim() || 'auto',
+		};
 	}
 
 	_dismissElement() {

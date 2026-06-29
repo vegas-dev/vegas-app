@@ -13,7 +13,6 @@
 
 .vg-dynamic-table {
 	@include mix-vars('dynamic-table', $dynamic-table-map);
-	@include mix-vars('dynamic-table', $dynamic-table-theme-light-map);
 	background: var(--vg-dynamic-table-wrap-background);
 	border-radius: var(--vg-dynamic-table-wrap-border-radius);
 	box-shadow: var(--vg-dynamic-table-wrap-box-shadow);
@@ -63,30 +62,29 @@
 	@import "skeleton";
 	@import "actions";
 
-	&.theme-light {
-		@include mix-vars('dynamic-table', $dynamic-table-theme-light-map);
-	}
-
-	&.theme-dark {
-		@include mix-vars('dynamic-table', $dynamic-table-theme-dark-map);
-	}
-
-	&.theme-auto {
-		@media (prefers-color-scheme: dark) {
-			@include mix-vars('dynamic-table', $dynamic-table-theme-dark-map);
-		}
-	}
-
 	&.table-striped {
 		tbody {
 			tr:nth-of-type(odd) {
 				background-color: var(--vg-dynamic-table-striped-background);
+			}
+
+			tr[data-virtual-spacer="1"] {
+				background-color: transparent;
 			}
 		}
 
 		tbody tr:nth-of-type(odd) td[data-fixed-side][data-fixed-overlap="1"] {
 			background: var(--vg-dynamic-table-striped-background);
 		}
+	}
+
+	tbody tr[data-virtual-spacer="1"] > td {
+		padding: 0;
+		border: 0;
+		height: 0;
+		background: transparent;
+		line-height: 0;
+		pointer-events: none;
 	}
 
 	&.table-bordered {
