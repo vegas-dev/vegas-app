@@ -127,7 +127,7 @@ class VGAlert {
 		const cancelBtn = Selectors.find(`[${DATA_CANCEL}]`, container);
 
 		return new Promise((resolve, reject) => {
-			const closeAlert = () => {
+			const closeAlert = (isHide = true) => {
 				if (type === 'modal') {
 					render.hide();
 					return;
@@ -136,7 +136,7 @@ class VGAlert {
 				if (type === 'overlay') {
 					container.remove();
 
-					if (context._params.render.dismiss) {
+					if (context._params.render.dismiss && isHide) {
 						render.hide();
 					}
 				}
@@ -159,7 +159,7 @@ class VGAlert {
 					accepted: false,
 					timestamp: new Date(),
 				});
-				closeAlert();
+				closeAlert(false);
 			};
 
 			const handleKeydown = (e) => {
