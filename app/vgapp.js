@@ -28,29 +28,15 @@ class VGApp {
 		this._isInitialized = false;
 	}
 
-	register(...entries) {
-		const modules = entries.flatMap((entry) => {
-			if (Array.isArray(entry)) {
-				return entry;
-			}
+	register(name, Module) {
+		const normalizedName = String(name || '').trim();
+		const candidate = this._resolveModuleCandidate(Module);
 
-			return entry ? [entry] : [];
-		});
-
-		for (const Module of modules) {
-			const candidate = Module?.default ?? Module;
-			const name = String(candidate?.NAME || '').trim();
-
-			if (!name) {
-				const moduleKeys = Module && typeof Module === 'object'
-					? Object.keys(Module).join(', ')
-					: '';
-				throw new Error(`VGApp.register() ожидает модуль со статическим NAME. Получено: ${moduleKeys || typeof Module}`);
-			}
-
-			this._modules.set(name, candidate);
+		if (!normalizedName) {
+			throw new Error('VGApp.register() ожидает строковое имя модуля первым аргументом.');
 		}
 
+		this._modules.set(normalizedName, candidate);
 		return this;
 	}
 
@@ -77,6 +63,16 @@ class VGApp {
 	has(name) {
 		this._ensureInitialized();
 		return this._modules.has(String(name).trim());
+	}
+
+	_resolveModuleCandidate(Module) {
+		const candidate = Module?.default ?? Module;
+
+		if (!candidate) {
+			throw new Error('VGApp.register() ожидает валидный модуль.');
+		}
+
+		return candidate;
 	}
 
 	_resolveModuleConfig(name, config) {
@@ -123,7 +119,11 @@ const defaultModules = [
 ];
 
 const vgapp = new VGApp({
-	initializer: (app) => app.register(defaultModules),
+	initializer: (app) => {
+		defaultModules.forEach((Module) => {
+			app.register(Module.NAME, Module);
+		});
+	},
 });
 
 export { VGApp, vgapp };

@@ -11,15 +11,6 @@ VGApp — набор фронтенд‑модулей (UI‑компонент�
 npm i vgapp
 ```
 
-Локально из соседнего репозитория:
-```json
-{
-	"dependencies": {
-		"vgapp": "file:../vegas-app"
-	}
-}
-```
-
 ## API
 ```js
 import vgapp from 'vgapp';
@@ -28,7 +19,7 @@ vgapp.boot();
 ```
 
 - `vgapp` экспортируется как singleton app.
-- `vgapp.register()` регистрирует модули по их статическому `NAME`.
+- `vgapp.register()` использует единый контракт: `register(name, Module)`.
 - `vgapp.boot()` вызывает общий boot-контракт модуля.
 - У модулей со своим `initAll()` boot использует его автоматически.
 
@@ -39,7 +30,8 @@ import { VGApp, VGModal, VGTooltip } from 'vgapp';
 const app = new VGApp();
 
 app
-	.register(VGModal, VGTooltip)
+	.register(VGModal.NAME, VGModal)
+	.register(VGTooltip.NAME, VGTooltip)
 	.boot();
 ```
 
@@ -116,7 +108,8 @@ import 'vgapp/build/vgapp.css';
 const app = new VGApp();
 
 app
-	.register(VGModal, VGTooltip)
+	.register(VGModal.NAME, VGModal)
+	.register(VGTooltip.NAME, VGTooltip)
 	.boot();
 ```
 

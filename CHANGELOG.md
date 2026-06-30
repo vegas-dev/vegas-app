@@ -404,3 +404,4 @@
 
 
 
+* `VGApp.register()` использует единый контракт `register(name, module)` для совместимости с boot-helper из `okaux`.
