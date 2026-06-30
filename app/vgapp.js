@@ -20,8 +20,12 @@ import VGToast from './modules/vgtoast';
 import VGTooltip from './modules/vgtooltip';
 
 class VGApp {
-	constructor() {
+	constructor(options = {}) {
 		this._modules = new Map();
+		this._initializer = typeof options.initializer === 'function'
+			? options.initializer
+			: null;
+		this._isInitialized = false;
 	}
 
 	register(...entries) {
@@ -34,19 +38,25 @@ class VGApp {
 		});
 
 		for (const Module of modules) {
-			const name = String(Module?.NAME || '').trim();
+			const candidate = Module?.default ?? Module;
+			const name = String(candidate?.NAME || '').trim();
 
 			if (!name) {
-				throw new Error('VGApp.register() ожидает модуль со статическим NAME.');
+				const moduleKeys = Module && typeof Module === 'object'
+					? Object.keys(Module).join(', ')
+					: '';
+				throw new Error(`VGApp.register() ожидает модуль со статическим NAME. Получено: ${moduleKeys || typeof Module}`);
 			}
 
-			this._modules.set(name, Module);
+			this._modules.set(name, candidate);
 		}
 
 		return this;
 	}
 
 	boot(config = {}) {
+		this._ensureInitialized();
+
 		for (const [name, Module] of this._modules) {
 			if (typeof Module?.boot !== 'function') {
 				continue;
@@ -60,10 +70,12 @@ class VGApp {
 	}
 
 	get(name) {
+		this._ensureInitialized();
 		return this._modules.get(String(name).trim());
 	}
 
 	has(name) {
+		this._ensureInitialized();
 		return this._modules.has(String(name).trim());
 	}
 
@@ -76,11 +88,18 @@ class VGApp {
 			? config[name]
 			: undefined;
 	}
+
+	_ensureInitialized() {
+		if (this._isInitialized || typeof this._initializer !== 'function') {
+			return;
+		}
+
+		this._isInitialized = true;
+		this._initializer(this);
+	}
 }
 
-const vgapp = new VGApp();
-
-vgapp.register(
+const defaultModules = [
 	VGAlert,
 	VGCollapse,
 	VGDropdown,
@@ -101,7 +120,11 @@ vgapp.register(
 	VGTabs,
 	VGToast,
 	VGTooltip,
-);
+];
+
+const vgapp = new VGApp({
+	initializer: (app) => app.register(defaultModules),
+});
 
 export { VGApp, vgapp };
 export default vgapp;
