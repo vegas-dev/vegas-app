@@ -1,3 +1,5 @@
+import vgapp, { VGApp } from './app/vgapp';
+
 export { default as VGAlert }        from './app/modules/vgalert';
 export { default as VGCollapse }     from './app/modules/vgcollapse';
 export { default as VGDropdown }     from './app/modules/vgdropdown';
@@ -18,3 +20,6 @@ export { default as VGSpy }          from './app/modules/vgspy';
 export { default as VGTabs }         from './app/modules/vgtabs';
 export { default as VGToast }        from './app/modules/vgtoast';
 export { default as VGTooltip }      from './app/modules/vgtooltip';
+
+export { VGApp, vgapp };
+export default vgapp;

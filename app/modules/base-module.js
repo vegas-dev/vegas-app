@@ -239,6 +239,23 @@ class BaseModule {
 		return this.getInstance(element) || new this(element, !isEmptyObj(params) ? params : {})
 	}
 
+	static boot(params = {}) {
+		if (typeof this.initAll === 'function') {
+			return this.initAll(params);
+		}
+
+		if (typeof this.init !== 'function') {
+			return null;
+		}
+
+		if (params && Object.prototype.hasOwnProperty.call(params, 'element')) {
+			const { element, ...options } = params;
+			return this.init(element, options);
+		}
+
+		return null;
+	}
+
 	static get DATA_KEY() {
 		return `vg.${this.NAME}`
 	}

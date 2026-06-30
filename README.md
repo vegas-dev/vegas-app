@@ -11,6 +11,115 @@ VGApp — набор фронтенд‑модулей (UI‑компонент�
 npm i vgapp
 ```
 
+Локально из соседнего репозитория:
+```json
+{
+	"dependencies": {
+		"vgapp": "file:../vegas-app"
+	}
+}
+```
+
+## API
+```js
+import vgapp from 'vgapp';
+
+vgapp.boot();
+```
+
+- `vgapp` экспортируется как singleton app.
+- `vgapp.register()` регистрирует модули по их статическому `NAME`.
+- `vgapp.boot()` вызывает общий boot-контракт модуля.
+- У модулей со своим `initAll()` boot использует его автоматически.
+
+Для выборочного набора модулей создавайте отдельный экземпляр:
+```js
+import { VGApp, VGModal, VGTooltip } from 'vgapp';
+
+const app = new VGApp();
+
+app
+	.register(VGModal, VGTooltip)
+	.boot();
+```
+
+## Подключение
+
+### Laravel + Vite
+`resources/js/app.js`
+```js
+import vgapp from 'vgapp';
+import 'vgapp/build/vgapp.css';
+
+vgapp.boot();
+```
+
+`vite.config.js`
+```js
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+
+export default defineConfig({
+	plugins: [
+		laravel([
+			'resources/css/app.css',
+			'resources/js/app.js',
+		]),
+	],
+});
+```
+
+В Blade:
+```php
+@vite(['resources/css/app.css', 'resources/js/app.js'])
+```
+
+### Vite
+`src/main.js`
+```js
+import vgapp from 'vgapp';
+import 'vgapp/build/vgapp.css';
+
+vgapp.boot();
+```
+
+### Webpack
+`src/app.js`
+```js
+import vgapp from 'vgapp';
+import 'vgapp/build/vgapp.css';
+
+vgapp.boot();
+```
+
+Минимально в `webpack.config.js`:
+```js
+module.exports = {
+	entry: './src/app.js',
+	module: {
+		rules: [
+			{
+				test: /\.css$/i,
+				use: ['style-loader', 'css-loader'],
+			},
+		],
+	},
+};
+```
+
+### Частичный boot
+Если не нужно поднимать весь реестр singleton-приложения:
+```js
+import { VGApp, VGModal, VGTooltip } from 'vgapp';
+import 'vgapp/build/vgapp.css';
+
+const app = new VGApp();
+
+app
+	.register(VGModal, VGTooltip)
+	.boot();
+```
+
 ## Что умеет
 
 ### Общие возможности
@@ -25,6 +134,7 @@ npm i vgapp
 - `VGAlert` — диалоги подтверждения и уведомления с поддержкой AJAX‑сценариев.
 - `VGCollapse` — сворачиваемые секции и аккордеоны с анимацией.
 - `VGDropdown` — выпадающие меню с гибким открытием и позиционированием.
+- `VGDynamicTable` — интерактивные таблицы с сортировкой, фильтрацией, remote-режимом и состоянием.
 - `VGFiles` — загрузка и управление файлами (dropzone, валидация, AJAX, сортировка).
 - `VGFilePreview` — предпросмотр файлов разных типов и действия по файлу (preview/download).
 - `VGFormSender` — отправка форм (AJAX/нативно), обработка состояний и ответов.
@@ -33,6 +143,7 @@ npm i vgapp
 - `VGModal` — базовый модуль модальных окон.
 - `VGNav` — навигация и мобильное меню.
 - `VGNestable` — drag‑and‑drop вложенных списков с обновлением структуры.
+- `VGRangeSlider` — одиночные и диапазонные слайдеры со значениями, лимитами и синхронизацией полей.
 - `VGRollup` — ограничение контента по высоте/элементам с кнопкой разворота.
 - `VGSelect` — кастомный select с поиском, мультивыбором и i18n.
 - `VGSidebar` — боковые панели с управлением открытием/закрытием.

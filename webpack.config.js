@@ -11,11 +11,15 @@ module.exports = outputPaths.map(outputPath => {
 			name = nameModule.trim().toLowerCase();
 
 		let args = {
-			entry: './index.scss',
+			entry: ['./index.js', './index.scss'],
 			output: {
 				path: path.resolve(__dirname, outputPath),
 				filename: name + '.js',
-				library: 'vg',
+				library: {
+					name,
+					type: 'umd',
+				},
+				globalObject: 'this',
 			},
 			stats: {
 				warnings: false
