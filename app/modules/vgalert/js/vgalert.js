@@ -93,6 +93,19 @@ class VGAlert {
 		this._params = this._setParams(params);
 	}
 
+	static get NAME() {
+		return NAME;
+	}
+
+	static get NAME_KEY() {
+		return NAME_KEY;
+	}
+
+	static boot() {
+		this._bindDataApi();
+		return null;
+	}
+
 	static call(options = {}, lang = 'ru') {
 		const context = new VGAlert(options, lang);
 
@@ -217,6 +230,32 @@ class VGAlert {
 
 		const instance = VGAlertConfirm.getOrCreateInstance(elem, context._params);
 		instance.run(VGAlert);
+	}
+
+	static _bindDataApi() {
+		if (this._isDataApiBound) {
+			return;
+		}
+
+		this._isDataApiBound = true;
+
+		EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
+			event.preventDefault();
+			const target = event.target;
+
+			if (!isVisible(target) || !isElement(target)) return;
+
+			VGAlert.confirm(target, {
+				buttons: {
+					agree: {
+						class: ["btn-primary"],
+					},
+					cancel: {
+						class: ["btn-outline-primary"],
+					},
+				},
+			});
+		});
 	}
 
 	_setParams(params) {
@@ -395,22 +434,6 @@ class VGAlertConfirm extends BaseModule {
 }
 
 // Делегирование кликов по data-атрибутам
-EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
-	event.preventDefault();
-	const target = event.target;
-
-	if (!isVisible(target) || !isElement(target)) return;
-
-	VGAlert.confirm(target, {
-		buttons: {
-			agree: {
-				class: ["btn-primary"],
-			},
-			cancel: {
-				class: ["btn-outline-primary"],
-			},
-		},
-	});
-});
+VGAlert._isDataApiBound = false;
 
 export default VGAlert;
