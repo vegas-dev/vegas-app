@@ -115,6 +115,16 @@ class VGAlert {
 		const getContainer = () => {
 			if (context._params.render.type === "overlay") {
 				const overlay = context._buildOverlay();
+
+				if (!overlay.element || !overlay.render) {
+					const modal = context._buildModal();
+					return {
+						element: modal._element,
+						render: modal,
+						type: 'modal'
+					}
+				}
+
 				return {
 					element: overlay.element,
 					render: overlay.render,
@@ -241,7 +251,7 @@ class VGAlert {
 
 		EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE, function (event) {
 			event.preventDefault();
-			const target = event.target;
+			const target = event.delegateTarget || this || event.target?.closest(SELECTOR_DATA_TOGGLE) || event.target;
 
 			if (!isVisible(target) || !isElement(target)) return;
 
@@ -330,8 +340,18 @@ class VGAlert {
 	}
 
 	_buildOverlay() {
-		let targetContainers = ['.vg-modal', '.vg-sidebar'];
-		const containerWrap = this._params.relatedTarget.closest(targetContainers.join(', '));
+		const targetContainers = ['.vg-modal', '.vg-sidebar'];
+		const relatedTarget = this._params.relatedTarget;
+		const containerWrap = isElement(relatedTarget)
+			? relatedTarget.closest(targetContainers.join(', '))
+			: null;
+
+		if (!containerWrap) {
+			return {
+				element: null,
+				render: null,
+			};
+		}
 
 		const modal = VGModal.getOrCreateInstance(containerWrap);
 		const container = Selectors.find('.vg-modal-content', modal._element) || containerWrap;

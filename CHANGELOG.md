@@ -1,3 +1,10 @@
+﻿# VEGAS-APP 1.3.7 (Июль, 11, 2026)
+## Изменения
+* В `VGFormSender` добавлен callback `callback.afterValidateError`, который вызывается при провале нативной HTML5-валидации до отправки формы.
+* В `VGFormSender` в `afterValidateError` передается нормализованный список ошибок валидации с полем, именем, типом, значением, `validationMessage` и слепком `ValidityState`.
+* Обновлена документация `app/modules/vgformsender/readme.md`: добавлено описание `callback.afterValidateError`, сценария `checkValidity()` и структуры массива `errors`.
+
+---
 # VEGAS-APP 1.3.0 (Июнь, 30, 2026)
 ## Новые фичи
 * Добавлен singleton `vgapp` с общим реестром модулей и методами `register()` / `boot()` для единой регистрации и запуска модулей библиотеки.

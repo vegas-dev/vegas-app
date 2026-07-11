@@ -24,6 +24,9 @@
  *   callback: {
  *     afterSuccess: (form, instance, event, data) => {
  *       console.log('Форма успешно отправлена');
+ *     },
+ *     afterValidateError: (form, instance, event, errors) => {
+ *       console.log(errors);
  *     }
  *   }
  * });
@@ -162,6 +165,7 @@ class VGFormSender extends BaseModule {
 			},
 			callback: {
 				afterInit: noop,
+				afterValidateError: noop,
 				afterSuccess: noop,
 				afterError: noop,
 				afterSend: noop,
@@ -480,6 +484,47 @@ class VGFormSender extends BaseModule {
 	}
 
 	/**
+	 * Возвращает список ошибок нативной валидации формы
+	 * @returns {Array<Object>}
+	 * @private
+	 */
+	_getValidationErrors() {
+		return [...this._element.elements]
+			.filter((field) => typeof field?.checkValidity === 'function' && !field.checkValidity())
+			.map((field) => ({
+				element: field,
+				name: field.name || '',
+				id: field.id || '',
+				type: field.type || '',
+				value: field.value,
+				message: field.validationMessage || '',
+				validity: {...field.validity}
+			}));
+	}
+
+	/**
+	 * Обрабатывает неуспешную нативную валидацию перед отправкой
+	 * @param {Event} event
+	 * @returns {boolean}
+	 * @private
+	 */
+	_handleValidateError(event) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		this._element.classList.add(this._params.classes.wasValidate);
+
+		execute(this._params.callback.afterValidateError, [
+			this._element,
+			this,
+			event,
+			this._getValidationErrors()
+		]);
+
+		return false;
+	}
+
+	/**
 	 * Отображение алерта в зависимости от типа (modal/collapse)
 	 * @param {Object|string} data - Данные для отображения
 	 * @param {string} status - Статус: success, error, danger и т.д.
@@ -602,7 +647,7 @@ class VGFormSender extends BaseModule {
 	 * @private
 	 */
 	_getNextModalZIndex() {
-		const indexes = Selectors.findAll('.modal.show, .vg-modal.show')
+		const indexes = Selectors.findAll('.modal.show, .vg-modal.show, .ox-modal.is-open')
 			.map((element) => Number.parseInt(window.getComputedStyle(element).zIndex, 10))
 			.filter((index) => Number.isFinite(index));
 
@@ -614,6 +659,7 @@ class VGFormSender extends BaseModule {
 	 * @private
 	 */
 	_closeOpenedModals() {
+		// Модалка Bootstrap
 		[...document.getElementsByClassName('modal')].forEach((element) => {
 			if (element && element.classList.contains('show')) {
 				if (typeof bootstrap !== 'undefined' && bootstrap.Modal?.getOrCreateInstance) {
@@ -625,10 +671,19 @@ class VGFormSender extends BaseModule {
 			}
 		});
 
+		// Модалка VGApp
 		[...document.getElementsByClassName('vg-modal')].forEach((element) => {
 			if (element && element.classList.contains('show')) {
 				const mVG = VGModal.getOrCreateInstance(element);
 				mVG.hide([mVG]);
+			}
+		});
+
+		// Модалка OKAUX
+		[...document.getElementsByClassName('ox-modal')].forEach((element) => {
+			if (element && element.classList.contains('is-open')) {
+				const mOX = okaux.Modal.getOrCreateInstance(element);
+				mOX.hide();
 			}
 		});
 	}
@@ -891,12 +946,7 @@ EventHandler.on(document, EVENT_SUBMIT_DATA_API, function (event) {
 
 	if (instance._params.validate) {
 		if (!instance._element.checkValidity()) {
-			event.preventDefault();
-			event.stopPropagation();
-
-			instance._element.classList.add(instance._params.classes.wasValidate);
-
-			return false;
+			return instance._handleValidateError(event);
 		}
 	}
 

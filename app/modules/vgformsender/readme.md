@@ -44,6 +44,9 @@ VGFormSender.init(document.getElementById('contactForm'), {
         delay: 5000 // ожидание открытия, через 5 секунд 
     }, 
     callback: { 
+        afterValidateError: (form, instance, event, errors) => {
+            console.log('Ошибки валидации:', errors);
+        },
         afterSuccess: (form, instance, event, data) => { 
             console.log('Форма отправлена!', data); 
         }, 
@@ -95,9 +98,37 @@ VGFormSender.init(document.getElementById('contactForm'), {
 | `interceptors.success`    | `Function\|false`       | `false`                            | Кастомная обработка успеха                                           |
 | `interceptors.error`      | `Function\|false`       | `false`                            | Кастомная обработка ошибки                                           |
 | `callback.afterInit`      | `Function`              | `noop`                             | После инициализации                                                  |
+| `callback.afterValidateError` | `Function`          | `noop`                             | После провала нативной HTML5-валидации, до отправки формы            |
 | `callback.afterSuccess`   | `Function`              | `noop`                             | После успеха                                                         |
 | `callback.afterError`     | `Function`              | `noop`                             | После ошибки                                                         |
 | `callback.afterSend`      | `Function`              | `noop`                             | После любого ответа                                                  |
+
+---
+
+## Проверка валидации до отправки
+
+Если включён `validate: true`, модуль сначала вызывает нативный `checkValidity()` у формы. Если форма невалидна, отправка отменяется, форме добавляется класс `was-validated`, а затем вызывается `callback.afterValidateError`.
+
+```js
+VGFormSender.init(document.getElementById('contactForm'), {
+    validate: true,
+    callback: {
+        afterValidateError: (form, instance, event, errors) => {
+            errors.forEach((error) => {
+                console.log(error.name, error.message);
+            });
+        }
+    }
+});
+```
+
+Каждый элемент массива `errors` содержит:
+
+- `element` — ссылку на невалидное поле
+- `name` / `id` / `type`
+- `value` — текущее значение поля
+- `message` — текст из `validationMessage`
+- `validity` — слепок объекта `ValidityState`
 
 ---
 
