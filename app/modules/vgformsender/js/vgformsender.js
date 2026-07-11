@@ -682,8 +682,9 @@ class VGFormSender extends BaseModule {
 		// Модалка OKAUX
 		[...document.getElementsByClassName('ox-modal')].forEach((element) => {
 			if (element && element.classList.contains('is-open')) {
-				const mOX = okaux.Modal.getOrCreateInstance(element);
-				mOX.hide();
+				okaux.Modal.getOpenInstances().forEach((instance) => {
+					instance.hide();
+				});
 			}
 		});
 	}
