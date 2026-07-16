@@ -1,4 +1,15 @@
-﻿# VEGAS-APP 1.3.7 (Июль, 11, 2026)
+﻿# VEGAS-APP 1.4.0 (Июль, 16, 2026)
+## Новые фичи
+* В `VGDynamicTable` добавлена настройка `stickyHeader.clone` и Data API `data-sticky-header-clone` для явного управления clone sticky header.
+* В `VGDynamicTable` `data-sticky-header-enable="true"` теперь автоматически включает clone sticky header, если `data-sticky-header-clone` или `stickyHeader.clone` не переопределены явно.
+
+## Изменения
+* В `VGDynamicTable` clone sticky header теперь использует те же настройки `stickyHeader.top` и `stickyHeader.max`, что и обычный sticky header, включая `data-sticky-header-max`.
+* В `VGDynamicTable` при пагинации таблиц с фиксированной высотой viewport больше не выполняется скролл страницы наверх; сбрасывается только scroll внутри таблицы.
+* В стилях `VGDynamicTable` скорректирован `overflow` для sticky header и clone sticky header, чтобы sticky-позиционирование не блокировалось таблицей.
+
+---
+# VEGAS-APP 1.3.7 (Июль, 11, 2026)
 ## Изменения
 * В `VGFormSender` добавлен callback `callback.afterValidateError`, который вызывается при провале нативной HTML5-валидации до отправки формы.
 * В `VGFormSender` в `afterValidateError` передается нормализованный список ошибок валидации с полем, именем, типом, значением, `validationMessage` и слепком `ValidityState`.

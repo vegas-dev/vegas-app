@@ -404,6 +404,10 @@ const DEFAULT_OPTIONS = {
         // Максимальная высота viewport таблицы.
         // data-атрибуты: data-sticky-header-max-height | data-stickyHeader-max
         max: 0,
+        // Рендерить отдельный sticky clone вместо sticky th.
+        // По умолчанию наследует stickyHeader.enable.
+        // data-attributes: data-sticky-header-clone
+        clone: null,
     },
 
     search: {

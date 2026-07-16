@@ -3027,10 +3027,32 @@ class VGDynamicTable extends BaseModule {
 	}
 
 	_isCloneStickyHeaderEnabled() {
+		const sticky = this._params.stickyHeader || {};
+		const cloneAttr = this._element.getAttribute('data-sticky-header-clone');
+		if (cloneAttr !== null) {
+			const normalized = String(cloneAttr).toLowerCase().trim();
+			return normalized !== 'false' && normalized !== '0';
+		}
+
+		if (sticky.clone !== undefined && sticky.clone !== null) {
+			const normalized = String(sticky.clone).toLowerCase().trim();
+			if (normalized === 'true' || normalized === '1') {
+				return true;
+			}
+			if (normalized === 'false' || normalized === '0') {
+				return false;
+			}
+			return Boolean(sticky.clone);
+		}
+
 		if (this._parent && this._parent.classList.contains('table-sticky')) {
 			return true;
 		}
-		return Boolean(this._element && this._element.classList.contains('table-sticky'));
+		if (this._element && this._element.classList.contains('table-sticky')) {
+			return true;
+		}
+
+		return this._isStickyHeaderEnabled();
 	}
 
 	_refreshStickyAndFixedLayout(options = {}) {
@@ -3138,9 +3160,10 @@ class VGDynamicTable extends BaseModule {
 	}
 
 	_getCloneStickyHeaderOffsets() {
+		const configured = this._getStickyHeaderOffsets();
 		return {
-			top: this._readCssSizeVar('--vgdt-sticky-top', 0),
-			maxHeight: this._readCssSizeVar('--vgdt-sticky-max-height', 0),
+			top: configured.top || this._readCssSizeVar('--vgdt-sticky-top', 0),
+			maxHeight: configured.maxHeight || this._readCssSizeVar('--vgdt-sticky-max-height', 0),
 		};
 	}
 
@@ -3238,6 +3261,7 @@ class VGDynamicTable extends BaseModule {
 			}
 			this._cloneStickyState = null;
 			this._parent.style.removeProperty('--vgdt-sticky-clone-height');
+			this._parent.style.removeProperty('--vgdt-sticky-top');
 			if (scrollTarget && !this._isStickyHeaderEnabled()) {
 				scrollTarget.classList.remove('table-sticky-scroll');
 				scrollTarget.style.removeProperty('--vgdt-sticky-max-height');
@@ -3253,6 +3277,7 @@ class VGDynamicTable extends BaseModule {
 		const offsets = this._getCloneStickyHeaderOffsets();
 
 		if (scrollTarget) {
+			this._parent.style.setProperty('--vgdt-sticky-top', `${offsets.top}px`);
 			if (offsets.maxHeight > 0) {
 				scrollTarget.classList.add('table-sticky-scroll');
 				scrollTarget.style.setProperty('--vgdt-sticky-max-height', `${offsets.maxHeight}px`);
@@ -3701,6 +3726,9 @@ class VGDynamicTable extends BaseModule {
 			this._tableViewport.scrollTop = 0;
 			this._tableViewport.scrollLeft = 0;
 		}
+		if (this._hasFixedHeightViewport()) {
+			return;
+		}
 		if (typeof window === 'undefined' || !this._parent) {
 			return;
 		}
@@ -3721,6 +3749,19 @@ class VGDynamicTable extends BaseModule {
 			top: Math.max(0, Math.round(targetTop)),
 			behavior: prefersReducedMotion ? 'auto' : 'smooth',
 		});
+	}
+
+	_hasFixedHeightViewport() {
+		if (this._tableViewport && this._tableViewport.classList.contains('table-sticky-scroll')) {
+			return true;
+		}
+
+		const offsets = this._getStickyHeaderOffsets();
+		if (offsets.maxHeight > 0) {
+			return true;
+		}
+
+		return this._readCssSizeVar('--vgdt-sticky-max-height', 0) > 0;
 	}
 
 	_getPaginationScrollTopTarget() {

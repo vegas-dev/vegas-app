@@ -156,6 +156,8 @@
 		overflow: visible;
 
 		.vgdt-table-viewport > table {
+			overflow: visible;
+
 			thead th {
 				position: sticky;
 				top: var(--vgdt-sticky-top, 0px);
@@ -259,6 +261,7 @@
 		}
 
 		.vgdt-table-viewport > table {
+			overflow: visible;
 			margin-top: calc(-1 * var(--vgdt-sticky-clone-height, 0px));
 		}
 	}
