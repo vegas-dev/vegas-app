@@ -17,7 +17,7 @@ import EventHandler from "../../../utils/js/dom/event";
 import {mergeDeepObject} from "../../../utils/js/functions";
 
 /**
- * РљРѕРЅСЃС‚Р°РЅС‚С‹
+ * Константы
  */
 const NAME = 'dynamicTable';
 const NAME_KEY = 'vg.' + NAME;
@@ -26,7 +26,7 @@ const MAIN_SELECTOR_CLASS = 'vg-dynamic-table';
 const SELECTOR_DATA_TOGGLE = '[data-vg-table]';
 
 /**
- * РљР°СЂС‚Р° РєРѕР»Р±РµРєРѕРІ
+ * Карта колбеков
  */
 const ACTION_CALLBACK_MAP = {
 	init: 'onInit',
@@ -1279,7 +1279,7 @@ class VGDynamicTable extends BaseModule {
 			if (Array.isArray(rows) && rows.length) {
 				return false;
 			}
-			const message = this._getTableMessage('stateEmpty', 'РќРёС‡РµРіРѕ РЅРµС‚');
+			const message = this._getTableMessage('stateEmpty', 'Ничего нет');
 			this._renderStateRow(message, 'empty');
 			return true;
 		}
@@ -1287,7 +1287,7 @@ class VGDynamicTable extends BaseModule {
 		const body = this._getBody();
 		body.innerHTML = viewRowsHtml;
 		if (!this._hasRenderableRowsInBody(body)) {
-			this._renderStateRow(this._getTableMessage('stateEmpty', 'РќРёС‡РµРіРѕ РЅРµС‚'), 'empty');
+			this._renderStateRow(this._getTableMessage('stateEmpty', 'Ничего нет'), 'empty');
 			return true;
 		}
 		this._setFixedColumnsSuppressed(false);
@@ -3657,7 +3657,7 @@ class VGDynamicTable extends BaseModule {
 		const body = this._getBody();
 
 		if (!rows.length) {
-			const message = this._getTableMessage('stateEmpty', 'РќРёС‡РµРіРѕ РЅРµС‚');
+			const message = this._getTableMessage('stateEmpty', 'Ничего нет');
 			this._renderStateRow(message, 'empty');
 			return;
 		}
@@ -3679,7 +3679,7 @@ class VGDynamicTable extends BaseModule {
 		const body = this._getBody();
 		const columns = this._getRenderedColumnsCount();
 		const retryButton = state === 'error'
-			? `<div class="vgdt-state-actions"><button type="button" class="vgdt-state-reset" data-state-retry>${this._escapeHtml(this._getTableMessage('retry', 'РџРѕРІС‚РѕСЂРёС‚СЊ'))}</button></div>`
+			? `<div class="vgdt-state-actions"><button type="button" class="vgdt-state-reset" data-state-retry>${this._escapeHtml(this._getTableMessage('retry', 'Повторить'))}</button></div>`
 			: '';
 		const illustration = this._buildStateIllustrationMarkup(state);
 		body.innerHTML = `<tr><td colspan="${columns}" data-table-state="${state}"><div class="vgdt-state">${illustration}<div class="vgdt-state-text">${this._escapeHtml(message)}</div>${retryButton}</div></td></tr>`;
