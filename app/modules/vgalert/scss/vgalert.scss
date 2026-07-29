@@ -36,6 +36,48 @@
 		}
 	}
 
+	&-dropdown {
+		width: 360px;
+		max-width: calc(100vw - 2rem);
+
+		.vg-dropdown-container {
+			overflow: hidden;
+		}
+
+		.vg-alert-content {
+			padding: 1rem;
+			gap: .75rem;
+			align-items: flex-start;
+
+			.vg-alert-content--title {
+				font-size: 1rem;
+				line-height: 1.25;
+			}
+
+			.vg-alert-content--description {
+				font-size: .875rem;
+				line-height: 1.4;
+			}
+
+			.vg-alert-content--icon {
+				svg {
+					width: 32px;
+					height: 32px;
+				}
+			}
+		}
+
+		.vg-alert-buttons {
+			padding: .75rem 1rem;
+
+			.btn {
+				padding: .5rem .875rem;
+				font-size: .875rem;
+				line-height: 1.25;
+			}
+		}
+	}
+
 	&-wrapper {
 		@include mix-vars('alert', $alert-map);
 		@include mix-alert-color-mode($class: vg-alert);

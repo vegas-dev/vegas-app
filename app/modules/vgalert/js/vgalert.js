@@ -1,5 +1,6 @@
 import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal";
+import VGDropdown from "../../vgdropdown";
 
 import { isElement, isVisible, makeRandomString, mergeDeepObject } from "../../../utils/js/functions";
 import { getSVG } from "../../module-fn";
@@ -28,8 +29,19 @@ class VGAlert {
 		this.lang = lang;
 		this._defaultParams = {
 			render: {
-				type: "modal", // modal or overlay,
+				type: "modal", // modal, overlay or dropdown
 				dismiss: false,
+			},
+			dropdown: {
+				placement: "auto",
+				hover: false,
+				animation: {
+					fade: true,
+					enable: false,
+					in: "animate__flipInY",
+					out: "animate__flipOutY",
+					delay: 300,
+				},
 			},
 			ajax: {
 				route: "",
@@ -137,12 +149,29 @@ class VGAlert {
 					render: modal,
 					type: 'modal'
 				}
+			} else if (context._params.render.type === "dropdown") {
+				const dropdown = context._buildDropdown();
+
+				if (!dropdown.element || !dropdown.render) {
+					const modal = context._buildModal();
+					return {
+						element: modal._element,
+						render: modal,
+						type: 'modal'
+					}
+				}
+
+				return {
+					element: dropdown.element,
+					render: dropdown.render,
+					type: 'dropdown'
+				}
 			}
 		};
 
 		const {element: container, render, type} = getContainer();
 
-		if (type === 'modal') {
+		if (type === 'modal' || type === 'dropdown') {
 			render.show();
 		}
 
@@ -150,8 +179,15 @@ class VGAlert {
 		const cancelBtn = Selectors.find(`[${DATA_CANCEL}]`, container);
 
 		return new Promise((resolve, reject) => {
+			let isSettled = false;
+
 			const closeAlert = (isHide = true) => {
 				if (type === 'modal') {
+					render.hide();
+					return;
+				}
+
+				if (type === 'dropdown') {
 					render.hide();
 					return;
 				}
@@ -167,6 +203,7 @@ class VGAlert {
 
 			const handleAgree = (e) => {
 				e.preventDefault();
+				isSettled = true;
 				cleanup();
 				resolve({
 					accepted: true,
@@ -177,6 +214,7 @@ class VGAlert {
 
 			const handleCancel = (e) => {
 				e.preventDefault();
+				isSettled = true;
 				cleanup();
 				reject({
 					accepted: false,
@@ -199,8 +237,21 @@ class VGAlert {
 			const cleanup = () => {
 				isAlertOpen = false;
 				document.removeEventListener("keydown", handleKeydown);
+				document.removeEventListener("click", handleDropdownClickOutside);
 				if (agreeBtn) agreeBtn.removeEventListener("click", handleAgree);
 				if (cancelBtn) cancelBtn.removeEventListener("click", handleCancel);
+			};
+
+			const handleDropdownClickOutside = (e) => {
+				if (type !== 'dropdown') return;
+
+				const toggle = context._params.relatedTarget;
+
+				if (container.contains(e.target) || (isElement(toggle) && toggle.contains(e.target))) {
+					return;
+				}
+
+				handleCancel(e);
 			};
 
 			if (context._params.mode === "confirm") {
@@ -216,6 +267,29 @@ class VGAlert {
 
 			if (type === 'modal') {
 				container.addEventListener("vg.modal.hide", () => {
+					if (isSettled) return;
+					isSettled = true;
+					cleanup();
+					reject({
+						accepted: false,
+						timestamp: new Date(),
+					});
+				}, {once: true});
+			}
+
+			if (type === 'dropdown') {
+				document.addEventListener("click", handleDropdownClickOutside);
+
+				container.addEventListener("vg.dropdown.hidden", () => {
+					if (container._vgAlertDropdownParent && !container._vgAlertDropdownParentWasSet) {
+						container._vgAlertDropdownParent.classList.remove('vg-dropdown');
+					}
+
+					container.remove();
+
+					if (isSettled) return;
+
+					isSettled = true;
 					cleanup();
 					reject({
 						accepted: false,
@@ -366,6 +440,50 @@ class VGAlert {
 		return {
 			element: overlay,
 			render: modal,
+		};
+	}
+
+	_buildDropdown() {
+		const relatedTarget = this._params.relatedTarget;
+
+		if (!isElement(relatedTarget) || !relatedTarget.parentNode) {
+			return {
+				element: null,
+				render: null,
+			};
+		}
+
+		const id = `${CLASS_NAME_ALERT}-dropdown-${makeRandomString()}`;
+		const parent = relatedTarget.parentNode;
+		const container = document.createElement('div');
+		const dropdownContainer = document.createElement('div');
+		const isDropdownParent = parent.classList.contains('vg-dropdown');
+
+		parent.classList.add('vg-dropdown');
+
+		container.id = id;
+		container.className = `vg-dropdown-content ${CLASS_NAME_ALERT}-dropdown`;
+		container.setAttribute('tabindex', '-1');
+		container.setAttribute('role', 'dialog');
+		container._vgAlertDropdownParent = parent;
+		container._vgAlertDropdownParentWasSet = isDropdownParent;
+
+		dropdownContainer.className = 'vg-dropdown-container';
+		dropdownContainer.append(this._buildContent());
+		container.append(dropdownContainer);
+
+		parent.append(container);
+
+		const dropdown = VGDropdown.getOrCreateInstance(relatedTarget, mergeDeepObject({
+			placement: 'bottom-start',
+		}, this._params.dropdown));
+
+		dropdown._drop = container;
+		dropdown._parent = parent;
+
+		return {
+			element: container,
+			render: dropdown,
 		};
 	}
 
