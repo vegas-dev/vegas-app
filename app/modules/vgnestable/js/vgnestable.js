@@ -14,6 +14,8 @@ const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="nestable"]';
 
 const CLASS_ITEM_DRAGGING = "is-dragging";
 const CLASS_ITEM_GHOST = "is-drag-ghost";
+const CLASS_DISABLED = "is-disabled";
+const CLASS_ITEM_DISABLED = "is-drag-disabled";
 const CLASS_PLACEHOLDER = "vg-nestable-placeholder";
 const CLASS_PLACEHOLDER_HIDDEN = "vg-nestable-placeholder-hidden";
 const CLASS_DRAG_ELEMENT = "vg-nestable-drag-element";
@@ -24,6 +26,10 @@ const CLASS_HANDLE_ICON = "vg-nestable-handle-icon";
 const CLASS_COLLAPSE_TOGGLE = "vg-nestable-collapse-toggle";
 const CLASS_DROP_TARGET = "is-drop-target";
 const CLASS_DROP_DENIED = "is-drop-denied";
+const CLASS_DROP_BEFORE = "is-drop-before";
+const CLASS_DROP_ATTACHABLE = "is-drop-attachable";
+const CLASS_DROP_INSIDE = "is-drop-inside";
+const CLASS_DROP_AFTER = "is-drop-after";
 const CLASS_LIVE_REGION = "vg-nestable-live";
 
 const EVENT_KEY_START = `${NAME_KEY}.start`;
@@ -46,16 +52,18 @@ class VGNestable extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			disabled: false, // Disable all drag-and-drop for this tree.
+			disabledattribute: "data-disabled", // Lock attribute for an item or nested list.
 			listselector: ".vg-nestable-list", // Root/nested list for dnd.
 			itemselector: ".vg-nestable-item", // Sortable item selector.
 			handleselector: ".vg-nestable-handle", // Drag handle selector.
 			idattribute: "data-id", // Item id attribute used by serialize().
 			childlistclass: "vg-nestable-list", // Class for auto-created child list.
 			handleicon: '', // иконка для хендлера
-			indent: 50, // X offset (px), after which item moves into child level.
+			indent: 18, // Small horizontal gesture (px) that moves the item under the previous sibling.
 			maxdepth: 6, // Maximum nesting depth.
 			moveaxis: "default", // Drag direction: default | vertical | horizontal.
-			hoverthreshold: 0, // Vertical threshold (0..0.5) around hovered item center.
+			hoverthreshold: 0.25, // Half-height of the central child-drop zone (0.05..0.45).
 			neighborchangethreshold: 0, // Percentage (0..49) of entering adjacent item before position changes.
 			showplaceholder: true, // Show placeholder during drag.
 			group: "",
@@ -103,6 +111,8 @@ class VGNestable extends BaseModule {
 		this._sourceInstance = this;
 		this._lastDropInstance = this;
 		this._activeDropList = null;
+		this._activeDropItem = null;
+		this._dragBaseDepth = 1;
 
 		this._mouse = {
 			startX: 0,
@@ -256,6 +266,7 @@ class VGNestable extends BaseModule {
 	}
 
 	_canAcceptItem(item, sourceInstance) {
+		if (this._isTreeDisabled()) return false;
 		const accept = this._params?.accept;
 		if (typeof accept !== "function") return true;
 		try {
@@ -267,13 +278,20 @@ class VGNestable extends BaseModule {
 	}
 
 	refresh() {
+		const treeDisabled = this._isTreeDisabled();
+		this._element.classList.toggle(CLASS_DISABLED, treeDisabled);
+		this._element.setAttribute("aria-disabled", treeDisabled ? "true" : "false");
+
 		this._getItems().forEach((item) => {
 			const handle = this._ensureItemLayout(item);
+			const dragDisabled = this._isItemDragDisabled(item);
+			item.classList.toggle(CLASS_ITEM_DISABLED, dragDisabled);
 
 			if (handle) {
-				handle.style.cursor = "grab";
+				handle.style.cursor = dragDisabled ? "not-allowed" : "grab";
 				handle.style.userSelect = "none";
 				handle.style.touchAction = "none";
+				handle.setAttribute("aria-disabled", dragDisabled ? "true" : "false");
 
 				if (!["BUTTON", "A", "INPUT"].includes(handle.tagName)) {
 					handle.setAttribute("role", "button");
@@ -799,7 +817,10 @@ class VGNestable extends BaseModule {
 	}
 
 	_startKeyboardDrag(item) {
-		if (!item || this._keyboardDraggedItem) {
+		if (!item || this._keyboardDraggedItem || this._isItemDragDisabled(item)) {
+			if (item && this._isItemDragDisabled(item)) {
+				this._announce("This item cannot be moved.");
+			}
 			return;
 		}
 
@@ -903,6 +924,10 @@ class VGNestable extends BaseModule {
 		}
 
 		const childList = this._getOrCreateChildList(parentCandidate);
+		if (this._isListDisabled(childList)) {
+			this._announce("This group cannot be changed.");
+			return false;
+		}
 		if (this._isDepthExceeded(childList, item)) {
 			this._announce("Maximum nesting depth reached.");
 			return false;
@@ -956,6 +981,9 @@ class VGNestable extends BaseModule {
 
 		const item = target?.closest?.(this._params.itemselector);
 		if (!item || !this._rootList.contains(item)) {
+			return;
+		}
+		if (this._isItemDragDisabled(item)) {
 			return;
 		}
 
@@ -1013,10 +1041,14 @@ class VGNestable extends BaseModule {
 		const pointerTarget = this._getPointerTarget(this._mouse.x, this._mouse.y);
 		if (!pointerTarget) {
 			this._setDropListState(null);
+			this._setDropItemState(null);
 			return;
 		}
 
-		if (pointerTarget.closest(`.${CLASS_PLACEHOLDER}`)) {
+		const pointerPlaceholder = pointerTarget.closest(`.${CLASS_PLACEHOLDER}`);
+		if (pointerPlaceholder) {
+			const targetInstance = this._findOwnerInstanceByElement(pointerPlaceholder) || this._currentTargetInstance || this;
+			this._tryIndentFromPlaceholder(this._mouse.x, targetInstance);
 			return;
 		}
 
@@ -1025,15 +1057,23 @@ class VGNestable extends BaseModule {
 		const list = this._resolveDropList(pointerTarget, hoveredItem, targetInstance);
 		if (!list || !targetInstance._rootList.contains(list)) {
 			this._setDropListState(null);
+			this._setDropItemState(null);
+			return;
+		}
+		const mode = this._resolveMode(this._mouse.x, this._mouse.y, hoveredItem, targetInstance._params);
+		if (targetInstance._isListDisabled(list)) {
+			this._setDropListState(list, true);
+			this._setDropItemState(hoveredItem, mode, true);
 			return;
 		}
 
 		if (!targetInstance._canAcceptItem(this._draggedItem, this._sourceInstance)) {
 			this._setDropListState(list, true);
+			this._setDropItemState(hoveredItem, mode, true);
 			return;
 		}
 
-		const mode = this._resolveMode(this._mouse.x, this._mouse.y, hoveredItem, targetInstance._params);
+		this._setDropItemState(hoveredItem, mode);
 		this._emit("move", {
 			item: this._draggedItem,
 			hoveredItem,
@@ -1073,12 +1113,14 @@ class VGNestable extends BaseModule {
 
 			if (!parentCandidate) {
 				this._setDropListState(null);
+				this._setDropItemState(null);
 				return;
 			}
 
 			const childList = targetInstance._getOrCreateChildList(parentCandidate);
 			if (targetInstance._isDepthExceeded(childList, this._draggedItem)) {
 				this._setDropListState(childList, true);
+				this._setDropItemState(parentCandidate, mode, true);
 				return;
 			}
 
@@ -1092,12 +1134,14 @@ class VGNestable extends BaseModule {
 		if (hoveredItem) {
 			if (hoveredItem === this._draggedItem || this._draggedItem.contains(hoveredItem)) {
 				this._setDropListState(null);
+				this._setDropItemState(null);
 				return;
 			}
 
 			const targetList = hoveredItem.parentElement;
 			if (targetInstance._isDepthExceeded(targetList, this._draggedItem)) {
 				this._setDropListState(targetList, true);
+				this._setDropItemState(hoveredItem, mode, true);
 				return;
 			}
 
@@ -1242,6 +1286,7 @@ class VGNestable extends BaseModule {
 		this._startSnapshot = JSON.stringify(this.serialize());
 		this._sourceInstance = this;
 		this._sourceRoot = this._rootList;
+		this._dragBaseDepth = this._getListDepth(this._draggedItem.parentElement);
 		this._currentTargetInstance = this;
 		this._lastDropInstance = this;
 
@@ -1336,66 +1381,201 @@ class VGNestable extends BaseModule {
 		return targetInstance._rootList;
 	}
 
-_resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
-	if (!hoveredItem) {
-		return "append";
-	}
+	_resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
+		if (!hoveredItem) {
+			return "append";
+		}
 
-	const rect = hoveredItem.getBoundingClientRect();
-	const offsetY = pointerY - rect.top;
-	// Use the dragged item's original left edge as baseline, not the pointer-down X.
-	// This makes "shift right to nest" work reliably regardless of where inside the handle the user grabbed.
-	const baseX = Number.isFinite(this._mouse.startItemX) ? this._mouse.startItemX : this._mouse.startX;
-	const offsetX = pointerX - baseX;
-	const indentValue = parseFloat(params.indent);
-	const indent = Number.isFinite(indentValue) ? indentValue : 0;
-	const moveAxis = this._getMoveAxis(params);
-	const allowVertical = moveAxis !== "horizontal";
-	const allowHorizontal = moveAxis !== "vertical";
-	const neighborThresholdPercent = Math.max(
-		0,
-		Math.min(49, Number(params.neighborchangethreshold || 0))
-	);
+		const rect = this._getItemDropRect(hoveredItem);
+		const offsetY = pointerY - rect.top;
+		// Measure indentation against the hovered row. Nested lists and wide subtrees must not
+		// change the pointer target geometry or force a large horizontal mouse gesture.
+		const offsetX = pointerX - rect.left;
+		const indentValue = parseFloat(params.indent);
+		const indent = Number.isFinite(indentValue) ? indentValue : 0;
+		const grabOffsetX = Math.max(0, Number(this._mouse.grabOffsetX) || 0);
+		const nestTriggerX = grabOffsetX + indent;
+		const moveAxis = this._getMoveAxis(params);
+		const allowVertical = moveAxis !== "horizontal";
+		const allowHorizontal = moveAxis !== "vertical";
+		const neighborThresholdPercent = Math.max(
+			0,
+			Math.min(49, Number(params.neighborchangethreshold || 0))
+		);
 
-	if (neighborThresholdPercent > 0) {
-		const edgeRatio = neighborThresholdPercent / 100;
-		const topBorder = rect.height * edgeRatio;
-		const bottomBorder = rect.height * (1 - edgeRatio);
+		if (neighborThresholdPercent > 0) {
+			const edgeRatio = neighborThresholdPercent / 100;
+			const topBorder = rect.height * edgeRatio;
+			const bottomBorder = rect.height * (1 - edgeRatio);
 
-		if (allowHorizontal && offsetX > indent) {
+			if (allowHorizontal && offsetX > nestTriggerX && offsetY > topBorder && offsetY < bottomBorder) {
+				return "child";
+			}
+
+			if (allowVertical && offsetY <= topBorder) {
+				return "before";
+			}
+
+			if (allowVertical && offsetY >= bottomBorder) {
+				return "after";
+			}
+
+			return "keep";
+		}
+
+		const threshold = Math.min(
+			0.45,
+			Math.max(0.05, Number(params.hoverthreshold || 0.25))
+		);
+
+		if (
+			allowHorizontal &&
+			offsetX > nestTriggerX &&
+			offsetY >= rect.height * (0.5 - threshold) &&
+			offsetY <= rect.height * (0.5 + threshold)
+		) {
 			return "child";
 		}
 
-		if (allowVertical && offsetY <= topBorder) {
+		if (allowVertical && offsetY < rect.height * (0.5 - threshold)) {
 			return "before";
 		}
 
-		if (allowVertical && offsetY >= bottomBorder) {
+		if (allowVertical && offsetY > rect.height * (0.5 + threshold)) {
 			return "after";
 		}
 
 		return "keep";
 	}
 
-	const threshold = Math.min(
-		0.45,
-		Math.max(0.05, Number(params.hoverthreshold || 0.18))
-	);
-
-	if (allowHorizontal && offsetX > indent) {
-		return "child";
+	_getItemDropRect(item) {
+		const inner = item?.querySelector?.(`:scope > .${CLASS_INNER}`);
+		return (inner || item).getBoundingClientRect();
 	}
 
-	if (allowVertical && offsetY < rect.height * (0.5 - threshold)) {
-		return "before";
+	_tryIndentFromPlaceholder(pointerX, targetInstance = this) {
+		if (!this._placeholder || this._getMoveAxis(targetInstance._params) === "vertical") {
+			return false;
+		}
+
+		if (
+			!targetInstance._canAcceptItem(this._draggedItem, this._sourceInstance) ||
+			targetInstance._isListDisabled(this._placeholder.parentElement)
+		) {
+			this._setDropListState(this._placeholder.parentElement, true);
+			this._setDropItemState(null);
+			return false;
+		}
+
+		const indentValue = parseFloat(targetInstance._params.indent);
+		const indent = Number.isFinite(indentValue) ? Math.max(1, indentValue) : 18;
+		const horizontalDistance = Math.max(0, pointerX - this._mouse.startX);
+		const requestedDepth = this._dragBaseDepth + Math.floor(horizontalDistance / indent);
+		let currentList = this._placeholder.parentElement;
+		let currentDepth = targetInstance._getListDepth(currentList);
+		let parentCandidate = null;
+
+		// Moving left promotes the placeholder one level at a time.
+		while (currentDepth > requestedDepth) {
+			const currentParent = currentList.closest(targetInstance._params.itemselector);
+			const parentList = currentParent?.parentElement;
+			if (!currentParent || !parentList) {
+				break;
+			}
+			this._placePlaceholder(parentList, currentParent.nextSibling);
+			currentList = parentList;
+			currentDepth = targetInstance._getListDepth(currentList);
+		}
+
+		// Every additional horizontal step nests under the previous item on that level.
+		while (currentDepth < requestedDepth) {
+			parentCandidate = targetInstance._getPreviousItem(this._placeholder);
+			while (parentCandidate && (parentCandidate === this._draggedItem || this._draggedItem.contains(parentCandidate))) {
+				parentCandidate = targetInstance._getPreviousItem(parentCandidate);
+			}
+			if (!parentCandidate) {
+				break;
+			}
+
+			const childList = targetInstance._getOrCreateChildList(parentCandidate);
+			if (targetInstance._isListDisabled(childList)) {
+				this._setDropListState(childList, true);
+				this._setDropItemState(parentCandidate, "child", true);
+				return false;
+			}
+			if (targetInstance._isDepthExceeded(childList, this._draggedItem)) {
+				this._setDropListState(childList, true);
+				this._setDropItemState(parentCandidate, "child", true);
+				return false;
+			}
+
+			this._placePlaceholder(childList, null);
+			currentList = childList;
+			currentDepth = targetInstance._getListDepth(currentList);
+		}
+
+		const currentParent = currentList.closest(targetInstance._params.itemselector);
+		const nextCandidate = targetInstance._getPreviousItem(this._placeholder);
+		const stepProgress = (horizontalDistance % indent) / indent;
+		if (nextCandidate && nextCandidate !== this._draggedItem && stepProgress >= 0.35) {
+			this._setDropItemState(nextCandidate, "attachable");
+			parentCandidate = nextCandidate;
+		} else if (currentParent) {
+			this._setDropItemState(currentParent, "child");
+			parentCandidate = currentParent;
+		} else if (nextCandidate && nextCandidate !== this._draggedItem) {
+			this._setDropItemState(nextCandidate, "attachable");
+			parentCandidate = nextCandidate;
+		} else {
+			this._setDropItemState(null);
+		}
+
+		this._setDropListState(currentList);
+		this._currentTargetInstance = targetInstance;
+		this._lastDropInstance = targetInstance;
+		this._emit("move", {
+			item: this._draggedItem,
+			hoveredItem: parentCandidate,
+			mode: currentDepth > this._dragBaseDepth ? "child" : "keep",
+			targetInstance,
+			mouse: { x: this._mouse.x, y: this._mouse.y }
+		});
+		return currentDepth > this._dragBaseDepth;
 	}
 
-	if (allowVertical && offsetY > rect.height * (0.5 + threshold)) {
-		return "after";
+	_hasDisabledAttribute(element) {
+		if (!element || !this._params.disabledattribute) {
+			return false;
+		}
+		const value = element.getAttribute(this._params.disabledattribute);
+		return value !== null && normalizeData(value === "" ? "true" : value) === true;
 	}
 
-	return "keep";
-}
+	_isTreeDisabled() {
+		return normalizeData(this._params.disabled) === true || this._hasDisabledAttribute(this._element);
+	}
+
+	_isListDisabled(list) {
+		if (this._isTreeDisabled()) {
+			return true;
+		}
+
+		let currentList = list;
+		while (currentList && this._rootList.contains(currentList)) {
+			if (currentList.matches(this._params.listselector) && this._hasDisabledAttribute(currentList)) {
+				return true;
+			}
+			if (currentList === this._rootList) {
+				break;
+			}
+			currentList = currentList.parentElement?.closest(this._params.listselector) || null;
+		}
+		return false;
+	}
+
+	_isItemDragDisabled(item) {
+		return this._isTreeDisabled() || this._hasDisabledAttribute(item) || this._isListDisabled(item?.parentElement);
+	}
 
 	_getPreviousItem(item) {
 		let sibling = item?.previousElementSibling || null;
@@ -1575,8 +1755,44 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		this._activeDropList = list;
 	}
 
+	_setDropItemState(item, mode = "", denied = false) {
+		const stateClasses = [
+			CLASS_DROP_BEFORE,
+			CLASS_DROP_ATTACHABLE,
+			CLASS_DROP_INSIDE,
+			CLASS_DROP_AFTER,
+			CLASS_DROP_DENIED
+		];
+
+		if (this._activeDropItem && this._activeDropItem !== item) {
+			this._activeDropItem.classList.remove(...stateClasses);
+		}
+
+		if (!item || !["before", "attachable", "child", "after"].includes(mode)) {
+			if (this._activeDropItem) {
+				this._activeDropItem.classList.remove(...stateClasses);
+			}
+			this._activeDropItem = null;
+			return;
+		}
+
+		item.classList.remove(...stateClasses);
+		const modeClass = {
+			before: CLASS_DROP_BEFORE,
+			attachable: CLASS_DROP_ATTACHABLE,
+			child: CLASS_DROP_INSIDE,
+			after: CLASS_DROP_AFTER
+		};
+		item.classList.add(modeClass[mode]);
+		if (denied) {
+			item.classList.add(CLASS_DROP_DENIED);
+		}
+		this._activeDropItem = item;
+	}
+
 	_clearDragState() {
 		this._setDropListState(null);
+		this._setDropItemState(null);
 
 		if (this._draggedItem) {
 			this._draggedItem.classList.remove(CLASS_ITEM_DRAGGING);
@@ -1610,6 +1826,7 @@ _resolveMode(pointerX, pointerY, hoveredItem, params = this._params) {
 		this._lastDropInstance = this;
 		this._activePointerId = null;
 		this._activeTouchId = null;
+		this._dragBaseDepth = 1;
 	}
 
 	_ensureLiveRegion() {

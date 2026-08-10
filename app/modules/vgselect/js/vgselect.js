@@ -70,6 +70,7 @@ class VGSelect extends BaseModule {
 
 		this._params = this._getParams(element, mergeDeepObject({
 			lang: document.documentElement.lang || 'ru',
+			autosearch: true,
 			// Dropdown placement behavior:
 			// - none: default CSS positioning (no JS)
 			// - auto: choose top/bottom based on available space in overflow ancestor/viewport
@@ -77,7 +78,7 @@ class VGSelect extends BaseModule {
 			// - bottom: force open downwards
 			position: 'none',
 			search: {
-				enabled: true,
+				enabled: false,
 				route: '',
 				remote: false,
 				delay: 300,
@@ -104,6 +105,7 @@ class VGSelect extends BaseModule {
 
 		this._observer = null;
 		this._observerTimeout = null;
+		this._visibilityTransitionId = 0;
 		this._drop = Selectors.find(SELECTOR_DROPDOWN, this._element);
 		this._searchTerm = '';
 		this._currentPage = 1;
@@ -121,6 +123,7 @@ class VGSelect extends BaseModule {
 		this._boundUpdateDropdownPlacement = () => this._updateDropdownPlacement();
 
 		this._initObserver();
+		this._syncSearch();
 		this._initLoadMoreButton();
 
 		this._triggerEvent(EVENT_KEY_INIT);
@@ -283,6 +286,33 @@ class VGSelect extends BaseModule {
 	}
 
 	/**
+	 * Определяет, нужно ли показывать поиск.
+	 * search.enabled и search.remote включают его при любом количестве опций.
+	 * autosearch: true использует порог 7, число задаёт собственный порог.
+	 * @param {HTMLSelectElement} selector
+	 * @param {Object} params
+	 * @returns {boolean}
+	 * @private
+	 */
+	static _isSearchEnabled(selector, params = {}) {
+		if (params.search?.enabled === true || params.search?.remote === true) return true;
+
+		const autosearch = params.autosearch;
+		if (autosearch === false) return false;
+
+		const numericThreshold = Number(autosearch);
+		const threshold = autosearch !== true && Number.isFinite(numericThreshold) && numericThreshold >= 0
+			? numericThreshold
+			: 7;
+		const optionCount = Array.from(selector?.options || []).filter(option => {
+			if (option.hidden) return false;
+			return option.value !== '' || option.textContent.trim() !== '';
+		}).length;
+
+		return optionCount > threshold;
+	}
+
+	/**
 	 * Проверяет, является ли значение "пустым" (соответствует placeholder)
 	 * @param {HTMLSelectElement} select - Элемент <select>
 	 * @param {string} value - Значение для проверки
@@ -398,45 +428,54 @@ class VGSelect extends BaseModule {
 
 		this.getOrCreateInstance(container, params);
 		this.updateUI(selector);
-		const instance = VGSelect.getInstance(container);
-
-		let searchInput = null;
-		if (Manipulator.has(selector, 'data-search-enabled')) {
-			const search = document.createElement('div');
-			search.classList.add(CLASS_NAME_SEARCH);
-			searchInput = document.createElement('input');
-			searchInput.name = 'vg-select-search';
-			searchInput.type = 'text';
-			searchInput.placeholder = lang_titles(instance._params.lang, NAME)['search'];
-			searchInput.autocomplete = 'off';
-			searchInput.setAttribute('role', 'searchbox');
-			search.appendChild(searchInput);
-			dropdown.insertBefore(search, dropdown.firstChild);
-		}
-
-		if (searchInput && instance) {
-			let searchTimeout;
-
-			searchInput.addEventListener('input', (e) => {
-				const term = e.target.value.trim();
-				const params = instance._params;
-
-				instance._callCallback('onSearch', { term });
-
-				if (params.search.remote && params.search.route) {
-					if (term.length < (params.search.minterm || 1)) return;
-
-					clearTimeout(searchTimeout);
-					searchTimeout = setTimeout(() => {
-						instance._fetchRemoteData(term);
-					}, params.search.delay || 300);
-				} else {
-					instance._filterLocalOptions(term);
-				}
-			});
-		}
 
 		return container;
+	}
+
+	/**
+	 * Добавляет или убирает поле поиска согласно search.enabled/autosearch.
+	 * @private
+	 */
+	_syncSearch() {
+		const selector = this._element.previousElementSibling;
+		if (!selector || selector.tagName !== 'SELECT' || !this._drop) return;
+
+		const enabled = VGSelect._isSearchEnabled(selector, this._params);
+		const currentSearch = this._drop.querySelector(`.${CLASS_NAME_SEARCH}`);
+		if (!enabled) {
+			currentSearch?.remove();
+			return;
+		}
+		if (currentSearch) return;
+
+		const search = document.createElement('div');
+		search.classList.add(CLASS_NAME_SEARCH);
+		const searchInput = document.createElement('input');
+		searchInput.name = 'vg-select-search';
+		searchInput.type = 'text';
+		searchInput.placeholder = lang_titles(this._params.lang, NAME)['search'];
+		searchInput.autocomplete = 'off';
+		searchInput.setAttribute('role', 'searchbox');
+		search.appendChild(searchInput);
+		this._drop.insertBefore(search, this._drop.firstChild);
+
+		let searchTimeout;
+		searchInput.addEventListener('input', (e) => {
+			const term = e.target.value.trim();
+			const params = this._params;
+
+			this._callCallback('onSearch', { term });
+			if (params.search.remote && params.search.route) {
+				if (term.length < (params.search.minterm || 1)) return;
+
+				clearTimeout(searchTimeout);
+				searchTimeout = setTimeout(() => {
+					this._fetchRemoteData(term);
+				}, params.search.delay || 300);
+			} else {
+				this._filterLocalOptions(term);
+			}
+		});
 	}
 
 	/**
@@ -457,7 +496,12 @@ class VGSelect extends BaseModule {
 		const e = EventHandler.trigger(this._element, EVENT_KEY_SHOW, { relatedTarget });
 		if (e.defaultPrevented) return;
 
+		const transitionId = ++this._visibilityTransitionId;
 		this._element.classList.add(CLASS_NAME_SHOW);
+		// active задаёт видимое состояние dropdown (opacity/height). Оно не должно
+		// зависеть от таймера: под нагрузкой отложенный callback оставлял уже
+		// открытый dropdown прозрачным и с height: 0.
+		this._element.classList.add(CLASS_NAME_ACTIVE);
 		if (this._getPositionMode() !== 'none') {
 			this._setupDropdownPlacement();
 		} else {
@@ -472,13 +516,11 @@ class VGSelect extends BaseModule {
 		const toggle = this._element.querySelector(SELECTOR_DATA_TOGGLE);
 		toggle.setAttribute('aria-expanded', 'true');
 
-		if (this._params.search?.enabled) {
-			const input = this._element.querySelector(SELECTOR_SEARCH_INPUT);
-			if (input) input.focus();
-		}
+		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
+		if (searchInput) searchInput.focus();
 
 		return this._queueCallback(() => {
-			this._element.classList.add(CLASS_NAME_ACTIVE);
+			if (transitionId !== this._visibilityTransitionId || !this._isShown()) return;
 			this._updateDropdownPlacement();
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
 			this._triggerEvent(EVENT_KEY_OPEN);
@@ -503,12 +545,14 @@ class VGSelect extends BaseModule {
 		const e = EventHandler.trigger(this._element, EVENT_KEY_HIDE, relatedTarget);
 		if (e.defaultPrevented) return;
 
+		const transitionId = ++this._visibilityTransitionId;
 		this._teardownDropdownPlacement();
 
 		this._element.classList.remove(CLASS_NAME_ACTIVE);
 		this._element.querySelector(SELECTOR_DATA_TOGGLE).setAttribute('aria-expanded', 'false');
 
 		this._queueCallback(() => {
+			if (transitionId !== this._visibilityTransitionId) return;
 			this._element.classList.remove(CLASS_NAME_SHOW);
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
 			this._triggerEvent(EVENT_KEY_CLOSE);
@@ -595,6 +639,7 @@ class VGSelect extends BaseModule {
 
 		const drop = this._element.querySelector(SELECTOR_DROPDOWN);
 		VGSelect.buildListOptions(select, drop, this._params);
+		this._syncSearch();
 		VGSelect.updateUI(select);
 	}
 
@@ -602,6 +647,7 @@ class VGSelect extends BaseModule {
 	 * Освобождает ресурсы (отключает observer, очищает таймеры)
 	 */
 	dispose() {
+		this._visibilityTransitionId++;
 		if (this._observer) {
 			this._observer.disconnect();
 			this._observer = null;
@@ -1236,6 +1282,7 @@ class VGSelect extends BaseModule {
 		if (isRebuild) {
 			const drop = container.querySelector(`.${CLASS_NAME_DROPDOWN}`);
 			VGSelect.buildListOptions(select, drop, instance?._params || {});
+			instance?._syncSearch();
 			instance?._triggerEvent(EVENT_KEY_REBUILD);
 		} else {
 			this.updateUI(select);

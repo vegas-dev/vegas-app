@@ -70,15 +70,17 @@ const nestable = VGNestable.getOrCreateInstance("#myNestable", {
 
 ```js
 {
+  disabled: false,
+  disabledattribute: "data-disabled",
   listselector: ".vg-nestable-list",
   itemselector: ".vg-nestable-item",
   handleselector: ".vg-nestable-handle",
   idattribute: "data-id",
   childlistclass: "vg-nestable-list",
   handleicon: "",
-  indent: 28,
+  indent: 18,
   maxdepth: 6,
-  hoverthreshold: 0.18,
+  hoverthreshold: 0.25,
   neighborchangethreshold: 0,
   showplaceholder: true,
   group: "",
@@ -119,20 +121,47 @@ const nestable = VGNestable.getOrCreateInstance("#myNestable", {
 
 ### Пояснение параметров
 
+- `disabled`: полностью отключает изменение дерева мышью, touch и клавиатурой. Также читается из `data-disabled="true"` корневого элемента.
+- `disabledattribute`: атрибут блокировки отдельных элементов и вложенных списков (`data-disabled` по умолчанию).
 - `listselector`: селектор корневого/вложенных списков.
 - `itemselector`: селектор sortable-элемента.
 - `handleselector`: селектор зоны, за которую можно начинать drag.
 - `idattribute`: атрибут, из которого берется `id` в `serialize()`.
 - `childlistclass`: классы для автосозданного дочернего списка.
 - `handleicon`: HTML/SVG иконки хэндла (проходит SVG-санитизацию).
-- `indent`: смещение по X (px), после которого режим дропа переключается в вложение (`child`).
+- `indent`: ширина одного горизонтального шага вложенности. Каждый следующий шаг вправо переносит элемент ещё на один доступный уровень под предыдущий элемент.
 - `maxdepth`: максимальная глубина дерева.
-- `hoverthreshold`: вертикальный порог (0.05..0.45 фактически), определяет зоны `before/after/keep`.
+- `hoverthreshold`: половина высоты центральной зоны (0.05..0.45), используемой для вложения; выше и ниже неё находятся зоны `before/after`.
 - `neighborchangethreshold`: порог в процентах (0..49), альтернативная логика смены позиции по краям элемента.
 - `showplaceholder`: показывать/скрывать placeholder во время drag.
 - `group`: имя группы списков для межспискового dnd.
 - `connect`: включить связь списков внутри группы.
 - `accept(item, sourceInstance, targetInstance)`: функция-фильтр разрешения дропа в target.
+
+### Блокировка перетаскивания
+
+Заблокировать всё дерево, в том числе запретить перенос в него из связанного списка:
+
+```html
+<div class="vg-nestable" data-vg-toggle="nestable" data-disabled="true">
+  <ol class="vg-nestable-list">...</ol>
+</div>
+```
+
+Заблокировать только конкретный элемент. Другие элементы по-прежнему могут вставляться до/после него, поэтому его индекс в результате может измениться:
+
+```html
+<li class="vg-nestable-item" data-id="2" data-disabled="true">...</li>
+```
+
+Заблокировать внутреннюю группу. Её элементы нельзя переносить отдельно или добавлять в эту группу, но родительскую ветку можно перемещать целиком:
+
+```html
+<li class="vg-nestable-item" data-id="1">
+  <div class="vg-nestable-inner">...</div>
+  <ol class="vg-nestable-list" data-disabled="true">...</ol>
+</li>
+```
 
 #### `collapse`
 

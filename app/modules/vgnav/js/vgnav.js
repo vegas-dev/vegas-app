@@ -49,27 +49,48 @@ class VGNav extends BaseModule {
 		super(element);
 
 		this._params = this._getParams(element, mergeDeepObject({
+			// Брейкпоинт, с которого навигация отображается в расширенном виде.
 			breakpoint: 'lg',
+			// Направление меню: влияет на классы и поведение позиционирования.
 			placement: 'horizontal',
+			// Включает открытие выпадающих пунктов при наведении на десктопе.
 			hover: true,
+			// Включает ограничение высоты и overflow для списка внутри выпадающего меню.
+			dropListScroll: true,
+			// Настройки плавного переключения между соседними пунктами первого уровня.
 			hoversmoothfirstlevel: {
+				// Включает режим плавного перехода без мгновенного закрытия соседнего дропа.
 				enable: false,
+				// Ограничивает плавное переключение только горизонтальным движением курсора.
 				horizontalOnly: true
 			},
+			// Настройки анимации открытия и закрытия выпадающих пунктов.
 			animation: {
+				// Включает анимацию переходов.
 				enable: true,
+				// Длительность ожидания завершения анимации перед финальным состоянием.
 				timeout: 700
 			},
+			// HTML-разметка иконки-указателя для пунктов с выпадающим меню.
 			toggle: '<span class="default"></span>',
+			// Настройки кнопки-гамбургера для мобильной/адаптивной навигации.
 			hamburger: {
+				// Разрешает создавать и использовать кнопку-гамбургер.
 				enable: true,
+				// Принудительно показывает гамбургер всегда, независимо от брейкпоинта.
 				always: false,
+				// Текстовый заголовок рядом с иконкой гамбургера.
 				title: '',
+				// Пользовательская HTML-разметка тела гамбургера вместо стандартных линий.
 				body: null,
+				// CSS-селектор сайдбара, который открывает кнопка-гамбургер.
 				target: '#sidebar-nav'
 			},
+			// Пользовательские обработчики жизненного цикла навигации.
 			callbacks: {
+				// Вызывается после построения навигации.
 				afterInit: noop,
+				// Вызывается после клика по пункту навигации.
 				afterClick: noop,
 			}
 		}, params));
@@ -80,6 +101,7 @@ class VGNav extends BaseModule {
 			hamburger: 'vg-nav-hamburger',
 			container: 'vg-nav-container',
 			wrapper: 'vg-nav-wrapper',
+			dropListScroll: 'vg-nav-drop-list-scroll',
 			active: 'vg-nav-active',
 			expand: 'vg-nav-expand',
 			cloned: 'vg-nav-cloned',
@@ -134,6 +156,7 @@ class VGNav extends BaseModule {
 		// Вешаем основные классы
 		this._element.classList.add(classes.container);
 		this._element.classList.add('vg-nav-' + params.placement);
+		this._element.classList.toggle(classes.dropListScroll, !!params.dropListScroll);
 
 		if (!params.hamburger.always) {
 			if (!params.breakpoint) {

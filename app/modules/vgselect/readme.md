@@ -41,6 +41,7 @@ js import VGSelect from './app/modules/vgselect/js/vgselect';
 VGSelect.init(document.getElementById('mySelect'), { 
     lang: 'ru', 
     placeholder: 'Выберите значение', 
+	autosearch: true,
     search: {
         enabled: true, 
         remote: true, 
@@ -63,8 +64,9 @@ VGSelect.init(document.getElementById('mySelect'), {
 |--------|-----|---------|
 | `lang` | `string` | Язык интерфейса (поддерживается i18n). По умолчанию: `ru` |
 | `placeholder` | `string` | Текст плейсхолдера |
-| `search.enabled` | `boolean` | Включить поле поиска |
-| `search.remote` | `boolean` | Поиск через AJAX |
+| `autosearch` | `boolean \| number` | Автоматически включить поиск, если опций больше порога. `true` — порог 7 (по умолчанию), число — собственный порог, `false` — отключить автоматику |
+| `search.enabled` | `boolean` | Включить поле поиска вручную при любом количестве опций |
+| `search.remote` | `boolean` | Поиск через AJAX; при `true` поле поиска включается независимо от количества локальных опций |
 | `search.route` | `string` | URL для удалённого поиска |
 | `search.delay` | `number` | Задержка перед запросом (мс) |
 | `search.minTerm` | `number` | Минимальная длина запроса |

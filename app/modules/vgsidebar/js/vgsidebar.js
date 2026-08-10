@@ -20,6 +20,9 @@ const NAME_KEY = 'vg.sidebar';
  * @constant {string} SELECTOR_DATA_TOGGLE - Селектор для элементов активации сайдбара.
  */
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="sidebar"]';
+const OPEN_SELECTOR = '.vg-sidebar.show';
+const BACKDROP_OWNER_ATTR = 'data-vg-backdrop-owner';
+const BACKDROP_OWNER_VALUE = 'sidebar';
 
 /**
  * @constant {string} CLASS_NAME_SHOW - Класс, отвечающий за отображение сайдбара.
@@ -105,6 +108,7 @@ class VGSidebar extends BaseModule {
 		}, params));
 
 		this._scrollBar = new ScrollBarHelper();
+		this._backdropElement = null;
 		this._params.animation.delay = this._params.animation.enable ? this._params.animation.delay : 0;
 
 		this._addEventListeners();
@@ -128,6 +132,15 @@ class VGSidebar extends BaseModule {
 		return NAME_KEY;
 	}
 
+	static getOpenSidebars(excludeElement = null) {
+		return Selectors.findAll(OPEN_SELECTOR).filter(sidebar => sidebar !== excludeElement);
+	}
+
+	static getBackdropElement() {
+		const sidebarBackdrops = Selectors.findAll(`.vg-backdrop[${BACKDROP_OWNER_ATTR}="${BACKDROP_OWNER_VALUE}"]`);
+		return sidebarBackdrops.length ? sidebarBackdrops[sidebarBackdrops.length - 1] : null;
+	}
+
 	/**
 	 * Переключает состояние сайдбара (открыть/закрыть).
 	 *
@@ -146,7 +159,7 @@ class VGSidebar extends BaseModule {
 	 * @returns {void}
 	 */
 	show(relatedTarget) {
-		if (isDisabled(this._element)) return;
+		if (isDisabled(this._element) || this._isShown()) return;
 
 		if (relatedTarget) {
 			this._params = this._getParams(relatedTarget, this._params);
@@ -159,11 +172,31 @@ class VGSidebar extends BaseModule {
 		const showEvent = EventHandler.trigger(this._element, EVENT_KEYS.SHOW, { relatedTarget });
 		if (showEvent.defaultPrevented) return;
 
+		const alreadyOpenSidebars = VGSidebar.getOpenSidebars(this._element);
+		const hasOpenSidebar = alreadyOpenSidebars.length > 0;
+		let currentBackdrop = null;
 		if (this._params.backdrop) {
-			Backdrop.show();
+			if (hasOpenSidebar) {
+				currentBackdrop = VGSidebar.getBackdropElement();
+				if (currentBackdrop) {
+					this._backdropElement = currentBackdrop;
+				} else {
+					Backdrop.show((backdrop) => {
+						currentBackdrop = backdrop;
+						this._backdropElement = backdrop;
+						backdrop.setAttribute(BACKDROP_OWNER_ATTR, BACKDROP_OWNER_VALUE);
+					});
+				}
+			} else {
+				Backdrop.show((backdrop) => {
+					currentBackdrop = backdrop;
+					this._backdropElement = backdrop;
+					backdrop.setAttribute(BACKDROP_OWNER_ATTR, BACKDROP_OWNER_VALUE);
+				});
+			}
 		}
 
-		if (this._params.overflow) {
+		if (this._params.overflow && !hasOpenSidebar) {
 			this._scrollBar.hide();
 		}
 
@@ -182,7 +215,7 @@ class VGSidebar extends BaseModule {
 		document.body.classList.add(CLASS_NAME_OPEN);
 
 		const completeCallback = () => {
-			const backdrop = Selectors.find('.vg-backdrop');
+			const backdrop = this._params.backdrop ? (currentBackdrop || VGSidebar.getBackdropElement()) : null;
 			if (backdrop) {
 				EventHandler.on(backdrop, 'mousedown.vg.backdrop', () => this.hide());
 			}
@@ -199,27 +232,35 @@ class VGSidebar extends BaseModule {
 	 * @returns {void}
 	 */
 	hide(isLeaveBackDrop = false) {
-		if (isDisabled(this._element)) return;
+		if (isDisabled(this._element) || !this._isShown()) return;
 
 		const hideEvent = EventHandler.trigger(this._element, EVENT_KEYS.HIDE);
 		if (hideEvent.defaultPrevented) return;
 
-		document.body.classList.remove(CLASS_NAME_OPEN);
 		this._element.classList.remove(CLASS_NAME_SHOW);
+		const remainingOpenSidebars = VGSidebar.getOpenSidebars(this._element);
+		if (!remainingOpenSidebars.length) {
+			document.body.classList.remove(CLASS_NAME_OPEN);
+		}
 
 		setTimeout(() => {
 			this._element.setAttribute('aria-expanded', 'false');
 
 			const completeCallback = () => {
 				if (!isLeaveBackDrop) {
-					if (this._params.backdrop) {
+					if (this._params.backdrop && !remainingOpenSidebars.length) {
 						Backdrop.hide(() => {
-							if (this._params.overflow) {
+							this._backdropElement = null;
+							if (this._params.overflow && !Backdrop.isActive()) {
 								this._scrollBar.reset();
 							}
-						});
+						}, this._backdropElement || VGSidebar.getBackdropElement());
+					} else if (this._params.backdrop) {
+						this._backdropElement = null;
 					} else if (this._params.overflow) {
-						this._scrollBar.reset();
+						if (!remainingOpenSidebars.length && !Backdrop.isActive()) {
+							this._scrollBar.reset();
+						}
 					}
 
 					if (this._params.hash && window.location.hash === `#${this._element.id}`) {
@@ -304,12 +345,6 @@ EventHandler.on(document, EVENT_KEYS.CLICK_DATA_API, SELECTOR_DATA_TOGGLE, funct
 	EventHandler.one(target, EVENT_KEYS.HIDDEN, () => {
 		this.setAttribute('aria-expanded', 'false');
 	});
-
-	// Закрываем уже открытый сайдбар
-	const alreadyOpen = Selectors.find('.vg-sidebar.show');
-	if (alreadyOpen && alreadyOpen !== target) {
-		VGSidebar.getInstance(alreadyOpen).hide();
-	}
 
 	const instance = VGSidebar.getOrCreateInstance(target);
 	instance.toggle(this);

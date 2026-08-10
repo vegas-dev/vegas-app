@@ -14,6 +14,13 @@ $nestable-map: (
 	item-transition: opacity .15s ease,
 	item-dragging-opacity: .85,
 	item-ghost-opacity: .3,
+	item-drop-line: #0d6efd,
+	item-drop-attachable-outline: 1px dashed rgba(13, 110, 253, .55),
+	item-drop-inside-bg: rgba(13, 110, 253, .1),
+	item-drop-inside-border: rgba(13, 110, 253, .72),
+	item-drop-denied: #dc3545,
+	item-disabled-bg: rgba(0, 0, 0, .025),
+	item-disabled-handle-color: rgba(0, 0, 0, .28),
 
 	inner-gap: .5rem,
 	inner-min-height: 40px,
@@ -54,7 +61,7 @@ $nestable-map: (
 	placeholder-margin: .35rem 0,
 	placeholder-min-height: 40px,
 
-	drag-element-opacity: .92,
-	drag-element-transform: rotate(.5deg),
-	drag-element-shadow: 0 8px 22px rgba(0, 0, 0, .18)
+	drag-element-opacity: 1,
+	drag-element-transform: scale(1.01),
+	drag-element-shadow: 0 12px 30px rgba(0, 0, 0, .2)
 );

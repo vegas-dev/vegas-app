@@ -17,72 +17,99 @@ class Backdrop {
 
 	static _scrollbar = new ScrollBarHelper();
 	static _backdrop = null;
+	static _backdrops = [];
+
+	static getElement() {
+		this._syncBackdrops();
+		return this._backdrop;
+	}
+
+	static isActive() {
+		this._syncBackdrops();
+		return this._backdrops.length > 0;
+	}
 
 	/**
-	 * Показывает бэкдроп
-	 * @param {Function} callback - вызывается после отображения
+	 * Показывает новый backdrop и кладёт его поверх предыдущих.
+	 * @param {Function} callback - Вызывается после добавления backdrop в DOM.
 	 */
 	static show(callback) {
-		if (!this._backdrop) {
-			this._backdrop = this._rootEl.querySelector(`.${CLASS_NAME}`);
-		}
-
-		if (this._backdrop) {
-			this._backdrop.remove();
-		}
-
-		this._append();
-		execute(callback);
+		const backdrop = this._append();
+		execute(callback, [backdrop]);
 	}
 
 	/**
-	 * Скрывает бэкдроп
-	 * @param {Function} callback - вызывается после скрытия
+	 * Скрывает только верхний backdrop.
+	 * @param {Function} callback - Вызывается после скрытия.
 	 */
-	static hide(callback) {
-		if (!this._backdrop) {
-			// На всякий случай проверим, есть ли элемент в DOM
-			this._backdrop = this._rootEl.querySelector(`.${CLASS_NAME}`);
+	static hide(callback, backdrop = null) {
+		this._syncBackdrops();
+
+		const targetBackdrop = backdrop && backdrop.isConnected ? backdrop : this._backdrop;
+
+		if (!targetBackdrop) {
+			execute(callback);
+			return;
 		}
 
-		if (!this._backdrop) return;
-
-		this._destroy().then(execute.bind(null, callback));
+		this._destroy(targetBackdrop).then(execute.bind(null, callback));
 	}
 
 	/**
-	 * Создаёт и добавляет элемент бэкдропа
+	 * Создаёт и добавляет backdrop.
+	 * @returns {HTMLElement}
 	 * @private
 	 */
 	static _append() {
 		const html = Html('dom');
-		this._backdrop = html.div({ class: CLASS_NAME });
+		const backdrop = html.div({ class: CLASS_NAME });
 
-		this._rootEl.appendChild(this._backdrop);
+		this._rootEl.appendChild(backdrop);
+		this._backdrops.push(backdrop);
+		this._backdrop = backdrop;
+
 		requestAnimationFrame(() => {
-			Classes.add(this._backdrop, CLASS_NAME_SHOW);
+			Classes.add(backdrop, CLASS_NAME_SHOW);
 			setTimeout(() => {
-				Classes.add(this._backdrop, CLASS_NAME_FADE);
+				if (backdrop.isConnected) {
+					Classes.add(backdrop, CLASS_NAME_FADE);
+				}
+			}, backdropDelay);
+		});
+
+		return backdrop;
+	}
+
+	/**
+	 * Удаляет backdrop с анимацией.
+	 * @param {HTMLElement} backdrop
+	 * @returns {Promise}
+	 * @private
+	 */
+	static _destroy(backdrop) {
+		return new Promise((resolve) => {
+			Classes.remove(backdrop, CLASS_NAME_FADE);
+			setTimeout(() => {
+				Classes.remove(backdrop, CLASS_NAME_SHOW);
+				backdrop.remove();
+				this._backdrops = this._backdrops.filter(item => item !== backdrop && item.isConnected);
+				this._backdrop = this._backdrops.length ? this._backdrops[this._backdrops.length - 1] : null;
+
+				if (!this._backdrop) {
+					this._scrollbar.reset();
+				}
+
+				resolve();
 			}, backdropDelay);
 		});
 	}
 
-	/**
-	 * Удаляет бэкдроп с анимацией
-	 * @returns {Promise}
-	 * @private
-	 */
-	static _destroy() {
-		return new Promise((resolve) => {
-			Classes.remove(this._backdrop, CLASS_NAME_FADE);
-			setTimeout(() => {
-				Classes.remove(this._backdrop, CLASS_NAME_SHOW);
-				this._backdrop.remove();
-				this._backdrop = null;
-				this._scrollbar.reset();
-				resolve();
-			}, backdropDelay);
-		});
+	static _syncBackdrops() {
+		this._backdrops = this._backdrops.filter(item => item && item.isConnected);
+		if (!this._backdrops.length) {
+			this._backdrops = Array.from(this._rootEl.querySelectorAll(`.${CLASS_NAME}`));
+		}
+		this._backdrop = this._backdrops.length ? this._backdrops[this._backdrops.length - 1] : null;
 	}
 }
 

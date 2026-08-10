@@ -51,6 +51,39 @@
 		&.is-drag-ghost {
 			opacity: var(--vg-nestable-item-ghost-opacity);
 		}
+
+		&.is-drop-before > .vg-nestable-inner {
+			box-shadow: inset 0 3px 0 var(--vg-nestable-item-drop-line);
+		}
+
+		&.is-drop-after > .vg-nestable-inner {
+			box-shadow: inset 0 -3px 0 var(--vg-nestable-item-drop-line);
+		}
+
+		&.is-drop-attachable > .vg-nestable-inner {
+			outline: var(--vg-nestable-item-drop-attachable-outline);
+			outline-offset: 2px;
+		}
+
+		&.is-drop-inside > .vg-nestable-inner {
+			border-color: var(--vg-nestable-item-drop-inside-border);
+			background: var(--vg-nestable-item-drop-inside-bg);
+			box-shadow: 0 0 0 3px var(--vg-nestable-item-drop-inside-bg);
+		}
+
+		&.is-drop-denied > .vg-nestable-inner {
+			border-color: var(--vg-nestable-item-drop-denied);
+			box-shadow: 0 0 0 2px rgba(220, 53, 69, .12);
+		}
+
+		&.is-drag-disabled > .vg-nestable-inner {
+			background: var(--vg-nestable-item-disabled-bg);
+		}
+
+		&.is-drag-disabled > .vg-nestable-inner > .vg-nestable-handle {
+			color: var(--vg-nestable-item-disabled-handle-color);
+			cursor: not-allowed;
+		}
 	}
 
 	&-inner {
@@ -77,6 +110,7 @@
 		border-radius: var(--vg-nestable-handle-border-radius);
 		cursor: var(--vg-nestable-handle-cursor);
 		user-select: none;
+		touch-action: none;
 
 		&:active {
 			cursor: var(--vg-nestable-handle-active-cursor);
@@ -155,9 +189,13 @@
 		height: 0 !important;
 	}
 
-	&-drag-element {
+	&-item.is-drag-ghost#{&}-drag-element {
 		opacity: var(--vg-nestable-drag-element-opacity);
 		transform: var(--vg-nestable-drag-element-transform);
 		box-shadow: var(--vg-nestable-drag-element-shadow);
+
+		> .vg-nestable-inner {
+			background: var(--vg-nestable-inner-bg);
+		}
 	}
 }

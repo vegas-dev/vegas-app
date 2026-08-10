@@ -2,7 +2,7 @@ import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal";
 import VGDropdown from "../../vgdropdown";
 
-import { isElement, isVisible, makeRandomString, mergeDeepObject } from "../../../utils/js/functions";
+import { execute, isElement, isVisible, makeRandomString, mergeDeepObject, reflow } from "../../../utils/js/functions";
 import { getSVG } from "../../module-fn";
 import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -15,6 +15,9 @@ import Params from "../../../utils/js/components/params";
  * Константы
  */
 const CLASS_NAME_ALERT = "vg-alert";
+const CLASS_NAME_SHOW = "show";
+const CLASS_NAME_FADE = "fade";
+const CLASS_NAME_CLOSING = "closing";
 const DATA_AGREE = "data-vg-alert-agree";
 const DATA_CANCEL = "data-vg-alert-cancel";
 
@@ -173,6 +176,8 @@ class VGAlert {
 
 		if (type === 'modal' || type === 'dropdown') {
 			render.show();
+		} else if (type === 'overlay') {
+			context._showOverlay(container);
 		}
 
 		const agreeBtn = Selectors.find(`[${DATA_AGREE}]`, container);
@@ -193,11 +198,11 @@ class VGAlert {
 				}
 
 				if (type === 'overlay') {
-					container.remove();
-
-					if (context._params.render.dismiss && isHide) {
-						render.hide();
-					}
+					context._hideOverlay(container, () => {
+						if (context._params.render.dismiss && isHide) {
+							render.hide();
+						}
+					});
 				}
 			};
 
@@ -441,6 +446,71 @@ class VGAlert {
 			element: overlay,
 			render: modal,
 		};
+	}
+
+	_showOverlay(overlay) {
+		if (!overlay) return;
+
+		reflow(overlay);
+		requestAnimationFrame(() => {
+			overlay.classList.add(CLASS_NAME_SHOW);
+			reflow(overlay);
+			window.setTimeout(() => {
+				if (overlay.isConnected) {
+					overlay.classList.add(CLASS_NAME_FADE);
+				}
+			}, 15);
+		});
+	}
+
+	_hideOverlay(overlay, callback) {
+		if (!overlay) {
+			execute(callback);
+			return;
+		}
+
+		const removeOverlay = () => {
+			overlay.classList.remove(CLASS_NAME_SHOW);
+			overlay.classList.remove(CLASS_NAME_CLOSING);
+			overlay.remove();
+			execute(callback);
+		};
+
+		overlay.classList.add(CLASS_NAME_CLOSING);
+
+		const wrapper = Selectors.find(`.${CLASS_NAME_ALERT}-wrapper`, overlay);
+		const wrapperDuration = this._getElementTransitionDuration(wrapper);
+
+		window.setTimeout(() => {
+			overlay.classList.remove(CLASS_NAME_FADE);
+
+			const backdropDuration = this._getElementTransitionDuration(overlay, '::before');
+			if (!backdropDuration) {
+				removeOverlay();
+				return;
+			}
+
+			window.setTimeout(removeOverlay, backdropDuration);
+		}, wrapperDuration);
+	}
+
+	_getElementTransitionDuration(element, pseudoElement = null) {
+		if (!element || typeof window === 'undefined') return 0;
+
+		const styles = window.getComputedStyle(element, pseudoElement);
+		const durations = styles.transitionDuration.split(',');
+		const delays = styles.transitionDelay.split(',');
+
+		return Math.max(...durations.map((duration, index) => {
+			return this._parseCssTime(duration) + this._parseCssTime(delays[index] || delays[0] || '0s');
+		}));
+	}
+
+	_parseCssTime(value) {
+		const time = Number.parseFloat(value);
+		if (!Number.isFinite(time)) return 0;
+
+		return value.trim().endsWith('ms') ? time : time * 1000;
 	}
 
 	_buildDropdown() {

@@ -6,8 +6,8 @@ import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../utils/js/functions";
 import {dismissTrigger} from "../../module-fn";
-import VGModalDrag from "./vgmodal.drag";
-import VGModalResize from "./vgmodal.resize";
+import VGModalInteraction from "./vgmodal.interaction";
+import VGModalMinimized from "./vgmodal.minimized";
 
 /**
  * Constants
@@ -21,6 +21,8 @@ const OPEN_SELECTOR = '.vg-modal.show:not([data-vg-persistent="true"])';
 const SELECTOR_DIALOG = '.vg-modal-dialog';
 const SELECTOR_MODAL_BODY = '.vg-modal-body';
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="modal"]';
+const BACKDROP_OWNER_ATTR = 'data-vg-backdrop-owner';
+const BACKDROP_OWNER_VALUE = 'modal';
 
 const CLASS_NAME_OPEN = 'vg-modal-open';
 const CLASS_NAME_SHOW = 'show';
@@ -39,29 +41,13 @@ const EVENT_KEY_HIDE_PREVENTED      = `hidePrevented.${NAME_KEY}`;
 const EVENT_KEY_CLICK_DATA_API      = `click.${NAME_KEY}.data.api`;
 const EVENT_KEY_MOUSEDOWN_DISMISS   = `mousedown.dismiss${NAME_KEY}`;
 const EVENT_KEY_CLICK_DISMISS       = `click.dismiss${NAME_KEY}`;
+const EVENT_KEY_BACKDROP_DISMISS    = `mousedown.${NAME_KEY}.backdrop`;
 const EVENT_KEY_DOM_LOADED_DATA_API = `DOMContentLoaded.${NAME_KEY}.data.api`;
 const EVENT_KEY_POPSTATE_DATA_API   = `popstate.${NAME_KEY}.data.api`;
 
 class VGModal extends BaseModule {
 	constructor(element, params = {}) {
 		super(element, params);
-
-		this._interactionDefaults = {
-			drag: {
-				enable: false,
-				selector: '.vg-modal-content',
-				threshold: 4,
-				resizeEdgeSize: 8,
-				debug: false,
-			},
-			resize: {
-				enable: false,
-				edgeSize: 8,
-				minWidth: 300,
-				minHeight: 160,
-				debug: false,
-			},
-		};
 
 		this._params = this._getParams(element, mergeDeepObject({
 			backdrop: true,
@@ -72,6 +58,11 @@ class VGModal extends BaseModule {
 			hash: false,
 			centered: false,
 			dismiss: true,
+			minimize: {
+				enable: false,
+				title: '',
+				text: '',
+			},
 			resize: {
 				enable: false,
 				edgeSize: 8,
@@ -126,14 +117,14 @@ class VGModal extends BaseModule {
 		this._isShown = false;
 		this._isTransitioning = false;
 		this._scrollBar = new ScrollBarHelper();
-		this._dragHandler = new VGModalDrag(this._element, this._dialog);
-		this._resizeHandler = new VGModalResize(this._element, this._dialog);
-		this._interactionConfig = this._resolveInteractionConfig();
-		this._dragHandler.setOptions(this._interactionConfig.drag);
-		this._resizeHandler.setOptions(this._interactionConfig.resize);
+		this._backdropElement = null;
+		this._isBackdropOwner = false;
+		this._interaction = new VGModalInteraction(this._element, this._dialog, this._content, () => this._params);
+		this._minimized = new VGModalMinimized(this);
 
 		this._addEventListeners();
 		this._dismissElement();
+		this._minimized.setup();
 
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGModal.NAME_KEY, this._params.animation);
@@ -152,12 +143,28 @@ class VGModal extends BaseModule {
 		return NAME_KEY;
 	}
 
-	static init(element, params, callback) {
-		VGModal.build(element, params, callback);
+	static init(element, params = {}, callback) {
+		return VGModal.build(element, params, callback);
 	}
 
-	static build(id, params, callback) {
+	static initAll(params = {}) {
+		return Selectors.findAll('.vg-modal').map((element) => {
+			return VGModal.getOrCreateInstance(element, params);
+		});
+	}
+
+	static build(id, params = {}, callback) {
 		if (typeof id !== "string") return;
+		if (!params || typeof params !== 'object') {
+			params = {};
+		}
+
+		const existed = document.getElementById(id);
+		if (existed) {
+			const modal = VGModal.getOrCreateInstance(existed, params);
+			execute(callback, [modal]);
+			return modal;
+		}
 
 		let _element = document.createElement('div');
 		_element.classList.add('vg-modal');
@@ -167,14 +174,15 @@ class VGModal extends BaseModule {
 		let dialog = document.createElement('div');
 		dialog.classList.add('vg-modal-dialog');
 
-		if ('centered' in params && params.centered) {
+		if (params.centered) {
 			dialog.classList.add('vg-modal-dialog-centered');
 		}
 
 		let content = document.createElement('div');
 		content.classList.add('vg-modal-content');
 
-		if ('dismiss' in params && params.dismiss) {
+		const hasDismiss = !Object.prototype.hasOwnProperty.call(params, 'dismiss') || params.dismiss;
+		if (hasDismiss) {
 			let btnClose = document.createElement('button');
 			Manipulator.set(btnClose, 'type', 'button');
 			Manipulator.set(btnClose, 'data-vg-dismiss', 'modal');
@@ -185,10 +193,34 @@ class VGModal extends BaseModule {
 			content.append(btnClose);
 		}
 
+		if (params.title) {
+			let header = document.createElement('div');
+			header.classList.add('vg-modal-header');
+
+			let title = document.createElement('div');
+			title.classList.add('vg-modal-title');
+			VGModal._appendBuildContent(title, params.title, Boolean(params.html || params.titleHtml));
+
+			header.append(title);
+			content.append(header);
+		}
+
 		let body = document.createElement('div');
 		body.classList.add('vg-modal-body');
+		const bodyContent = Object.prototype.hasOwnProperty.call(params, 'body')
+			? params.body
+			: (Object.prototype.hasOwnProperty.call(params, 'content') ? params.content : null);
+		VGModal._appendBuildContent(body, bodyContent, Boolean(params.html || params.bodyHtml || params.contentHtml));
 
 		content.append(body);
+
+		if (Object.prototype.hasOwnProperty.call(params, 'footer')) {
+			let footer = document.createElement('div');
+			footer.classList.add('vg-modal-footer');
+			VGModal._appendBuildContent(footer, params.footer, Boolean(params.html || params.footerHtml));
+			content.append(footer);
+		}
+
 		dialog.append(content);
 		_element.append(dialog);
 
@@ -212,12 +244,41 @@ class VGModal extends BaseModule {
 		return modal;
 	}
 
+	static _appendBuildContent(target, content, isHTML = false) {
+		if (!target || content === null || content === undefined) return;
+
+		if (Array.isArray(content)) {
+			content.forEach(item => VGModal._appendBuildContent(target, item, isHTML));
+			return;
+		}
+
+		if (content instanceof Node) {
+			target.append(content);
+			return;
+		}
+
+		if (isHTML) {
+			target.insertAdjacentHTML('beforeend', String(content));
+			return;
+		}
+
+		target.append(document.createTextNode(String(content)));
+	}
+
 	toggle(relatedTarget) {
+		if (this._minimized.isMinimized()) {
+			return this.restore(relatedTarget);
+		}
+
 		return !this._isShown ? this.show(relatedTarget) : this.hide();
 	}
 
 	show(relatedTarget) {
 		if (isDisabled(this._element)) return;
+		if (this._minimized.isMinimized()) {
+			return this.restore(relatedTarget);
+		}
+		if (this._isShown || this._isTransitioning) return;
 
 		if (this._params.ajax.route && this._params.ajax.target && !this._params.ajax.once) {
 			const ajaxTargetContent = Selectors.find(this._params.ajax.target, this._element);
@@ -231,14 +292,18 @@ class VGModal extends BaseModule {
 		this._isTransitioning = true;
 
 		if (this._params.hash) {
-			window.history.pushState(null, "vg-sidebar-open", "#" + this._element.id);
+			if (window.location.hash !== `#${this._element.id}`) {
+				window.history.pushState(null, "vg-modal-open", "#" + this._element.id);
+			}
 
 			EventHandler.on(window, EVENT_KEY_POPSTATE_DATA_API, () => {
 				this.hide();
 			});
 		}
 
-		this._scrollBar.hide();
+		if (this._params.backdrop) {
+			this._scrollBar.hide();
+		}
 
 		document.body.classList.add(CLASS_NAME_OPEN);
 
@@ -246,20 +311,19 @@ class VGModal extends BaseModule {
 		this._adjustDialog();
 
 		if (this._params.backdrop) {
-			Backdrop.show(() => {
-				const backdrop = Selectors.find('.vg-backdrop');
-				if (backdrop) {
-					EventHandler.one(backdrop, 'mousedown.vg.backdrop', () => {
-						this.hide();
-					});
-				}
-
-				this._showElement(relatedTarget);
-			});
+			this._showBackdrop(() => this._showElement(relatedTarget));
 			return;
 		}
 
 		this._showElement(relatedTarget);
+	}
+
+	minimize(relatedTarget) {
+		return this._minimized.minimize(relatedTarget);
+	}
+
+	restore(relatedTarget) {
+		return this._minimized.restore(relatedTarget);
 	}
 
 	hide(openedModals = [], isLeaveBackDrop = false) {
@@ -281,6 +345,7 @@ class VGModal extends BaseModule {
 		if (!isLeaveBackDrop) {
 			this._saveInteractionState();
 			this._disableInteractionHandlers();
+			this._minimized.reset();
 			this._element.style.display = 'none';
 			this._element.removeAttribute('aria-modal');
 			this._element.removeAttribute('role');
@@ -300,19 +365,29 @@ class VGModal extends BaseModule {
 
 			if (!this._params.backdrop) {
 				this._resetAdjustments();
-				this._scrollBar.reset();
+				if (!Backdrop.isActive()) {
+					this._scrollBar.reset();
+				}
 
 				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 				return;
 			}
 
-			Backdrop.hide(() => {
+			this._hideBackdrop(() => {
 				this._resetAdjustments();
-				this._scrollBar.reset();
+				if (!Backdrop.isActive()) {
+					this._scrollBar.reset();
+				}
 
 				EventHandler.trigger(this._element, EVENT_KEY_HIDDEN);
 			})
 		}
+	}
+
+	dispose() {
+		this._minimized.dispose();
+		this._interaction.dispose();
+		super.dispose();
 	}
 
 	_showElement(relatedTarget) {
@@ -354,176 +429,79 @@ class VGModal extends BaseModule {
 		this._queueCallback(transitionComplete, this._dialog, this._isAnimatedFade())
 	}
 
-	_bindInteractionHandlers() {
-		this._dragHandler.setOptions(this._interactionConfig.drag);
-		this._resizeHandler.setOptions(this._interactionConfig.resize);
+	_showBackdrop(callback) {
+		const activeBackdrop = Backdrop.getElement();
+		const activeBackdropOwner = activeBackdrop ? activeBackdrop.getAttribute(BACKDROP_OWNER_ATTR) : '';
+		if (activeBackdrop && activeBackdropOwner !== 'sidebar') {
+			if (!activeBackdropOwner) {
+				activeBackdrop.setAttribute(BACKDROP_OWNER_ATTR, BACKDROP_OWNER_VALUE);
+			}
+
+			this._backdropElement = activeBackdrop;
+			this._isBackdropOwner = true;
+			this._bindBackdropDismiss(activeBackdrop);
+			execute(callback);
+			return;
+		}
+
+		Backdrop.show((backdrop) => {
+			this._backdropElement = backdrop;
+			this._isBackdropOwner = true;
+			if (backdrop) {
+				backdrop.setAttribute(BACKDROP_OWNER_ATTR, BACKDROP_OWNER_VALUE);
+			}
+			this._bindBackdropDismiss(backdrop);
+			execute(callback);
+		});
 	}
+
+	_hideBackdrop(callback) {
+		if (!this._backdropElement || !this._isBackdropOwner) {
+			this._backdropElement = null;
+			this._isBackdropOwner = false;
+			execute(callback);
+			return;
+		}
+
+		Backdrop.hide(() => {
+			this._backdropElement = null;
+			this._isBackdropOwner = false;
+			execute(callback);
+		}, this._backdropElement);
+	}
+
+	_bindBackdropDismiss(backdrop) {
+		if (!backdrop) return;
+
+		EventHandler.off(backdrop, EVENT_KEY_BACKDROP_DISMISS);
+		EventHandler.one(backdrop, EVENT_KEY_BACKDROP_DISMISS, () => {
+			if (this._params.backdrop === 'static') {
+				this._triggerBackdropTransition();
+				return;
+			}
+
+			this.hide();
+		});
+	}
+
 	_toggleInteractionHandlers() {
-		this._interactionConfig = this._resolveInteractionConfig();
-		this._bindInteractionHandlers();
-
-		if (this._interactionConfig.drag.enable) {
-			this._dragHandler.enable();
-		} else {
-			this._dragHandler.disable();
-		}
-
-		if (this._interactionConfig.resize.enable) {
-			this._resizeHandler.enable();
-		} else {
-			this._resizeHandler.disable();
-		}
+		this._interaction.toggleHandlers();
 	}
 
 	_disableInteractionHandlers() {
-		this._dragHandler.disable();
-		this._resizeHandler.disable();
+		this._interaction.disableHandlers();
 	}
 
 	_syncInteractiveBounds() {
-		if (this._interactionConfig.resize.enable) {
-			this._resizeHandler.syncToViewport();
-		}
-
-		if (this._interactionConfig.drag.enable) {
-			this._dragHandler.syncPosition();
-		}
-	}
-
-	_resolveInteractionConfig() {
-		return {
-			drag: this._normalizeInteractionParams(this._params.drag, this._interactionDefaults.drag),
-			resize: this._normalizeInteractionParams(this._params.resize, this._interactionDefaults.resize),
-		};
-	}
-
-	_normalizeInteractionParams(paramsValue, defaults) {
-		if (typeof paramsValue === 'boolean') {
-			return {...defaults, enable: paramsValue};
-		}
-
-		if (paramsValue && typeof paramsValue === 'object') {
-			const hasEnable = Object.prototype.hasOwnProperty.call(paramsValue, 'enable');
-			return {
-				...defaults,
-				...paramsValue,
-				enable: hasEnable ? Boolean(paramsValue.enable) : true,
-			};
-		}
-
-		return {...defaults};
-	}
-
-	_getStateConfig() {
-		return this._normalizeStateParams(this._params.state);
-	}
-
-	_normalizeStateParams(paramsValue, defaults = { enable: true, key: '' }) {
-		if (typeof paramsValue === 'boolean') {
-			return {...defaults, enable: paramsValue};
-		}
-
-		if (paramsValue && typeof paramsValue === 'object') {
-			const hasEnable = Object.prototype.hasOwnProperty.call(paramsValue, 'enable');
-			const key = typeof paramsValue.key === 'string' ? paramsValue.key.trim() : '';
-			return {
-				...defaults,
-				...paramsValue,
-				key,
-				enable: hasEnable ? Boolean(paramsValue.enable) : true,
-			};
-		}
-
-		return {...defaults};
-	}
-
-	_getStateStorageKey(stateConfig = this._getStateConfig()) {
-		if (!stateConfig.enable) return '';
-
-		if (typeof stateConfig.key === 'string' && stateConfig.key.trim()) {
-			return stateConfig.key.trim();
-		}
-
-		if (!this._element || !this._element.id) return '';
-
-		return `vg.modal.state:${window.location.pathname}:${this._element.id}`;
-	}
-
-	_captureInteractionState() {
-		const dialogStyle = this._dialog ? this._dialog.style : null;
-		const contentElement = this._content || Selectors.find('.vg-modal-content', this._dialog);
-		const contentStyle = contentElement ? contentElement.style : null;
-
-		return {
-			dialog: dialogStyle ? {
-				position: dialogStyle.position,
-				margin: dialogStyle.margin,
-				left: dialogStyle.left,
-				top: dialogStyle.top,
-				width: dialogStyle.width,
-				height: dialogStyle.height,
-				transform: dialogStyle.transform,
-				maxWidth: dialogStyle.maxWidth,
-				maxHeight: dialogStyle.maxHeight,
-				minHeight: dialogStyle.minHeight,
-			overflow: dialogStyle.overflow,
-			pointerEvents: dialogStyle.pointerEvents,
-			transition: dialogStyle.transition,
-			willChange: dialogStyle.willChange,
-		} : {},
-			content: contentStyle ? {
-				height: contentStyle.height,
-				maxHeight: contentStyle.maxHeight,
-				overflow: contentStyle.overflow,
-			} : {},
-		};
-	}
-
-	_applyInteractionState(state) {
-		if (!state || typeof state !== 'object') return;
-
-		const dialogState = state.dialog && typeof state.dialog === 'object' ? state.dialog : {};
-		const contentState = state.content && typeof state.content === 'object' ? state.content : {};
-		if (this._dialog) {
-			Object.keys(dialogState).forEach(propertyName => {
-				this._dialog.style[propertyName] = dialogState[propertyName] || '';
-			});
-		}
-
-		const contentElement = this._content || Selectors.find('.vg-modal-content', this._dialog);
-		if (contentElement) {
-			Object.keys(contentState).forEach(propertyName => {
-				contentElement.style[propertyName] = contentState[propertyName] || '';
-			});
-		}
+		this._interaction.syncBounds();
 	}
 
 	_saveInteractionState() {
-		const stateConfig = this._getStateConfig();
-		const storageKey = this._getStateStorageKey(stateConfig);
-		if (!stateConfig.enable || !storageKey || typeof window === 'undefined' || !window.localStorage) return;
-
-		try {
-			window.localStorage.setItem(storageKey, JSON.stringify(this._captureInteractionState()));
-		} catch (error) {
-		}
+		this._interaction.saveState();
 	}
 
 	_restoreInteractionState() {
-		const stateConfig = this._getStateConfig();
-		const storageKey = this._getStateStorageKey(stateConfig);
-		if (!stateConfig.enable || !storageKey || typeof window === 'undefined' || !window.localStorage) return false;
-
-		try {
-			const rawState = window.localStorage.getItem(storageKey);
-			if (!rawState) return false;
-
-			const parsedState = JSON.parse(rawState);
-			this._applyInteractionState(parsedState);
-			return true;
-		} catch (error) {
-			return false;
-		}
+		return this._interaction.restoreState();
 	}
 
 	_isAnimatedFade() {
@@ -656,19 +634,35 @@ dismissTrigger(VGModal);
 		data.toggle(this);
 	});
 
-EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, function () {
+const showModalFromHash = () => {
 	let targetHash = window.location.hash.slice(1);
-	if (targetHash) {
-		let target = Selectors.find('#' + targetHash);
-		if (target && target.classList.contains('vg-modal')) {
-			if (isDisabled(target)) {
-				return;
-			}
+	if (!targetHash) return;
 
-			const data = VGModal.getOrCreateInstance(target)
-			data.toggle();
-		}
+	try {
+		targetHash = decodeURIComponent(targetHash);
+	} catch (error) {
+		return;
 	}
-})
+
+	const target = Selectors.findID(targetHash);
+	if (!target || !target.classList.contains('vg-modal') || isDisabled(target)) {
+		return;
+	}
+
+	const data = VGModal.getOrCreateInstance(target);
+	if (!data._params.hash || data._isShown) {
+		return;
+	}
+
+	data.show();
+};
+
+if (document.readyState === 'loading') {
+	EventHandler.on(document, EVENT_KEY_DOM_LOADED_DATA_API, showModalFromHash);
+} else {
+	showModalFromHash();
+}
+
+window.addEventListener('hashchange', showModalFromHash);
 
 export default VGModal;

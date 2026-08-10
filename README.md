@@ -145,6 +145,34 @@ app
 - `VGToast` — всплывающие уведомления со стеком и автозакрытием.
 - `VGTooltip` — tooltip/popover подсказки с Data API, автопозиционированием и закрытием по `Esc`/клику вне элемента.
 
+### VGSelect: автоматический поиск
+
+По умолчанию `autosearch: true`: поле поиска автоматически появляется, если в `<select>` больше 7 непустых видимых опций. Число вместо `true` задаёт собственный порог:
+
+```js
+VGSelect.init(select, { autosearch: 10 }); // поиск появится при 11+ опциях
+VGSelect.init(select, { autosearch: 15 }); // поиск появится при 16+ опциях
+VGSelect.init(select, { autosearch: false }); // автоматический поиск отключён
+```
+
+Ручное включение поиска не зависит от количества опций и имеет приоритет над `autosearch`:
+
+```js
+VGSelect.init(select, {
+	search: { enabled: true }, // поиск будет виден даже для двух опций
+});
+```
+
+`search.remote: true` также всегда включает поле поиска: remote-режим не зависит от количества локальных опций.
+
+Те же настройки через Data API:
+
+```html
+<select class="vg-select" data-autosearch="10">...</select>
+<select class="vg-select" data-search-enabled="true">...</select>
+<select class="vg-select" data-search-remote="true" data-search-route="/api/search">...</select>
+```
+
 ## Authors
 
 [VEGAS STUDIO](https://vegas-dev.com)  Russia
