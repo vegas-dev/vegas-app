@@ -1,14 +1,16 @@
+@use "../../../utils/scss" as vg;
+
 $lawcookie-map: (
-		background-color:          $bg-color,
-		color:                     $color,
-		box-shadow:                $box-shadow,
+		background-color:          var(--vg-surface-bg, #{vg.$surface-bg}),
+		color:                     var(--vg-text-color, #{vg.$color}),
+		box-shadow:                var(--vg-box-shadow, #{vg.$box-shadow}),
 		padding:                   1rem,
-		border:                    1px solid #{$border-color},
-		border-radius:             $border-radius,
-		z-index:                   $lawcookie-index,
-		transition:                $transition-base,
+		border:                    vg.$border-width vg.$border-style var(--vg-border-color, #{vg.$border-color}),
+		border-radius:             vg.$border-radius,
+		z-index:                   vg.$lawcookie-index,
+		transition:                vg.$transition-base,
 		max-width:                 50%,
 		padding-outer:             1rem,
 		font-size:                 14px,
 		title-font-size:           16px
-);
+) !default;

@@ -1,6 +1,9 @@
+@use "sass:map";
+@use "../../../utils/scss" as vg;
+
 $nav-map: (
 		transition: all .2s ease-in-out,
-);
+) !default;
 
 $nav-item-map: (
 		margin: 0,
@@ -8,39 +11,39 @@ $nav-item-map: (
 		font-size: 1rem,
 		font-weight: 400,
 		line-height: 1.4,
-		color: #212529,
+		color: var(--vg-text-color, #212529),
 		decoration: none,
 		display: inline-block,
 		border: none,
 		border-radius: 0,
 		white-space: nowrap,
 		position: relative,
-);
+) !default;
 
 $nav-drop-map: (
 		z-index: 10,
-		transition: map-get($nav-map, transition),
+		transition: map.get($nav-map, transition),
 		width: 200px,
 		max-height: 650px,
-		border-color: $border-color,
+		border-color: var(--vg-border-color, #{vg.$border-color}),
 		border-radius: 0,
 		padding: 0,
-		bg: $bg-color,
+		bg: var(--vg-surface-bg, #{vg.$surface-bg}),
 		overflow-y: auto,
 		overflow-x: visible,
-);
+) !default;
 
 $nav-drop-mega-map: (
 		width: 100%,
 		min-height: 300px,
-		bg: $bg-color,
-		border-color: $border-color,
+		bg: var(--vg-surface-bg, #{vg.$surface-bg}),
+		border-color: var(--vg-border-color, #{vg.$border-color}),
 		border-radius: 0,
 		padding: 1rem,
 		z-index: 10,
-		transition: map-get($nav-map, transition),
+		transition: map.get($nav-map, transition),
 		max-height: 600px,
-);
+) !default;
 
 $nav-drop-item-map: (
 		padding: .75rem 1rem,
@@ -50,16 +53,16 @@ $nav-drop-item-map: (
 		bg-hover: transparent,
 		color: inherit,
 		color-hover: inherit,
-		transition: map-get($nav-map, transition),
-);
+		transition: map.get($nav-map, transition),
+) !default;
 
 $hamburger-map: (
 		height: 27px,
 		line-width: 35px,
-		line-color: #333333,
+		line-color: var(--vg-text-emphasis-color, #333333),
 		line-height: 3px,
 		line-indent-top: 7px
-);
+) !default;
 
 $grid-breakpoints: (
 		xs: 576px,
@@ -69,4 +72,4 @@ $grid-breakpoints: (
 		xl: 1400px,
 		xxl: 1600px,
 		xxxl: 1800px
-);
+) !default;

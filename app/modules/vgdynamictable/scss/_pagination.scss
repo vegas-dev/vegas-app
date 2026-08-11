@@ -1,3 +1,4 @@
+@mixin pagination() {
 &.table-pagination {
 	.vgdt-pagination {
 		padding: var(--vg-dynamic-table-pagination-padding-y) var(--vg-dynamic-table-pagination-padding-x);
@@ -179,5 +180,7 @@
 	.vgdt-page--ellipsis:hover .vgdt-ellipsis-chevron {
 		display: inline;
 	}
+}
+
 }
 

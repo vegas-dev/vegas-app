@@ -6,10 +6,9 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 select {
 	&.vg-select {
@@ -26,20 +25,20 @@ select {
 }
 
 .vg-select {
-	@include mix-vars('select-current', $select-current-map);
-	@include mix-vars('select-current', $select-placeholder-map);
-	@include mix-vars('select-dropdown', $select-dropdown-map);
-	@include mix-vars('select-list', $select-list-map);
-	@include mix-vars('select-optgroup', $select-optgroup-map);
-	@include mix-vars('select-optgroup-hover', $select-optgroup-hover-map);
-	@include mix-vars('select-list-hover', $select-list-hover-map);
-	@include mix-vars('select-search', $select-search-map);
-	@include mix-vars('select-tags', $select-tags-map);
-	@include mix-vars('select-tag', $select-tag-map);
-	--vg-select-list-max-height: #{$select-list-max-height};
-	--vg-select-list-scrollbar-width: #{$select-list-scrollbar-width};
-	--vg-select-list-scrollbar-bg: #{$select-list-scrollbar-bg};
-	--vg-select-list-scrollbar-thumb: #{$select-list-scrollbar-thumb};
+	@include vg.mix-vars('select-current', vars.$select-current-map);
+	@include vg.mix-vars('select-current', vars.$select-placeholder-map);
+	@include vg.mix-vars('select-dropdown', vars.$select-dropdown-map);
+	@include vg.mix-vars('select-list', vars.$select-list-map);
+	@include vg.mix-vars('select-optgroup', vars.$select-optgroup-map);
+	@include vg.mix-vars('select-optgroup-hover', vars.$select-optgroup-hover-map);
+	@include vg.mix-vars('select-list-hover', vars.$select-list-hover-map);
+	@include vg.mix-vars('select-search', vars.$select-search-map);
+	@include vg.mix-vars('select-tags', vars.$select-tags-map);
+	@include vg.mix-vars('select-tag', vars.$select-tag-map);
+	--vg-select-list-max-height: #{vars.$select-list-max-height};
+	--vg-select-list-scrollbar-width: #{vars.$select-list-scrollbar-width};
+	--vg-select-list-scrollbar-bg: #{vars.$select-list-scrollbar-bg};
+	--vg-select-list-scrollbar-thumb: #{vars.$select-list-scrollbar-thumb};
 	position: relative;
 
 	&:not(.show) {
@@ -87,7 +86,7 @@ select {
 	}
 
 	&-current {
-		@each $key, $value in $select-current-map {
+		@each $key, $value in vars.$select-current-map {
 			#{$key}: var(--vg-select-current-#{$key})
 		}
 		box-sizing: border-box;
@@ -105,7 +104,7 @@ select {
 			top: 50%;
 			transform: translateY(-50%);
 			transition: all .4s ease-in-out;
-			background-image: url("data:image/svg+xml, " + $select-current-svg);
+			background-image: url("data:image/svg+xml, " + vars.$select-current-svg);
 			background-repeat: no-repeat;
 			width: 16px;
 			height: 16px;
@@ -118,7 +117,7 @@ select {
 	}
 
 	&-dropdown {
-		@each $key, $value in $select-dropdown-map {
+		@each $key, $value in vars.$select-dropdown-map {
 			#{$key}: var(--vg-select-dropdown-#{$key})
 		}
 		position: absolute;
@@ -159,7 +158,7 @@ select {
 		overflow-y: auto;
 
 		&::-webkit-scrollbar-track {
-			-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+			-webkit-box-shadow: inset 0 0 6px var(--vg-shadow-color, rgba(0, 0, 0, .3));
 			background-color: var(--vg-select-list-scrollbar-bg);
 		}
 
@@ -175,7 +174,7 @@ select {
 		}
 
 		&--option {
-			@each $key, $value in $select-list-map {
+			@each $key, $value in vars.$select-list-map {
 				#{$key}: var(--vg-select-list-#{$key})
 			}
 			display: block;
@@ -188,7 +187,7 @@ select {
 			}
 
 			&:hover, &.selected {
-				@each $key, $value in $select-list-hover-map {
+				@each $key, $value in vars.$select-list-hover-map {
 					#{$key}: var(--vg-select-list-hover-#{$key})
 				}
 			}
@@ -218,7 +217,7 @@ select {
 			}
 
 			&-title {
-				@each $key, $value in $select-optgroup-map {
+				@each $key, $value in vars.$select-optgroup-map {
 					#{$key}: var(--vg-select-optgroup-#{$key})
 				}
 			}
@@ -227,7 +226,7 @@ select {
 
 	&-search {
 		input {
-			@each $key, $value in $select-search-map {
+			@each $key, $value in vars.$select-search-map {
 				#{$key}: var(--vg-select-search-#{$key})
 			}
 			padding: 8px;

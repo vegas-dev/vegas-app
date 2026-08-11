@@ -6,13 +6,12 @@
 *--------------------------------------------------------------------------
 **/
 
-@import '../../../utils/scss/functions';
-@import '../../../utils/scss/mixin';
-@import '../../../utils/scss/variables';
-@import 'variables';
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 .vg-form-sender {
-	@include mix-vars('form-sender', $form-sender-map);
+	@include vg.mix-vars('form-sender', vars.$form-sender-map);
 
 	&-modal {
 		.vg-modal-content {
@@ -43,7 +42,7 @@
 		width: 22px;
 		height: 22px;
 		cursor: pointer;
-		transition: $transition-base;
+		transition: vg.$transition-base;
 
 		svg {
 			path {
@@ -72,15 +71,15 @@
 }
 
 .vg-form-sender-alert {
-	@include mix-alert-color-mode($class: vg-form-sender-alert);
+	@include vg.mix-alert-color-mode($class: vg-form-sender-alert);
 	background-color: var(--vg-form-sender-alert-background-color);
 	border: 1px solid var(--vg-form-sender-alert-border-color) ;
-	border-radius: var(--vg-border-radius);
+	border-radius: var(--vg-border-radius, #{vg.$border-radius});
 
 	.vg-btn-close {
 		svg {
 			path {
-				fill: var(--vg-form-sender-alert-close)
+				fill: var(--vg-form-sender-alert-close);
 			}
 		}
 	}

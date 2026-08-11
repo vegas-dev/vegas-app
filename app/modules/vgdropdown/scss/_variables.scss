@@ -1,12 +1,14 @@
+@use "../../../utils/scss" as vg;
+
 $dropdown-map: (
-		bg-color:                  $bg-color,
-		color:                     $color,
-		box-shadow:                $box-shadow,
-		border-width:              1px,
-		border-style:              solid,
-		border-color:              $border-color,
-		border-radius:             $border-radius,
-		z-index:                   $dropdown-index,
-		transition:                $transition-base,
+		bg-color:                  var(--vg-surface-bg, #{vg.$surface-bg}),
+		color:                     var(--vg-text-color, #{vg.$color}),
+		box-shadow:                var(--vg-box-shadow, #{vg.$box-shadow}),
+		border-width:              vg.$border-width,
+		border-style:              vg.$border-style,
+		border-color:              var(--vg-border-color, #{vg.$border-color}),
+		border-radius:             vg.$border-radius,
+		z-index:                   vg.$dropdown-index,
+		transition:                vg.$transition-base,
 		min-width:                 225px
-);
+) !default;

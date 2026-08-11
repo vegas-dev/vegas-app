@@ -6,13 +6,12 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 .vg-modal {
-	@include mix-vars('modal', $modal-map);
+	@include vg.mix-vars('modal', vars.$modal-map);
 	position: fixed;
 	left: 0;
 	top: 0;
@@ -122,7 +121,7 @@
 	position: fixed;
 	right: 20px;
 	bottom: 20px;
-	z-index: calc(var(--vg-modal-z-index, #{$modal-index}) + 1);
+	z-index: calc(var(--vg-modal-z-index, #{vg.$modal-index}) + 1);
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
@@ -160,8 +159,8 @@
 
 @media screen and (min-width: 576px){
 	.vg-modal {
-		--vg-modal-margin: #{$modal-dialog-margin-y-sm-up};
-		--vg-modal-box-shadow: #{$modal-content-box-shadow-sm-up};
+		--vg-modal-margin: #{vars.$modal-dialog-margin-y-sm-up};
+		--vg-modal-box-shadow: #{vars.$modal-content-box-shadow-sm-up};
 	}
 
 	.vg-modal-dialog {
@@ -171,18 +170,18 @@
 	}
 
 	.vg-modal-sm {
-		--vg-modal-width: #{$modal-sm};
+		--vg-modal-width: #{vars.$modal-sm};
 	}
 }
 
 @media screen and (min-width: 992px){
 	.vg-modal-lg, .vg-modal-xl {
-		--vg-modal-width: #{$modal-lg};
+		--vg-modal-width: #{vars.$modal-lg};
 	}
 }
 
 @media screen and (min-width: 1399px) {
 	.vg-modal-xl {
-		--vg-modal-width: #{$modal-xl};
+		--vg-modal-width: #{vars.$modal-xl};
 	}
 }

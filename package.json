@@ -1,6 +1,6 @@
 {
 	"name": "vgapp",
-	"version": "1.4.1",
+	"version": "1.4.4",
 	"main": "./build/vgapp.js",
 	"module": "./index.js",
 	"style": "./build/vgapp.css",
@@ -12,6 +12,66 @@
 		},
 		"./scss": {
 			"sass": "./index.scss"
+		},
+		"./default": {
+			"sass": "./app/utils/scss/default.scss"
+		},
+		"./theme": {
+			"sass": "./app/utils/scss/_theme.scss"
+		},
+		"./alert": {
+			"sass": "./app/modules/vgalert/scss/vgalert.scss"
+		},
+		"./collapse": {
+			"sass": "./app/modules/vgcollapse/scss/vgcollapse.scss"
+		},
+		"./dropdown": {
+			"sass": "./app/modules/vgdropdown/scss/vgdropdown.scss"
+		},
+		"./dynamictable": {
+			"sass": "./app/modules/vgdynamictable/scss/vgdynamictable.scss"
+		},
+		"./filepreview": {
+			"sass": "./app/modules/vgfilepreview/scss/vgfilepreview.scss"
+		},
+		"./files": {
+			"sass": "./app/modules/vgfiles/scss/vgfiles.scss"
+		},
+		"./formsender": {
+			"sass": "./app/modules/vgformsender/scss/vgformsender.scss"
+		},
+		"./lawcookie": {
+			"sass": "./app/modules/vglawcookie/scss/vglawcookie.scss"
+		},
+		"./modal": {
+			"sass": "./app/modules/vgmodal/scss/vgmodal.scss"
+		},
+		"./nav": {
+			"sass": "./app/modules/vgnav/scss/vgnav.scss"
+		},
+		"./nestable": {
+			"sass": "./app/modules/vgnestable/scss/vgnestable.scss"
+		},
+		"./rangeslider": {
+			"sass": "./app/modules/vgrangeslider/scss/vgrangeslider.scss"
+		},
+		"./rollup": {
+			"sass": "./app/modules/vgrollup/scss/vgrollup.scss"
+		},
+		"./select": {
+			"sass": "./app/modules/vgselect/scss/vgselect.scss"
+		},
+		"./sidebar": {
+			"sass": "./app/modules/vgsidebar/scss/vgsidebar.scss"
+		},
+		"./tabs": {
+			"sass": "./app/modules/vgtabs/scss/vgtabs.scss"
+		},
+		"./toast": {
+			"sass": "./app/modules/vgtoast/scss/vgtoast.scss"
+		},
+		"./tooltip": {
+			"sass": "./app/modules/vgtooltip/scss/vgtooltip.scss"
 		},
 		"./build/vgapp.css": "./build/vgapp.css"
 	},

@@ -1,3 +1,6 @@
+@use "sass:map";
+@use "../../../utils/scss" as vg;
+
 $spacer: 1rem !default;
 $spacers: (
 		0: 0,
@@ -8,12 +11,12 @@ $spacers: (
 		5: $spacer * 3,
 ) !default;
 
-$sizes-0: map-get($spacers, 0);
-$sizes-1: map-get($spacers, 1);
-$sizes-2: map-get($spacers, 2);
-$sizes-3: map-get($spacers, 3);
-$sizes-4: map-get($spacers, 4);
-$sizes-5: map-get($spacers, 5);
+$sizes-0: map.get($spacers, 0);
+$sizes-1: map.get($spacers, 1);
+$sizes-2: map.get($spacers, 2);
+$sizes-3: map.get($spacers, 3);
+$sizes-4: map.get($spacers, 4);
+$sizes-5: map.get($spacers, 5);
 
 $dynamic-table-map: (
 	wrap: (
@@ -28,22 +31,22 @@ $dynamic-table-map: (
 		font-size: $sizes-3,
 		row-content-height: 20px,
 		border-color: transparent,
-		text-color: #1f1f1f,
+		text-color: var(--vg-text-color, #1f1f1f),
 	),
 	header: (
 		font-weight: 600,
-		background: #f7f4ef,
-		text-color: #1f1f1f,
+		background: var(--vg-surface-muted-bg, #f7f4ef),
+		text-color: var(--vg-text-color, #1f1f1f),
 	),
 	bordered: (
 		border-width: 1px,
-		border-color: rgba(0, 0, 0, 0.1),
+		border-color: var(--vg-border-disabled-color, rgba(0, 0, 0, .1)),
 	),
 	striped: (
-		background: rgba(0, 0, 0, 0.03),
+		background: var(--vg-surface-subtle-bg, rgba(0, 0, 0, .03)),
 	),
 	hover: (
-		background: rgba(0, 0, 0, 0.05),
+		background: var(--vg-surface-subtle-hover-bg, rgba(0, 0, 0, .05)),
 	),
 	table: (
 		min-width: 640px,
@@ -82,21 +85,21 @@ $dynamic-table-map: (
 		jump-width: 64px,
 		jump-gap: 6px,
 		jump-button-min-width: 54px,
-		border-color: rgba(0, 0, 0, 0.08),
-		toolbar-bg: #faf8f4,
-		label-color: #5f5a52,
-		button-border: 1px solid rgba(0, 0, 0, 0.12),
-		button-border-color: rgba(0, 0, 0, 0.12),
-		button-bg: #ffffff,
-		button-text: #2e2a24,
-		button-hover-bg: #f1ece4,
-		button-hover-border: rgba(0, 0, 0, 0.2),
-		button-active-bg: #24201b,
-		button-active-text: #ffffff,
-		button-active-border: #24201b,
-		per-page-bg: #ffffff,
-		per-page-border-color: rgba(0, 0, 0, 0.12),
-		per-page-text: #2e2a24,
+		border-color: var(--vg-border-disabled-color, rgba(0, 0, 0, .08)),
+		toolbar-bg: var(--vg-surface-muted-bg, #faf8f4),
+		label-color: var(--vg-text-muted-color, #5f5a52),
+		button-border: vg.$border-width vg.$border-style var(--vg-border-disabled-color, rgba(0, 0, 0, .12)),
+		button-border-color: var(--vg-border-disabled-color, rgba(0, 0, 0, .12)),
+		button-bg: var(--vg-control-bg, #ffffff),
+		button-text: var(--vg-text-color, #2e2a24),
+		button-hover-bg: var(--vg-surface-hover-bg, #f1ece4),
+		button-hover-border: var(--vg-border-color, rgba(0, 0, 0, .2)),
+		button-active-bg: var(--vg-primary-color, #24201b),
+		button-active-text: var(--vg-primary-contrast-color, #ffffff),
+		button-active-border: var(--vg-primary-color, #24201b),
+		per-page-bg: var(--vg-control-bg, #ffffff),
+		per-page-border-color: var(--vg-border-disabled-color, rgba(0, 0, 0, .12)),
+		per-page-text: var(--vg-text-color, #2e2a24),
 	),
 	sortable: (
 		header-padding-right: 1.8rem,
@@ -109,22 +112,27 @@ $dynamic-table-map: (
 		arrow-opacity: 0.35,
 		arrow-active-opacity: 1,
 		arrow-color: currentColor,
-		column-highlight-background: rgba(191, 153, 92, 0.14),
+		column-highlight-background: var(--vg-primary-subtle-bg, rgba(191, 153, 92, .14)),
 	),
 	fixed: (
 		shadow-width: 14px,
-		shadow-color: rgba(0, 0, 0, 0.16),
-		cell-background: rgba(247, 244, 239, 0.92),
+		shadow-color: var(--vg-shadow-soft-color, rgba(0, 0, 0, .16)),
+		cell-background: var(--vg-surface-bg, rgba(247, 244, 239, .92)),
 	),
 	skeleton: (
 		padding: 12px 14px,
 		line-height: 10px,
 		radius: 999px,
 		duration: 1.2s,
-		row-bg: rgba(255, 255, 255, 0.5),
-		border-color: rgba(0, 0, 0, 0.04),
-		glow: rgba(255, 255, 255, 0.55),
-		gradient-1: #ebe6df,
-		gradient-2: #f5f1ea,
+		row-bg: rgb(var(--vg-surface-bg-rgb, 255 255 255) / .5),
+		border-color: var(--vg-border-disabled-color, rgba(0, 0, 0, .04)),
+		glow: rgb(var(--vg-surface-bg-rgb, 255 255 255) / .55),
+		gradient-1: var(--vg-control-border-color, #ebe6df),
+		gradient-2: var(--vg-surface-muted-bg, #f5f1ea),
 	),
-);
+	actions: (
+		drag-indicator: var(--vg-primary-color, #3f8cff),
+		danger-color: var(--vg-danger-color, #a22929),
+		danger-contrast: var(--vg-danger-contrast-color, #ffffff),
+	),
+) !default;

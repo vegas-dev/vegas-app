@@ -1,0 +1,22 @@
+@use "mixin" as mix;
+@use "variables" as vars;
+
+.vg-loader, .vg.loader:after {
+	border-radius: 50%;
+	width: 7em;
+	height: 7em;
+}
+
+.vg-loader {
+	@include mix.mix-vars('loader', vars.$loader-map);
+	margin: var(--vg-loader-margin);
+	font-size: var(--vg-loader-font-size);
+	position: relative;
+	text-indent: -9999em;
+	border-top: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-border-color);
+	border-right: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-border-color);
+	border-bottom: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-border-color);
+	border-left: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-color);
+	transform: var(--vg-loader-transform);
+	animation: var(--vg-loader-animation);
+}

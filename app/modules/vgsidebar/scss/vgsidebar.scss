@@ -6,13 +6,12 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 .vg-sidebar {
-	@include mix-vars('sidebar', $sidebar-map);
+	@include vg.mix-vars('sidebar', vars.$sidebar-map);
 	position: fixed;
 	width: auto;
 	height: auto;

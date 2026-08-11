@@ -6,10 +6,9 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 .vg-alert {
 	&-modal {
@@ -19,7 +18,7 @@
 	}
 
 	&-overlay {
-		@include mix-vars('alert', $alert-map);
+		@include vg.mix-vars('alert', vars.$alert-map);
 		width: 100%;
 		height: 100%;
 		position: absolute;
@@ -111,9 +110,9 @@
 	}
 
 	&-wrapper {
-		@include mix-vars('alert', $alert-map);
-		@include mix-alert-color-mode($class: vg-alert);
-		border-radius: var(--vg-border-radius);
+		@include vg.mix-vars('alert', vars.$alert-map);
+		@include vg.mix-alert-color-mode($class: vg-alert);
+		border-radius: var(--vg-border-radius, #{vg.$border-radius});
 		overflow: hidden;
 
 		.vg-alert-content {

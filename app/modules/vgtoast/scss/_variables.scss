@@ -1,20 +1,22 @@
+@use "../../../utils/scss" as vg;
+
 $toast-map: (
 		indent: 1rem,
 		height: auto,
 		width: auto,
-		z-index: $toast-index,
+		z-index: vg.$toast-index,
 		transition: all .3s ease-in-out,
 		padding: 8px 22px,
 		font-size: 1.125rem,
-		background-color: $bg-color,
-		color: $color,
-		border-width: $border-width,
+		background-color: var(--vg-surface-bg, #{vg.$surface-bg}),
+		color: var(--vg-text-color, #{vg.$color}),
+		border-width: vg.$border-width,
 		border-color: transparent,
-		border-style: $border-style,
+		border-style: vg.$border-style,
 		border-radius: 20px,
-		box-shadow: $box-shadow,
+		box-shadow: var(--vg-box-shadow, #{vg.$box-shadow}),
 		header-font-weight: 500,
 		header-font-size: .975rem,
 		body-font-size: 1rem,
 		body-font-weight: 400,
-);
+) !default;

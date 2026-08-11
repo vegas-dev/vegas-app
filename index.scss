@@ -1,59 +1,56 @@
-// css animation
-/*@import "./app/utils/scss/animate";*/
-
 // css классы по умолчанию
-@import "./app/utils/scss/default";
+@use "./app/utils/scss/default";
 
 // alert
-@import "./app/modules/vgalert/scss/vgalert";
+@use "./app/modules/vgalert/scss/vgalert";
 
 // collapse
-@import "./app/modules/vgcollapse/scss/vgcollapse";
+@use "./app/modules/vgcollapse/scss/vgcollapse";
 
 // Dropdown
-@import './app/modules/vgdropdown/scss/vgdropdown';
+@use "./app/modules/vgdropdown/scss/vgdropdown";
 
 // Dynamic Table
-@import './app/modules/vgdynamictable/scss/vgdynamictable';
+@use "./app/modules/vgdynamictable/scss/vgdynamictable";
 
 // FormSender
-@import './app/modules/vgformsender/scss/vgformsender';
+@use "./app/modules/vgformsender/scss/vgformsender";
 
 // Files
-@import './app/modules/vgfiles/scss/vgfiles';
+@use "./app/modules/vgfiles/scss/vgfiles";
 
 // File Preview
-@import './app/modules/vgfilepreview/scss/vgfilepreview';
+@use "./app/modules/vgfilepreview/scss/vgfilepreview";
 
 // Law Cookie
-@import './app/modules/vglawcookie/scss/vglawcookie';
+@use "./app/modules/vglawcookie/scss/vglawcookie";
 
 // Modal
-@import './app/modules/vgmodal/scss/vgmodal';
+@use "./app/modules/vgmodal/scss/vgmodal";
 
 // Nav
-@import './app/modules/vgnav/scss/vgnav';
+@use "./app/modules/vgnav/scss/vgnav";
 
 // Nestable
-@import './app/modules/vgnestable/scss/vgnestable';
+@use "./app/modules/vgnestable/scss/vgnestable";
 
 // Range Slider
-@import './app/modules/vgrangeslider/scss/vgrangeslider';
+@use "./app/modules/vgrangeslider/scss/vgrangeslider";
 
 // Rollup
-@import './app/modules/vgrollup/scss/vgrollup';
+@use "./app/modules/vgrollup/scss/vgrollup";
 
 // Select
-@import './app/modules/vgselect/scss/vgselect';
+@use "./app/modules/vgselect/scss/vgselect";
 
 // Sidebar
-@import './app/modules/vgsidebar/scss/vgsidebar';
+@use "./app/modules/vgsidebar/scss/vgsidebar";
 
 // Tabs
-@import './app/modules/vgtabs/scss/vgtabs';
+@use "./app/modules/vgtabs/scss/vgtabs";
 
 // Toast
-@import './app/modules/vgtoast/scss/vgtoast';
+@use "./app/modules/vgtoast/scss/vgtoast";
 
 // Tooltip
-@import './app/modules/vgtooltip/scss/vgtooltip';
+@use "./app/modules/vgtooltip/scss/vgtooltip";

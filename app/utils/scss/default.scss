@@ -1,78 +1,11 @@
-@import "../../utils/scss/functions";
-@import "../../utils/scss/variables";
-@import "../../utils/scss/mixin";
-@import "../../utils/scss/animation";
-@import "../../utils/scss/placement";
+@forward "index";
 
-.vg-backdrop {
-	@include mix-vars('backdrop', $backdrop-map);
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100vw;
-	height: 100vh;
-	background: var(--vg-backdrop-bg);
-	transition: var(--vg-backdrop-transition);
-	opacity: 0;
-	z-index: var(--vg-backdrop-z-index);
+@forward "index";
 
-	&.fade.show {
-		opacity: var(--vg-backdrop-opacity);
-	}
-}
-
-.vg-btn-close {
-	position: absolute;
-	width: 30px;
-	height: 30px;
-	right: 15px;
-	top: 15px;
-	border: none;
-	background: transparent;
-	border-radius: 50%;
-	padding: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-
-	svg {
-		width: 20px;
-		height: 20px;
-		fill: $color;
-	}
-}
-
-.vg-collapse {
-	&:not(.show) {
-		display: none;
-	}
-}
-
-.vg-collapsing {
-	height: 0;
-	overflow: hidden;
-	transition: $transition-base;
-}
-
-/**
-* Loader
- */
-.vg-loader, .vg.loader:after {
-	border-radius: 50%;
-	width: 7em;
-	height: 7em;
-}
-
-.vg-loader {
-	@include mix-vars('loader', $loader-map);
-	margin: var(--vg-loader-margin);
-	font-size: var(--vg-loader-font-size);
-	position: relative;
-	text-indent: -9999em;
-	border-top: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-border-color);
-	border-right: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-border-color);
-	border-bottom: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-border-color);
-	border-left: var(--vg-loader-border-width) var(--vg-loader-border-style) var(--vg-loader-color);
-	transform: var(--vg-loader-transform);
-	animation: var(--vg-loader-animation);
-}
+@use "animation";
+@use "placement";
+@use "theme-default";
+@use "backdrop";
+@use "closable";
+@use "collapsable";
+@use "loaders";

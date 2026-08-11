@@ -1,3 +1,4 @@
+@mixin skeleton() {
 .skeleton-row td {
 	padding: var(--vg-dynamic-table-skeleton-padding);
 	background: var(--vg-dynamic-table-skeleton-row-bg);
@@ -57,4 +58,6 @@
 	100% {
 		transform: translateX(120%);
 	}
+}
+
 }

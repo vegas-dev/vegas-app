@@ -1,15 +1,17 @@
+@use "../../../utils/scss" as vg;
+
 $tooltip-map: (
 		zindex: 1080,
 		max-width: 260px,
 		padding: 8px 12px,
 		font-size: 13px,
 		line-height: 1.4,
-		color: #fff,
-		background: rgba(30, 30, 30, .95),
+		color: var(--vg-text-inverse-color, #ffffff),
+		background: var(--vg-surface-inverse-bg, rgba(30, 30, 30, .95)),
 		border-radius: 6px,
-		box-shadow: 0 6px 20px rgba(0, 0, 0, .18),
+		box-shadow: 0 6px 20px var(--vg-shadow-soft-color, rgba(0, 0, 0, .18)),
 		word-break: break-word,
 		arrow-width: 8px,
 		arrow-height: 8px,
-		border-color: $border-color,
-);
+		border-color: var(--vg-border-color, #{vg.$border-color}),
+) !default;

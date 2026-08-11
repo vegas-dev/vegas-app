@@ -1,0 +1,13 @@
+@use "variables" as vars;
+
+.vg-collapse {
+	&:not(.show) {
+		display: none;
+	}
+}
+
+.vg-collapsing {
+	height: 0;
+	overflow: hidden;
+	transition: vars.$transition-base;
+}

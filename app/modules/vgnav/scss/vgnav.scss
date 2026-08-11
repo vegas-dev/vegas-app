@@ -6,19 +6,23 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
-@import "breakpoints";
+@forward "variables";
+@forward "breakpoints";
+@use "sass:map";
+@use "../../../utils/scss" as vg;
+@use "breakpoints";
+@use "hamburger";
+@use "placement";
+@use "toggle";
+@use "variables" as vars;
 
 .vg-nav {
-	@include mix-vars('nav', $nav-map);
-	@include mix-vars('nav-item', $nav-item-map);
-	@include mix-vars('nav-drop', $nav-drop-map);
-	@include mix-vars('nav-drop-mega', $nav-drop-mega-map);
-	@include mix-vars('nav-drop-item', $nav-drop-item-map);
-	@include mix-vars('nav-hamburger', $hamburger-map);
+	@include vg.mix-vars('nav', vars.$nav-map);
+	@include vg.mix-vars('nav-item', vars.$nav-item-map);
+	@include vg.mix-vars('nav-drop', vars.$nav-drop-map);
+	@include vg.mix-vars('nav-drop-mega', vars.$nav-drop-mega-map);
+	@include vg.mix-vars('nav-drop-item', vars.$nav-drop-item-map);
+	@include vg.mix-vars('nav-hamburger', vars.$hamburger-map);
 
 	.vg-nav-wrapper {
 		display: flex;
@@ -48,7 +52,7 @@
 		li {
 			a {
 				/** set toggle **/
-				@import "toggle";
+				@include toggle.toggle();
 			}
 		}
 
@@ -147,14 +151,14 @@
 	}
 
 	/** set placement **/
-	@import "placement";
+	@include placement.placement();
 
 	/** set hamburger **/
-	@import "hamburger";
+	@include hamburger.hamburger();
 
 	&:not(.vg-nav-expand) {
-		@each $breakpoint in map-keys($grid-breakpoints) {
-			@include media-breakpoint-down($breakpoint, $grid-breakpoints) {
+		@each $breakpoint in map.keys(vars.$grid-breakpoints) {
+			@include breakpoints.media-breakpoint-down($breakpoint, vars.$grid-breakpoints) {
 				&.vg-nav-#{$breakpoint} {
 					.vg-nav-hamburger {
 						display: flex;

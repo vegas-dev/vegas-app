@@ -1,29 +1,45 @@
-// -- Backgrounds
-$bg-color:           #fff !default;
-$bg-color-active:    #c7dcf6 !default;
+@use "sass:map";
+@use "functions" as fn;
+@use "tokens";
+
+// Semantic base values for Sass consumers. Runtime theme-aware components
+// should use the matching --vg-* custom properties.
+$body-bg:            tokens.theme-token(tokens.$theme-light, body-bg) !default;
+$surface-bg:         tokens.theme-token(tokens.$theme-light, surface-bg) !default;
+$surface-raised-bg:  tokens.theme-token(tokens.$theme-light, surface-raised-bg) !default;
+$surface-muted-bg:   tokens.theme-token(tokens.$theme-light, surface-muted-bg) !default;
+$surface-hover-bg:   tokens.theme-token(tokens.$theme-light, surface-hover-bg) !default;
+$surface-active-bg:  tokens.theme-token(tokens.$theme-light, surface-active-bg) !default;
+
+// Legacy aliases. Keep these until every component has moved to semantic tokens.
+$bg-color:           $surface-bg !default;
+$bg-color-active:    $surface-active-bg !default;
 
 // -- Colors
-$color:              #000000 !default;
-$color-emphasis:     #3c3c3c !default;
-$color-active:       #0065ff !default;
-$color-disabled:     rgba(#000000, .5) !default;
+$color:              tokens.theme-token(tokens.$theme-light, text-color) !default;
+$color-emphasis:     tokens.theme-token(tokens.$theme-light, text-emphasis-color) !default;
+$color-muted:        tokens.theme-token(tokens.$theme-light, text-muted-color) !default;
+$color-active:       tokens.theme-token(tokens.$theme-light, primary-color) !default;
+$color-disabled:     tokens.theme-token(tokens.$theme-light, text-disabled-color) !default;
+$color-inverse:      tokens.theme-token(tokens.$theme-light, text-inverse-color) !default;
 
 // -- Shadows
-$box-shadow:         0 8px 14px 5px rgba(0, 0, 0, 0.2) !default;
+$box-shadow:         tokens.theme-token(tokens.$theme-light, box-shadow) !default;
 
 // -- Borders
-$border-color:          rgba(0, 0, 0, .2) !default;
-$border-color-active:   rgba(#0065ff, 1) !default;
-$border-color-disabled: rgba(0, 0, 0, .1) !default;
+$border-color:          tokens.theme-token(tokens.$theme-light, border-color) !default;
+$border-color-strong:   tokens.theme-token(tokens.$theme-light, border-strong-color) !default;
+$border-color-active:   tokens.theme-token(tokens.$theme-light, primary-color) !default;
+$border-color-disabled: tokens.theme-token(tokens.$theme-light, border-disabled-color) !default;
 $border-radius:         .375rem !default;
 $border-width:          1px !default;
-$border-style:          solid;
+$border-style:          solid !default;
 
 // -- Transitions
 $transition-base:    all .5s ease-in-out !default;
 
 // -- Backdrop
-$backdrop-bg:        rgba(0, 0, 0, 1) !default;
+$backdrop-bg:        tokens.theme-token(tokens.$theme-light, backdrop-color) !default;
 $backdrop-opacity:   .4 !default;
 
 // Z-indexes
@@ -54,66 +70,78 @@ $loader-map: (
 );
 
 // Colors Status
-$danger:        #FF2A2C !default;
-$danger-border: #FFCCC7 !default;
-$danger-text:   #DF0306 !default;
-$danger-bg:     #FFF2F0 !default;
+$danger:        tokens.theme-token(tokens.$theme-light, danger-color) !default;
+$danger-border: tokens.theme-token(tokens.$theme-light, danger-border-color) !default;
+$danger-text:   tokens.theme-token(tokens.$theme-light, danger-text-color) !default;
+$danger-bg:     tokens.theme-token(tokens.$theme-light, danger-bg) !default;
 
-$success: #4FD90B;
-$success-border: #BAF98A !default;
-$success-text:   #40BE02 !default;
-$success-bg:     #F6FFED !default;
+$success:        tokens.theme-token(tokens.$theme-light, success-color) !default;
+$success-border: tokens.theme-token(tokens.$theme-light, success-border-color) !default;
+$success-text:   tokens.theme-token(tokens.$theme-light, success-text-color) !default;
+$success-bg:     tokens.theme-token(tokens.$theme-light, success-bg) !default;
 
-$warning: #FFC107;
-$warning-border: #FFDE79 !default;
-$warning-text:   #FFC107 !default;
-$warning-bg:     #FFF6DA !default;
+$warning:        tokens.theme-token(tokens.$theme-light, warning-color) !default;
+$warning-border: tokens.theme-token(tokens.$theme-light, warning-border-color) !default;
+$warning-text:   tokens.theme-token(tokens.$theme-light, warning-text-color) !default;
+$warning-bg:     tokens.theme-token(tokens.$theme-light, warning-bg) !default;
 
-$info: #1F8BFF;
-$info-border: #F0FAFF !default;
-$info-text:   #0471E5 !default;
-$info-bg:     #ADDDFF !default;
+$info:        tokens.theme-token(tokens.$theme-light, info-color) !default;
+$info-border: tokens.theme-token(tokens.$theme-light, info-border-color) !default;
+$info-text:   tokens.theme-token(tokens.$theme-light, info-text-color) !default;
+$info-bg:     tokens.theme-token(tokens.$theme-light, info-bg) !default;
 
 $dark: #232323;
-$dark-border: shade-color($dark, 60%) !default;
-$dark-text:   tint-color($dark, 60%) !default;
-$dark-bg:     shade-color($dark, 80%) !default;
+$dark-border: fn.shade-color($dark, 60%) !default;
+$dark-text:   fn.tint-color($dark, 60%) !default;
+$dark-bg:     fn.shade-color($dark, 80%) !default;
 
 $success-map: (
-		icon: $success,
-		color: $success-text,
-		border-color: $success-border,
-		background-color: $success-bg,
-		close: shade-color($success-text, 80%)
+		icon: var(--vg-success-color, #{$success}),
+		color: var(--vg-success-text-color, #{$success-text}),
+		border-color: var(--vg-success-border-color, #{$success-border}),
+		background-color: var(--vg-success-bg, #{$success-bg}),
+		close: var(--vg-success-close-color, #{fn.shade-color($success-text, 80%)})
 );
 
 $danger-map: (
-		icon: $danger,
-		color: $danger-text,
-		border-color: $danger-border,
-		background-color: $danger-bg,
-		close: shade-color($danger-text, 80%)
+		icon: var(--vg-danger-color, #{$danger}),
+		color: var(--vg-danger-text-color, #{$danger-text}),
+		border-color: var(--vg-danger-border-color, #{$danger-border}),
+		background-color: var(--vg-danger-bg, #{$danger-bg}),
+		close: var(--vg-danger-close-color, #{fn.shade-color($danger-text, 80%)})
 );
 
 $warning-map: (
-		icon: $warning,
-		color: $warning-text,
-		border-color: $warning-border,
-		background-color: $warning-bg,
-		close: shade-color($warning-text, 80%)
+		icon: var(--vg-warning-color, #{$warning}),
+		color: var(--vg-warning-text-color, #{$warning-text}),
+		border-color: var(--vg-warning-border-color, #{$warning-border}),
+		background-color: var(--vg-warning-bg, #{$warning-bg}),
+		close: var(--vg-warning-close-color, #{fn.shade-color($warning-text, 80%)})
 );
 
 $info-map: (
-		icon: $info,
-		color: $info-text,
-		border-color: $info-border,
-		background-color: $info-bg,
-		close: shade-color($info-text, 80%)
+		icon: var(--vg-info-color, #{$info}),
+		color: var(--vg-info-text-color, #{$info-text}),
+		border-color: var(--vg-info-border-color, #{$info-border}),
+		background-color: var(--vg-info-bg, #{$info-bg}),
+		close: var(--vg-info-close-color, #{fn.shade-color($info-text, 80%)})
 );
 
 $dark-map: (
 		color: $dark-text,
 		border-color: $dark-border,
 		background-color: $dark-bg,
-		close: shade-color($dark-text, 80%)
+		close: fn.shade-color($dark-text, 80%)
 );
+
+$alert-colors: (
+	success: $success-map,
+	info: $info-map,
+	warning: $warning-map,
+	danger: $danger-map,
+	dark: $dark-map,
+) !default;
+
+@function get-alert-color($type) {
+	@return map.get($alert-colors, $type);
+}

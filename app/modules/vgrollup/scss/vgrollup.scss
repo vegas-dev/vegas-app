@@ -6,17 +6,16 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 .vg-rollup {
-	@include mix-vars('rollup', $rollup-map);
+	@include vg.mix-vars('rollup', vars.$rollup-map);
 	transform: var(--vg-rollup-transition);
 
 	&-button {
-		@include mix-vars('rollup-button', $rollup-button-map);
+		@include vg.mix-vars('rollup-button', vars.$rollup-button-map);
 		text-align: var(--vg-rollup-button-align);
 	}
 

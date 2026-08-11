@@ -1,5 +1,7 @@
+@use "../../../utils/scss" as vg;
+
 $collapse-accordion-map: (
-		border: 1px solid $border-color,
-		border-radius: $border-radius,
+		border: vg.$border-width vg.$border-style var(--vg-border-color, #{vg.$border-color}),
+		border-radius: vg.$border-radius,
 		padding: 1rem
-);
+) !default;

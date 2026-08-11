@@ -1,9 +1,11 @@
+@use "../../../utils/scss" as vg;
+
 $select-current-map: (
-		background-color: white,
-		color: black,
-		border-width: 1px,
-		border-style: solid,
-		border-color: #dddddd,
+		background-color: var(--vg-control-bg, #ffffff),
+		color: var(--vg-text-color, #{vg.$color}),
+		border-width: vg.$border-width,
+		border-style: vg.$border-style,
+		border-color: var(--vg-control-border-color, #dddddd),
 		border-radius: 5px,
 		padding-left: 16px,
 		padding-right: 40px,
@@ -15,68 +17,68 @@ $select-current-map: (
 ) !default;
 
 $select-placeholder-map: (
-		placehoder-color: rgba(0, 0, 0, .32),
+		placehoder-color: var(--vg-text-placeholder-color, rgba(0, 0, 0, .32)),
 		placehoder-font-size: 16px,
-);
+) !default;
 
 $select-current-svg: '<svg aria-hidden="true" focusable="false" data-prefix="fa-light" data-icon="chevron-down" class="svg-inline--fa fa-chevron-down fa-w-14" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M4 181C7 178 12 176 16 176C20 176 24 177 27 180L224 362L421 180C428 174 438 175 444 181C450 188 449 198 443 204L235 396C229 401 219 401 213 396L5 204C-1 198 -2 188 4 181Z" fill="gray"/></svg>' !default;
 
 $select-dropdown-map: (
-		background-color: white,
-		color: black,
-		border-width: 1px,
-		border-style: solid,
-		border-color: #dddddd,
-		border-radius: $border-radius,
-		box-shadow: 0 7px 12px 1px rgba(68, 68, 68, 0.11),
+		background-color: var(--vg-control-bg, #ffffff),
+		color: var(--vg-text-color, #{vg.$color}),
+		border-width: vg.$border-width,
+		border-style: vg.$border-style,
+		border-color: var(--vg-control-border-color, #dddddd),
+		border-radius: vg.$border-radius,
+		box-shadow: 0 7px 12px 1px var(--vg-shadow-soft-color, rgba(68, 68, 68, .11)),
 		z-index: 15,
 ) !default;
 
 $select-list-map: (
 		background-color: transparent,
-		color: black,
+		color: var(--vg-text-color, #{vg.$color}),
 		padding-left: 8px,
 		padding-right: 8px,
 		padding-top: 8px,
 		padding-bottom: 8px,
-		border-bottom-width: 1px,
-		border-bottom-style: solid,
-		border-bottom-color: #f5f5f5,
+		border-bottom-width: vg.$border-width,
+		border-bottom-style: vg.$border-style,
+		border-bottom-color: var(--vg-border-disabled-color, #f5f5f5),
 ) !default;
 
 $select-optgroup-map: (
 		background-color: transparent,
-		color: #000,
+		color: var(--vg-text-color, #{vg.$color}),
 		padding-left: 8px,
 		padding-right: 8px,
 		padding-top: 8px,
 		padding-bottom: 8px,
-		border-bottom-width: 1px,
-		border-bottom-style: solid,
-		border-bottom-color: #838383,
+		border-bottom-width: vg.$border-width,
+		border-bottom-style: vg.$border-style,
+		border-bottom-color: var(--vg-border-strong-color, #838383),
 		font-weight: 500,
 ) !default;
 
 $select-list-max-height: 286px !default;
 $select-list-scrollbar-width: 6px !default;
-$select-list-scrollbar-bg: #F5F5F5 !default;
-$select-list-scrollbar-thumb: #999 !default;
+$select-list-scrollbar-bg: var(--vg-surface-muted-bg, #f5f5f5) !default;
+$select-list-scrollbar-thumb: var(--vg-text-muted-color, #999999) !default;
 
 $select-list-hover-map: (
-		background-color: #f7f7f7,
-		color: black,
-		border-bottom-color: #f5f5f5,
+		background-color: var(--vg-surface-hover-bg, #f7f7f7),
+		color: var(--vg-text-color, #{vg.$color}),
+		border-bottom-color: var(--vg-border-disabled-color, #f5f5f5),
 ) !default;
 
 $select-optgroup-hover-map: (
-		background-color: #f7f7f7,
-		color: black,
-		border-bottom-color: #f5f5f5,
+		background-color: var(--vg-surface-hover-bg, #f7f7f7),
+		color: var(--vg-text-color, #{vg.$color}),
+		border-bottom-color: var(--vg-border-disabled-color, #f5f5f5),
 ) !default;
 
 $select-search-map: (
-		background-color: #f2f2f2,
-		color: #000000
+		background-color: var(--vg-control-muted-bg, #f2f2f2),
+		color: var(--vg-text-color, #{vg.$color})
 ) !default;
 
 $select-tags-map: (
@@ -88,13 +90,13 @@ $select-tags-map: (
 
 $select-tag-map: (
 		gap: 4px,
-		background: #0d6efd,
-		color: white,
+		background: var(--vg-primary-color, #0d6efd),
+		color: var(--vg-primary-contrast-color, #ffffff),
 		padding: 2px 6px,
 		border-radius: 4px,
 		font-size: 14px,
 		remove-width: 12px,
 		remove-height: 12px,
-		remove-stroke: white,
+		remove-stroke: var(--vg-primary-contrast-color, #ffffff),
 		remove-stroke-width: 2
 ) !default;

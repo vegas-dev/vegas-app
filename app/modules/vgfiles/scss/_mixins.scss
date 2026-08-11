@@ -36,7 +36,7 @@
 	}
 
 	&.loading {
-		--vg-button-color: var(--vg-body-color);
+		--vg-button-color: var(--vg-text-color, var(--vg-body-color));
 
 		> *:not(.file-remove) {
 			opacity: .52;
@@ -56,11 +56,11 @@
 	}
 
 	&.completed {
-		--vg-button-color: var(--vg-success);
+		--vg-button-color: var(--vg-success-color, var(--vg-success));
 	}
 
 	&.failing {
-		--vg-button-color: var(--vg-danger);
+		--vg-button-color: var(--vg-danger-color, var(--vg-danger));
 
 		> * {
 			opacity: .62;

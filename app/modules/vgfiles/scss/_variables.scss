@@ -1,8 +1,10 @@
+@use "../../../utils/scss" as vg;
+
 $files-map: (
 	// label (уже используется в vgfiles.scss)
-	label-bg: #242424,
-	label-color: #ffffff,
-	label-border-color: #343434,
+	label-bg: var(--vg-surface-inverse-bg, #242424),
+	label-color: var(--vg-text-inverse-color, #ffffff),
+	label-border-color: var(--vg-border-strong-color, #343434),
 	label-border-radius: 4px,
 	label-padding: 8px 24px,
 	label-padding-icon: 8px 16px,
@@ -12,21 +14,21 @@ $files-map: (
 	errors-font-size: 16px,
 
 	// drop zone
-	drop-bg: var(--vg-secondary-bg),
+	drop-bg: var(--vg-secondary-bg, #{vg.$surface-muted-bg}),
 	drop-border-width: 2px,
 	drop-border-style: dashed,
-	drop-border-color: var(--vg-secondary),
+	drop-border-color: var(--vg-secondary-color, var(--vg-secondary, #{vg.$color-muted})),
 	drop-radius: 8px,
 	drop-height: 250px,
 	drop-transition: all 0.2s ease,
 
 	drop-after-font-size: 14px,
-	drop-after-color: #007bff,
+	drop-after-color: var(--vg-primary-color, #007bff),
 	drop-after-bottom: 10px,
 
-	drop-hover-border-color: #007bff,
-	drop-hover-bg: #e3f2fd,
-	drop-hover-shadow: 0 0 10px rgba(0, 123, 255, 0.2),
+	drop-hover-border-color: var(--vg-primary-color, #007bff),
+	drop-hover-bg: var(--vg-primary-subtle-bg, #e3f2fd),
+	drop-hover-shadow: 0 0 10px var(--vg-primary-outline-color, rgba(0, 123, 255, .2)),
 
 	drop-stripes-alpha: 0.03,
 	drop-stripes-size: 30px 30px,
@@ -36,9 +38,9 @@ $files-map: (
 	drop-message-gap: 8px,
 	drop-message-font-size: 14px,
 	drop-message-line-height: 22px,
-	drop-message-color: #999999,
+	drop-message-color: var(--vg-text-muted-color, #999999),
 	drop-message-icon-size: 48px,
-	drop-message-icon-color: #999999,
+	drop-message-icon-color: var(--vg-text-muted-color, #999999),
 	drop-message-padding: 1rem,
 	drop-message-margin: 0 0 1rem,
 
@@ -52,13 +54,13 @@ $files-map: (
 	drop-remove-offset: 10px,
 	drop-remove-size: 36px,
 	drop-remove-radius: 3px,
-	drop-remove-hover-bg: rgba(var(--vg-body-bg-rgb), .4),
+	drop-remove-hover-bg: rgb(var(--vg-body-bg-rgb, 255 255 255) / .4),
 
 	// stat
 	stat-padding: 12px 8px,
 	stat-gap: 1rem,
 	stat-mb: 1rem,
-	stat-border-color: var(--vg-secondary-bg),
+	stat-border-color: var(--vg-secondary-bg, #{vg.$surface-muted-bg}),
 	stat-title-fw: 600,
 	stat-count-font-size: 14px,
 	stat-count-ms: 6px,
@@ -66,16 +68,16 @@ $files-map: (
 
 	// info
 	info-mt: 1rem,
-	info-border-color: var(--vg-secondary-bg),
+	info-border-color: var(--vg-secondary-bg, #{vg.$surface-muted-bg}),
 	info-radius: 4px,
 	info-list-max-height: 360px,
 
 	info-gap: 8px,
 	info-padding: 8px,
-	info-border-bottom-color: var(--vg-secondary-bg),
-	info-hover-bg: rgba(var(--vg-secondary-bg-rgb), .4),
-	info-audio-progress-track: rgba(var(--vg-secondary-bg-rgb), .3),
-	info-audio-progress-fill: #000,
+	info-border-bottom-color: var(--vg-secondary-bg, #{vg.$surface-muted-bg}),
+	info-hover-bg: rgb(var(--vg-secondary-bg-rgb, 245 245 245) / .4),
+	info-audio-progress-track: rgb(var(--vg-secondary-bg-rgb, 245 245 245) / .3),
+	info-audio-progress-fill: var(--vg-text-color, #{vg.$color}),
 	info-audio-progress-opacity: .33,
 	info-audio-row-min-height: 64px,
 	info-audio-image-size: 48px,
@@ -94,22 +96,22 @@ $files-map: (
 
 	// legacy (оставлено для совместимости со старым API темы)
 	info-mb: 10px,
-	info-title-color: darkgreen,
+	info-title-color: var(--vg-success-text-color, darkgreen),
 	info-count-fw: 400,
 	info-count-fs: 14px,
-	info-count-color: #999999,
+	info-count-color: var(--vg-text-muted-color, #999999),
 	info-dismiss-fs: 14px,
 	info-dismiss-ms: 10px,
 	info-image-width: 100px,
 	info-image-me: 15px,
 	info-image-mb: 15px,
 	info-image-padding: 5px,
-	info-image-border: 1px solid #e0e0e0,
+	info-image-border: vg.$border-width vg.$border-style var(--vg-control-border-color, #e0e0e0),
 	info-list-fs: 15px,
 	info-list-mt: 7px,
 	info-list-span-fs: 12px,
-	info-list-span-color: #999999,
+	info-list-span-color: var(--vg-text-muted-color, #999999),
 	info-list-span-me: 6px,
 	info-list-button-fs: 12px,
-	info-list-button-color: #999999,
-);
+	info-list-button-color: var(--vg-text-muted-color, #999999),
+) !default;

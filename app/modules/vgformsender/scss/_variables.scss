@@ -1,3 +1,5 @@
+@use "../../../utils/scss" as vg;
+
 $form-sender-map: (
-		'eye-color': $color
-);
+		'eye-color': var(--vg-text-color, #{vg.$color})
+) !default;

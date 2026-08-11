@@ -1,3 +1,4 @@
+@mixin hamburger() {
 .vg-nav-hamburger {
 	display: none;
 	align-items: flex-start;
@@ -59,4 +60,6 @@
 			}
 		}
 	}
+}
+
 }

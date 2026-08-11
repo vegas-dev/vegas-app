@@ -1,5 +1,9 @@
+@use "sass:color";
+@use "sass:map";
+@use "sass:meta";
+
 @function is-map($var){
-	@return type-of($var) == 'map';
+	@return meta.type-of($var) == 'map';
 }
 
 // Merge multiple maps
@@ -7,38 +11,16 @@
 	$merged-maps: ();
 
 	@each $map in $maps {
-		$merged-maps: map-merge($merged-maps, $map);
+		$merged-maps: map.merge($merged-maps, $map);
 	}
 	@return $merged-maps;
 }
 
 // mix colors
 @function shade-color($color, $weight) {
-	@return mix(black, $color, $weight);
+	@return color.mix(black, $color, $weight);
 }
 
 @function tint-color($color, $weight) {
-	@return mix(white, $color, $weight);
-}
-
-@function get-alert-color($type) {
-	@if $type == success {
-		@return $success-map;
-	}
-
-	@if $type == danger {
-		@return $danger-map;
-	}
-
-	@if $type == warning {
-		@return $warning-map;
-	}
-
-	@if $type == info {
-		@return $info-map;
-	}
-
-	@if $type == dark {
-		@return $dark-map;
-	}
+	@return color.mix(white, $color, $weight);
 }

@@ -1,3 +1,4 @@
+@mixin sortable() {
 &.table-sortable {
 	&[data-sort-hide-unsorted-arrows="1"] {
 		th[data-sortable="1"]:not([data-sort-direction]) {
@@ -59,5 +60,7 @@
 			box-shadow: 0 1px 0 var(--vg-dynamic-table-cell-border-color);
 		}
 	}
+}
+
 }
 

@@ -1,8 +1,15 @@
+@use "../../../utils/scss" as vg;
+
 $rollup-map: (
-		transition: $transition-base,
+		transition: vg.$transition-base,
 		fade-height: 100px,
-		fade-background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)
-);
+		fade-background: linear-gradient(
+			180deg,
+			var(--vg-surface-transparent, rgba(255, 255, 255, 0)) 0%,
+			var(--vg-surface-bg, #{vg.$surface-bg}) 100%
+		)
+) !default;
+
 $rollup-button-map: (
 		align: center
-);
+) !default;

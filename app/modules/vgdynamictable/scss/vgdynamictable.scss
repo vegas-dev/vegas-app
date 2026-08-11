@@ -6,13 +6,17 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "actions";
+@use "pagination";
+@use "skeleton";
+@use "sortable";
+@use "table" as table-styles;
+@use "variables" as vars;
 
 .vg-dynamic-table {
-	@include mix-vars('dynamic-table', $dynamic-table-map);
+	@include vg.mix-vars('dynamic-table', vars.$dynamic-table-map);
 	background: var(--vg-dynamic-table-wrap-background);
 	border-radius: var(--vg-dynamic-table-wrap-border-radius);
 	box-shadow: var(--vg-dynamic-table-wrap-box-shadow);
@@ -56,11 +60,11 @@
 		}
 	}
 
-	@import "pagination";
-	@import "sortable";
-	@import "table";
-	@import "skeleton";
-	@import "actions";
+	@include pagination.pagination();
+	@include sortable.sortable();
+	@include table-styles.table();
+	@include skeleton.skeleton();
+	@include actions.actions();
 
 	&.table-striped {
 		tbody {

@@ -1,25 +1,27 @@
+@use "../../../utils/scss" as vg;
+
 $modal-sm: 300px !default;
 $modal-md: 500px !default;
 $modal-lg: 800px !default;
 $modal-xl: 1140px !default;
 
 $modal-dialog-margin-y-sm-up: 1.75rem !default;
-$modal-content-box-shadow-sm-up: $box-shadow !default;
+$modal-content-box-shadow-sm-up: var(--vg-box-shadow, #{vg.$box-shadow}) !default;
 
 $modal-map: (
-		z-index: $modal-index,
+		z-index: vg.$modal-index,
 		margin: .5rem,
 		padding: 1rem,
 		width: $modal-md,
-		color: $color,
-		background-color: $bg-color,
-		border-width: $border-width,
+		color: var(--vg-text-color, #{vg.$color}),
+		background-color: var(--vg-surface-bg, #{vg.$surface-bg}),
+		border-width: vg.$border-width,
 		border-color: transparent,
-		border-style: $border-style,
-		border-radius: $border-radius,
-		box-shadow: $box-shadow,
-		transition: $transition-base,
+		border-style: vg.$border-style,
+		border-radius: vg.$border-radius,
+		box-shadow: var(--vg-box-shadow, #{vg.$box-shadow}),
+		transition: vg.$transition-base,
 		fade-transform:  translate(0, -50px),
 		show-transform:  none,
 		scale-transform: scale(1.02),
-);
+) !default;

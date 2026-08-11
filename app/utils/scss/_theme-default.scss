@@ -1,0 +1,12 @@
+@use "theme";
+
+// Default adapter for the ready-made VGApp stylesheet. Projects that own
+// their theme selector can use vgapp/theme and emit the same variables there.
+:root,
+[data-vg-theme="light"] {
+	@include theme.theme-variables(theme.$theme-light);
+}
+
+[data-vg-theme="dark"] {
+	@include theme.theme-variables(theme.$theme-dark);
+}

@@ -6,14 +6,13 @@
 *--------------------------------------------------------------------------
 **/
 
-@import "../../../utils/scss/functions";
-@import "../../../utils/scss/mixin";
-@import "../../../utils/scss/variables";
-@import "variables";
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
 
 
 .vg-accordion {
-	@include mix-vars('accordion', $collapse-accordion-map);
+	@include vg.mix-vars('accordion', vars.$collapse-accordion-map);
 	position: relative;
 	border: var(--vg-accordion-border);
 	border-radius: var(--vg-accordion-border-radius);
