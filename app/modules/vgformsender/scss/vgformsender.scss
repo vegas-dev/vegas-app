@@ -22,7 +22,7 @@
 	&--content {
 		position: relative;
 
-		&-pass {
+		&-pass-focus-offset {
 			&:focus-within {
 				input {
 					padding-right: 5rem;
@@ -56,7 +56,7 @@
 			right: 34px;
 		}
 
-		.vg-form-sender--content-pass {
+		.vg-form-sender--content-pass-focus-offset {
 			&:focus-within {
 				input {
 					padding-right: 6.25rem;

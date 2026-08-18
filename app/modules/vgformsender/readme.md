@@ -78,7 +78,7 @@ VGFormSender.init(document.getElementById('contactForm'), {
 | `response.enabled`        | `boolean`               | `false`                            | Нативная обработка ответа (без AJAX)                                 |
 | `submit`                  | `boolean`               | `false`                            | Отправлять нативно (без AJAX)                                        |
 | `fields`                  | `Array`                 | `[]`                               | Доп. данные для отправки                                             |
-| `pass.enabled`            | `boolean`               | `true`                             | Показывать иконку глаза у паролей                                    |
+| `pass.focus`              | `boolean`               | `false`                            | Увеличивать правый отступ поля и сдвигать иконку глаза при фокусе     |
 | `alert.enabled`           | `boolean`               | `true`                             | Показывать уведомления                                               |
 | `alert.type`              | `'modal' \| 'collapse'` | `'modal'`                          | Тип уведомления                                                      |
 | `alert.errors`            | `boolean`               | `true`                             | Показывать детали ошибок                                             |

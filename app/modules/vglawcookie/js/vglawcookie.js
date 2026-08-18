@@ -23,7 +23,6 @@ const SELECTOR_DATA_TOGGLE_CLEAR = '[data-vg-toggle="lawcookie-clear"]';
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
 class VGLawCookie extends BaseModule {
-	// Убрано статическое sParams — избыточно и небезопасно
 
 	constructor(element, params = {}) {
 		super(element, params);
@@ -147,11 +146,13 @@ class VGLawCookie extends BaseModule {
 	}
 
 	/**
-	 * Полный сброс согласия
+	 * Сбрасывает согласие, не затрагивая остальные данные хранилища
 	 */
 	static reset() {
-		Cookies.remove(VGLawCookie.getDefaultParams().cookie.name);
-		localStorage.clear();
+		const { name } = VGLawCookie.getDefaultParams().cookie;
+
+		Cookies.remove(name);
+		localStorage.removeItem(name);
 		location.reload();
 	}
 
@@ -165,8 +166,10 @@ class VGLawCookie extends BaseModule {
 	}
 
 	dispose() {
-		Cookies.remove(VGLawCookie.getDefaultParams().cookie.name);
-		localStorage.clear();
+		const { name } = this._params.cookie;
+
+		Cookies.remove(name);
+		localStorage.removeItem(name);
 		super.dispose();
 	}
 
@@ -213,7 +216,7 @@ EventHandler.on(document, EVENT_KEY_CLICK_DATA_API, SELECTOR_DATA_TOGGLE_CLEAR, 
 
 	const instance = VGLawCookie.getOrCreateInstance(element);
 	instance.dispose();
-	VGLawCookie.reset(); // Полный сброс
+	VGLawCookie.reset(); // Сброс согласия
 });
 
 export default VGLawCookie;

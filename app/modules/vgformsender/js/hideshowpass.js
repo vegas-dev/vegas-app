@@ -13,6 +13,7 @@ const NAME_KEY = 'vg.hideshowpass';
 const SELECTOR_DATA_TOGGLE= '[data-vg-toggle="pass"]';
 
 const CLASS_NAME_SHOW = 'show';
+const CLASS_NAME_FOCUS_OFFSET = 'vg-form-sender--content-pass-focus-offset';
 
 const EVENT_KEY_CLICK_DATA_API = `click.${NAME_KEY}.data.api`;
 
@@ -67,6 +68,10 @@ class VGHideShowPass extends BaseModule{
 		const HTML = Html('string');
 		if (this._element.parentElement && this._params.parentClass) {
 			this._element.parentElement.classList.add(this._params.parentClass);
+			this._element.parentElement.classList.toggle(
+				CLASS_NAME_FOCUS_OFFSET,
+				this._params.focus === true
+			);
 		}
 
 		if (!isShow) {

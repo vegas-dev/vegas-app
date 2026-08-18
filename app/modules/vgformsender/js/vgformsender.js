@@ -129,7 +129,7 @@ class VGFormSender extends BaseModule {
 			fields: [],
 			timeout: 50,
 			pass: {
-				enabled: true,
+				focus: false,
 				template: 'pass-open',
 				classes: ['vg-form-sender--hide-show-pass'],
 				insert: 'afterend'
@@ -270,11 +270,9 @@ class VGFormSender extends BaseModule {
 			this._element.classList.add(this._params.classes.validation);
 		}
 
-		if (this._params.pass.enabled) {
-			[... Selectors.findAll('input[type="password"]', this._element)].forEach((el) => {
-				VGHideShowPass.init(el, this._params.pass);
-			})
-		}
+		[... Selectors.findAll('input[type="password"]', this._element)].forEach((el) => {
+			VGHideShowPass.init(el, this._params.pass);
+		})
 
 		execute(this._params.callback.afterInit, [this._element, this]);
 
