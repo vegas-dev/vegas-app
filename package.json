@@ -1,6 +1,6 @@
 {
 	"name": "vgapp",
-	"version": "1.4.7",
+	"version": "1.4.8",
 	"main": "./build/vgapp.js",
 	"module": "./index.js",
 	"style": "./build/vgapp.css",
@@ -103,7 +103,7 @@
 	"scripts": {
 		"dev": "webpack --mode development",
 		"prod": "webpack --mode production",
-		"test": "node --test tests/vgtooltip.test.cjs"
+		"test": "node --test tests/*.test.cjs"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.25.2",

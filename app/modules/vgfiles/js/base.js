@@ -145,9 +145,6 @@ class VGFilesBase extends BaseModule {
 			this.append(filesArray, true);
 			this._revokeUrls();
 			this._cleanupFakeInputs();
-			this._cleanupErrors();
-
-			this._files = this._filterFiles(filesArray);
 			if (this._params.prepend) this._files.reverse();
 
 			this.build();
