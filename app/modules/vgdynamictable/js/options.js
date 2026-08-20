@@ -361,7 +361,7 @@ const DEFAULT_OPTIONS = {
 		minDelay: 500,
 		// Количество skeleton-строк.
 		// data-атрибуты: data-loading-skeleton | data-loading-skeleton-rows
-		skeleton: 10,
+		skeleton: 5,
 	},
 
 	summary: {

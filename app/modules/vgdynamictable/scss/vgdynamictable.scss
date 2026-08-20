@@ -195,8 +195,6 @@
 			z-index: 4;
 			overflow: hidden;
 			margin-bottom: 0;
-			border-top-left-radius: var(--vg-dynamic-table-wrap-border-radius);
-			border-top-right-radius: var(--vg-dynamic-table-wrap-border-radius);
 			background: var(--vg-dynamic-table-header-background);
 			box-shadow: 0 1px 0 var(--vg-dynamic-table-cell-border-color);
 		}
@@ -249,14 +247,6 @@
 		.vgdt-sticky-clone th[data-fixed-edge="left"][data-fixed-shadow="1"]::before {
 			left: calc(-1 * var(--vg-dynamic-table-fixed-shadow-width));
 			background: linear-gradient(to left, var(--vg-dynamic-table-fixed-shadow-color), transparent);
-		}
-
-		.vgdt-sticky-clone thead tr:first-child th:first-child {
-			border-top-left-radius: var(--vg-dynamic-table-wrap-border-radius);
-		}
-
-		.vgdt-sticky-clone thead tr:first-child th:last-child {
-			border-top-right-radius: var(--vg-dynamic-table-wrap-border-radius);
 		}
 
 		.vgdt-table-viewport.table-sticky-scroll {

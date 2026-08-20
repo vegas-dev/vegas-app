@@ -62,9 +62,17 @@ const skeletonMethods = {
     },
 
     _getSkeletonRowsCount() {
-        const fromPerPageControl = this._getPerPageControlValue();
-        if (Number.isFinite(fromPerPageControl) && fromPerPageControl > 0) {
-            return fromPerPageControl;
+        const renderedRows = this._getRenderedDataRows();
+        if (renderedRows.length > 0) {
+            return renderedRows.length;
+        }
+
+        const body = this._getBody();
+        const currentSkeletonRows = Array.from(body.rows || []).filter((row) => {
+            return row && row.classList.contains('skeleton-row');
+        });
+        if (currentSkeletonRows.length > 0) {
+            return currentSkeletonRows.length;
         }
 
         const loadingOptions = this._params.loading || {};
@@ -73,9 +81,9 @@ const skeletonMethods = {
             return explicit;
         }
 
-        const renderedRows = this._getRenderedDataRows();
-        if (renderedRows.length > 0) {
-            return renderedRows.length;
+        const fromPerPageControl = this._getPerPageControlValue();
+        if (Number.isFinite(fromPerPageControl) && fromPerPageControl > 0) {
+            return fromPerPageControl;
         }
 
         const fromState = Number.parseInt(this._pageState && this._pageState.perPage, 10);
@@ -89,7 +97,7 @@ const skeletonMethods = {
             return fromParams;
         }
 
-        return 10;
+        return 5;
     },
 
     _getPerPageControlValue() {

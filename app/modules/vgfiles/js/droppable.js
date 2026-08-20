@@ -6,6 +6,7 @@ import BaseModule from "../../base-module";
 
 const CLASS_NAME_CONTAINER = 'vg-files';
 const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
+const CLASS_NAME_DROP_LIST = `${CLASS_NAME_DROP}--list`;
 
 const CLASS_NAME_DROP_ACTIVE = 'drop-active';
 const CLASS_NAME_DROP_HOVER = 'drop-hover';
@@ -70,6 +71,15 @@ class VGFilesDroppable extends BaseModule {
             try { plain = e.dataTransfer?.getData?.('text/plain') || ''; } catch (_) {}
             return plain === 'vgsortable';
         };
+
+        EventHandler.on(this._element, `click.${NAME_KEY}`, (e) => {
+            if (this._element.tagName !== 'LABEL') return;
+
+            const fileList = e.target?.closest?.(`.${CLASS_NAME_DROP_LIST}`);
+            if (fileList && this._element.contains(fileList)) {
+                e.preventDefault();
+            }
+        });
 
         EventHandler.on(this._element, 'dragover', (e) => {
             e.preventDefault();
@@ -325,6 +335,7 @@ class VGFilesDroppable extends BaseModule {
     }
 
     dispose() {
+        EventHandler.off(this._element, `click.${NAME_KEY}`);
         EventHandler.off(this._element, 'dragover');
         EventHandler.off(this._element, 'dragenter');
         EventHandler.off(this._element, 'dragleave');
