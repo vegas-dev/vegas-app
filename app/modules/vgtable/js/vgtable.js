@@ -30,7 +30,7 @@ class VGTable extends BaseModule {
 	static get NAME_KEY() { return NAME_KEY; }
 
 	init() {
-		console.log('asdasdasd')
+
 	}
 }
 

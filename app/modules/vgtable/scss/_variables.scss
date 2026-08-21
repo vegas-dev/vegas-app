@@ -2,4 +2,6 @@
 
 $table-map-prop: ();
 $table-map-sizing: ();
-$table-map-colors: ();
+$table-map-colors: (
+	thead-bg: vg.theme-token(vg.$theme-light, table-thead-bg)
+);

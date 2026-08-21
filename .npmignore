@@ -3,3 +3,5 @@
 /node_modules
 .osp
 PLAN.md
+/.agents
+.codex-build-check

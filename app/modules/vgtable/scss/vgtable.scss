@@ -10,9 +10,22 @@
 @use "../../../utils/scss" as vg;
 @use "variables" as vars;
 
-.vg-table {
+.vg-table-wrapper {
 	@include vg.mix-vars('table', vars.$table-map-prop);
 	@include vg.mix-vars('table', vars.$table-map-sizing);
 	@include vg.mix-vars('table', vars.$table-map-colors);
 	position: relative;
+	
+	.vg-table {
+		border: none;
+		width: 100%;
+		
+		thead {
+			> tr > th {
+				background-color: var(--vg-table-thead-bg);
+				padding: 1rem;
+				text-align: left;
+			}
+		}
+	}
 }
