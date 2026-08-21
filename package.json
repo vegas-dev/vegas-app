@@ -28,9 +28,6 @@
 		"./dropdown": {
 			"sass": "./app/modules/vgdropdown/scss/vgdropdown.scss"
 		},
-		"./dynamictable": {
-			"sass": "./app/modules/vgdynamictable/scss/vgdynamictable.scss"
-		},
 		"./filepreview": {
 			"sass": "./app/modules/vgfilepreview/scss/vgfilepreview.scss"
 		},
@@ -66,6 +63,9 @@
 		},
 		"./tabs": {
 			"sass": "./app/modules/vgtabs/scss/vgtabs.scss"
+		},
+		"./table": {
+			"sass": "./app/modules/vgtable/scss/vgtable.scss"
 		},
 		"./toast": {
 			"sass": "./app/modules/vgtoast/scss/vgtoast.scss"

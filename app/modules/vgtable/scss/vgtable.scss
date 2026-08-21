@@ -1,0 +1,18 @@
+/**
+*--------------------------------------------------------------------------
+* Модуль: VGTable
+* Автор: Vegas DEV
+* Лицензия: смотри LICENSE
+*--------------------------------------------------------------------------
+**/
+
+@forward "variables";
+@use "../../../utils/scss" as vg;
+@use "variables" as vars;
+
+.vg-table {
+	@include vg.mix-vars('table', vars.$table-map-prop);
+	@include vg.mix-vars('table', vars.$table-map-sizing);
+	@include vg.mix-vars('table', vars.$table-map-colors);
+	position: relative;
+}

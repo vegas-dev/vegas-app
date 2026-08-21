@@ -3,7 +3,6 @@ import vgapp, { VGApp } from './app/vgapp';
 export { default as VGAlert }        from './app/modules/vgalert';
 export { default as VGCollapse }     from './app/modules/vgcollapse';
 export { default as VGDropdown }     from './app/modules/vgdropdown';
-export { Editable, VGDynamicTable }  from './app/modules/vgdynamictable';
 export { default as VGFiles }        from './app/modules/vgfiles';
 export { default as VGFilePreview }  from './app/modules/vgfilepreview';
 export { default as VGFormSender }   from './app/modules/vgformsender';
@@ -18,6 +17,7 @@ export { default as VGSelect }       from './app/modules/vgselect';
 export { default as VGSidebar }      from './app/modules/vgsidebar';
 export { default as VGSpy }          from './app/modules/vgspy';
 export { default as VGTabs }         from './app/modules/vgtabs';
+export { default as VGTable }        from './app/modules/vgtable';
 export { default as VGToast }        from './app/modules/vgtoast';
 export { default as VGTooltip }      from './app/modules/vgtooltip';
 

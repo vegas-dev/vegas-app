@@ -1,7 +1,6 @@
 import VGAlert from './modules/vgalert';
 import VGCollapse from './modules/vgcollapse';
 import VGDropdown from './modules/vgdropdown';
-import { Editable, VGDynamicTable } from './modules/vgdynamictable';
 import VGFiles from './modules/vgfiles';
 import VGFilePreview from './modules/vgfilepreview';
 import VGFormSender from './modules/vgformsender';
@@ -16,6 +15,7 @@ import VGSelect from './modules/vgselect';
 import VGSidebar from './modules/vgsidebar';
 import VGSpy from './modules/vgspy';
 import VGTabs from './modules/vgtabs';
+import VGTable from "./modules/vgtable";
 import VGToast from './modules/vgtoast';
 import VGTooltip from './modules/vgtooltip';
 
@@ -264,7 +264,6 @@ const defaultModules = [
 	VGAlert,
 	VGCollapse,
 	VGDropdown,
-	VGDynamicTable,
 	VGFiles,
 	VGFilePreview,
 	VGFormSender,
@@ -279,6 +278,7 @@ const defaultModules = [
 	VGSidebar,
 	VGSpy,
 	VGTabs,
+	VGTable,
 	VGToast,
 	VGTooltip,
 ];
@@ -291,5 +291,5 @@ const vgapp = new VGApp({
 	},
 });
 
-export { Editable, VGApp, vgapp };
+export { VGApp, vgapp };
 export default vgapp;

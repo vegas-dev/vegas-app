@@ -10,9 +10,6 @@
 // Dropdown
 @use "./app/modules/vgdropdown/scss/vgdropdown";
 
-// Dynamic Table
-@use "./app/modules/vgdynamictable/scss/vgdynamictable";
-
 // FormSender
 @use "./app/modules/vgformsender/scss/vgformsender";
 
@@ -48,6 +45,9 @@
 
 // Tabs
 @use "./app/modules/vgtabs/scss/vgtabs";
+
+// Table
+@use "./app/modules/vgtable/scss/vgtable";
 
 // Toast
 @use "./app/modules/vgtoast/scss/vgtoast";
