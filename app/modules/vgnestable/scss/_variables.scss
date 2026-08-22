@@ -1,6 +1,13 @@
 @use "../../../utils/scss" as vg;
 
 $nestable-map: (
+	max-width: 40rem,
+	empty-min-height: 5rem,
+	empty-padding: 1rem,
+	empty-border: vg.$border-width dashed var(--vg-border-disabled-color, rgba(0, 0, 0, .18)),
+	empty-bg: var(--vg-surface-subtle-bg, rgba(0, 0, 0, .025)),
+	empty-color: var(--vg-text-muted-color, rgba(0, 0, 0, .6)),
+	empty-border-radius: .5rem,
 	list-transition: "background-color .15s ease, outline-color .15s ease",
 	list-drop-target-bg: var(--vg-primary-subtle-bg, rgba(13, 110, 253, .06)),
 	list-drop-target-outline: vg.$border-width dashed var(--vg-primary-outline-color, rgba(13, 110, 253, .45)),
@@ -9,7 +16,7 @@ $nestable-map: (
 	list-drop-denied-outline: vg.$border-width dashed var(--vg-danger-outline-color, rgba(220, 53, 69, .5)),
 	list-drop-denied-outline-offset: 2px,
 	list-nested-margin-top: .35rem,
-	list-nested-padding-left: 1.25rem,
+	list-nested-padding-left: 1.875rem,
 	list-nested-border-left: vg.$border-width dashed var(--vg-border-disabled-color, rgba(0, 0, 0, .12)),
 
 	item-margin: .35rem 0,
@@ -25,15 +32,15 @@ $nestable-map: (
 	item-disabled-handle-color: var(--vg-text-placeholder-color, rgba(0, 0, 0, .28)),
 
 	inner-gap: .5rem,
-	inner-min-height: 40px,
-	inner-padding: .45rem .65rem,
+	inner-min-height: 42px,
+	inner-padding: .4rem .65rem .4rem .35rem,
 	inner-border: vg.$border-width vg.$border-style var(--vg-border-disabled-color, rgba(0, 0, 0, .12)),
 	inner-bg: var(--vg-surface-bg, #{vg.$surface-bg}),
 	inner-border-radius: .45rem,
 
-	handle-size: 1.85rem,
-	handle-border: vg.$border-width vg.$border-style var(--vg-border-disabled-color, rgba(0, 0, 0, .12)),
-	handle-bg: var(--vg-surface-subtle-bg, rgba(0, 0, 0, .03)),
+	handle-size: 2rem,
+	handle-border: 0,
+	handle-bg: transparent,
 	handle-border-radius: .35rem,
 	handle-cursor: grab,
 	handle-active-cursor: grabbing,
@@ -61,9 +68,9 @@ $nestable-map: (
 	placeholder-bg: var(--vg-primary-subtle-bg, rgba(13, 110, 253, .08)),
 	placeholder-border-radius: .45rem,
 	placeholder-margin: .35rem 0,
-	placeholder-min-height: 40px,
+	placeholder-min-height: 42px,
 
 	drag-element-opacity: 1,
-	drag-element-transform: scale(1.01),
-	drag-element-shadow: 0 12px 30px var(--vg-shadow-color, rgba(0, 0, 0, .2))
+	drag-element-transform: translate3d(0, 0, 0) scale(1.01),
+	drag-element-shadow: 0 10px 24px var(--vg-shadow-color, rgba(0, 0, 0, .18))
 ) !default;

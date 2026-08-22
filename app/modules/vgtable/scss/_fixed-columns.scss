@@ -1,0 +1,123 @@
+@mixin styles {
+	&.vg-table-wrapper--fixed-columns .vg-table {
+		// Таблица не должна становиться собственным overflow-контейнером:
+		// sticky-ячейки обязаны ориентироваться на прокручиваемый container/body.
+		overflow: visible;
+	}
+
+	// У обычной таблицы внешний clip принадлежит обязательному container.
+	// Fixed Header исключён: его углы формируют отдельные header/body слои.
+	&.vg-table-wrapper--fixed-columns:not(.vg-table-wrapper--sticky-container):not(.vg-table-wrapper--sticky-page) {
+		// Реальный внешний clip нужен, иначе под радиусом перемещённого th
+		// продолжает просвечивать прямоугольный фон широкой таблицы.
+		> .vg-table-container {
+			border-radius: var(--vg-table-fixed-radius);
+
+			> .vg-table {
+				--vg-table-fixed-inner-radius: max(0px, calc(var(--vg-table-radius) - var(--vg-table-border-width)));
+
+				thead > tr:first-child {
+					> th:first-child {
+						border-start-start-radius: var(--vg-table-fixed-inner-radius);
+					}
+
+					> th:last-child {
+						border-start-end-radius: var(--vg-table-fixed-inner-radius);
+					}
+				}
+			}
+		}
+	}
+
+	[data-vg-table-fixed-side] {
+		position: sticky;
+		z-index: var(--vg-table-fixed-z-index);
+		opacity: 1;
+		background-color: var(--vg-table-fixed-cell-bg);
+		background-image: none;
+		background-clip: padding-box;
+		transition: none;
+	}
+
+	// Перекрывает базовый position: relative у th, сохраняя positioned-контекст разделителя.
+	thead tr > [data-vg-table-fixed-side],
+	tfoot tr > [data-vg-table-fixed-side] {
+		position: sticky;
+	}
+
+	thead tr > [data-vg-table-fixed-side] {
+		z-index: var(--vg-table-fixed-header-z-index);
+		opacity: 1;
+		background-color: var(--vg-table-fixed-header-bg);
+		background-image: none;
+	}
+
+	[data-vg-table-fixed-side="left"] {
+		inset-inline-start: var(--vg-table-fixed-offset);
+	}
+
+	[data-vg-table-fixed-side="right"] {
+		inset-inline-end: var(--vg-table-fixed-offset);
+	}
+
+	tbody tr > [data-vg-table-fixed-side],
+	tfoot tr > [data-vg-table-fixed-side] {
+		background-color: var(--vg-table-fixed-cell-bg);
+		background-image: none;
+	}
+
+	.vg-table-striped tbody tr:nth-child(even) > [data-vg-table-fixed-side] {
+		background-color: var(--vg-table-fixed-cell-bg);
+		background-image: linear-gradient(var(--vg-table-tbody-bg-striped), var(--vg-table-tbody-bg-striped));
+	}
+
+	.vg-table-hovered tbody tr:hover > [data-vg-table-fixed-side] {
+		background-color: var(--vg-table-fixed-cell-bg);
+		background-image: linear-gradient(var(--vg-table-tbody-bg-hovered), var(--vg-table-tbody-bg-hovered));
+	}
+
+	tbody tr.vg-table-row-selected > [data-vg-table-fixed-side] {
+		background-color: var(--vg-table-fixed-cell-bg);
+		background-image: linear-gradient(var(--vg-table-selection-row-background), var(--vg-table-selection-row-background));
+	}
+
+	tbody tr.vg-table-row-selected:hover > [data-vg-table-fixed-side] {
+		background-color: var(--vg-table-fixed-cell-bg);
+		background-image: linear-gradient(var(--vg-table-selection-row-background-hovered), var(--vg-table-selection-row-background-hovered));
+	}
+
+	[data-vg-table-fixed-edge]::after {
+		content: "";
+		position: absolute;
+		top: 0;
+		bottom: calc(var(--vg-table-border-width) * -1);
+		width: var(--vg-table-fixed-shadow-size);
+		pointer-events: none;
+		opacity: 0;
+	}
+
+	[data-vg-table-fixed-edge="left"]::after {
+		inset-inline-end: calc(var(--vg-table-fixed-shadow-size) * -1);
+		box-shadow: inset var(--vg-table-fixed-shadow-size) 0 var(--vg-table-fixed-shadow-blur) calc(var(--vg-table-fixed-shadow-spread) * -1) var(--vg-table-fixed-shadow-color);
+	}
+
+	[data-vg-table-fixed-edge="right"]::after {
+		inset-inline-start: calc(var(--vg-table-fixed-shadow-size) * -1);
+		box-shadow: inset calc(var(--vg-table-fixed-shadow-size) * -1) 0 var(--vg-table-fixed-shadow-blur) calc(var(--vg-table-fixed-shadow-spread) * -1) var(--vg-table-fixed-shadow-color);
+	}
+
+	&.is-vg-table-fixed-scrolled-start [data-vg-table-fixed-edge="left"]::after,
+	&.is-vg-table-fixed-scrolled-end [data-vg-table-fixed-edge="right"]::after {
+		opacity: 1;
+	}
+
+	// Радиус принадлежит настоящему краю таблицы и не должен ехать вместе
+	// с fixed-ячейкой, пока горизонтальная прокрутка не достигла этого края.
+	&.is-vg-table-fixed-scrolled-start {
+		--vg-table-sticky-edge-start-radius: 0px;
+	}
+
+	&.is-vg-table-fixed-scrolled-end {
+		--vg-table-sticky-edge-end-radius: 0px;
+	}
+}

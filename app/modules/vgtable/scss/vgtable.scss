@@ -5,27 +5,199 @@
 * Лицензия: смотри LICENSE
 *--------------------------------------------------------------------------
 **/
-
-@forward "variables";
 @use "../../../utils/scss" as vg;
-@use "variables" as vars;
+@use "../../../utils/scss/theme" as vg-theme;
+@use "sass:map";
+@forward "variables";
+
+@use "variables" as table;
+@use "sorting" as table-sorting;
+@use "columns" as table-columns;
+@use "row-reorder" as table-row-reorder;
+@use "pagination" as table-pagination;
+@use "expandable" as table-expandable;
+@use "sticky-header" as table-sticky-header;
+@use "fixed-columns" as table-fixed-columns;
+@use "skeleton" as table-skeleton;
+@use "states" as table-states;
 
 .vg-table-wrapper {
-	@include vg.mix-vars('table', vars.$table-map-prop);
-	@include vg.mix-vars('table', vars.$table-map-sizing);
-	@include vg.mix-vars('table', vars.$table-map-colors);
+	@include vg.mix-vars('table', table.$table-prop);
+	@include vg.mix-vars('table-wrapper', table.$table-wrapper);
+	@include vg.mix-vars('table-container', table.$table-container);
+	@include vg.mix-vars('table-sort', table.$table-sort);
+	@include vg.mix-vars('table-columns', table.$table-columns);
+	@include vg.mix-vars('table-row-reorder', table.$table-row-reorder);
+	@include vg.mix-vars('table-pan', table.$table-pan);
+	@include vg.mix-vars('table-selection', table.$table-selection);
+	@include vg.mix-vars('table-expandable', table.$table-expandable);
+	@include vg.mix-vars('table-pagination', table.$table-pagination);
+	@include vg.mix-vars('table-sticky', table.$table-sticky);
+	@include vg.mix-vars('table-fixed', table.$table-fixed);
+	@include vg.mix-vars('table-state', table.$table-state);
+	@include vg.mix-vars('table', table.$table-colors);
 	position: relative;
-	
-	.vg-table {
-		border: none;
-		width: 100%;
-		
-		thead {
-			> tr > th {
-				background-color: var(--vg-table-thead-bg);
-				padding: 1rem;
-				text-align: left;
-			}
+	overflow: visible;
+	border: var(--vg-table-wrapper-border-width) var(--vg-table-wrapper-border-style) var(--vg-table-wrapper-border-color);
+	border-radius: var(--vg-table-wrapper-radius);
+	background: var(--vg-table-wrapper-bg);
+
+	// Подключение стилей пагинации
+	@include table-pagination.styles;
+	@include table-columns.styles;
+	@include table-row-reorder.styles;
+
+	&.is-panning {
+		cursor: var(--vg-table-pan-cursor);
+		user-select: var(--vg-table-pan-user-select);
+
+		.vg-table tr {
+			transition: none;
+		}
+
+		.vg-table,
+		.vg-table * {
+			cursor: inherit;
 		}
 	}
+	
+	.vg-table {
+		@include vg.mix-vars('table', map.get(table.$table-sizing, md));
+		@include vg.mix-vars('table-skeleton', table.$table-skeleton);
+		border: 0;
+		border-radius: 0;
+		background: var(--vg-table-bg);
+		width: 100%;
+		border-collapse: separate;
+		border-spacing: 0;
+		overflow: visible;
+		font-size: var(--vg-table-font-size);
+
+		@each $size, $values in table.$table-sizing {
+			&-#{$size} {
+				@include vg.mix-vars('table', $values);
+			}
+		}
+		
+		tr {
+			> th {
+				background-color: var(--vg-table-thead-bg);
+				color: var(--vg-table-thead-text);
+				padding: var(--vg-table-cell-padding-block) var(--vg-table-cell-padding-inline);
+				text-align: var(--vg-table-thead-text-align);
+				border-bottom: var(--vg-table-border-width) var(--vg-table-border-style) var(--vg-table-border-color);
+				position: relative;
+			}
+
+			> td {
+				padding: var(--vg-table-cell-padding-block) var(--vg-table-cell-padding-inline);
+				text-align: var(--vg-table-tbody-text-align);
+			}
+		}
+
+		thead {
+			tr > th {
+				&:before {
+					content: "";
+					background-color: var(--vg-table-thead-spliter);
+					width: 1px;
+					height: 1.6em;
+					position: absolute;
+					inset-inline-end: 0;
+					top: 50%;
+					transform: translateY(-50%);
+				}
+
+				&:last-child {
+					&:before {
+						display: none;
+					}
+				}
+			}
+		}
+
+		// Подключение стилей сортировки
+		@include table-sorting.styles;
+
+		// Подключение многоуровневых строк
+		@include table-expandable.styles;
+
+		// Skeleton Remote-загрузки
+		@include table-skeleton.styles;
+
+		// Empty, filtered-empty и error.
+		@include table-states.styles;
+
+		tbody {
+			tr {
+				transition: var(--vg-transition-base);
+				background-color: var(--vg-table-tbody-bg);
+
+				td {
+					border-bottom: var(--vg-table-border-width) var(--vg-table-border-style) var(--vg-table-border-color);
+				}
+
+				&:last-child {
+					td {
+						border-bottom: none;
+					}
+				}
+			}
+		}
+
+		// Эффект при наведении
+		&-hovered {
+			tbody {
+				tr:hover {
+					background-color: var(--vg-table-tbody-bg-hovered);
+				}
+			}
+		}
+
+		//
+		&-striped {
+			tbody {
+				tr:nth-child(even) {
+					background-color: var(--vg-table-tbody-bg-striped);
+				}
+			}
+		}
+
+		// Выборка строк
+		&.vg-table-selection-click {
+			tbody tr {
+				cursor: var(--vg-table-selection-row-cursor);
+			}
+		}
+
+		tbody tr.vg-table-row-selected {
+			background-color: var(--vg-table-selection-row-background);
+			border-bottom-color: var(--vg-table-selection-row-border-selected);
+
+			&:hover {
+				background-color: var(--vg-table-selection-row-background-hovered);
+			}
+		}
+
+	}
+
+	// В Fixed Header wrapper остаётся внешним layout-контейнером без overflow.
+	@include table-sticky-header.wrapper-styles;
+
+	// Настоящие sticky-ячейки и краевые тени Fixed Columns.
+	@include table-fixed-columns.styles;
+}
+
+.vg-table-wrapper > .vg-table-container {
+	// Защита от глобальных селекторов вида [class*="container-"] в приложении.
+	padding-inline: 0;
+	position: relative;
+	overflow-x: auto;
+	box-sizing: border-box;
+	border: var(--vg-table-container-border-width) var(--vg-table-container-border-style) var(--vg-table-container-border-color);
+	border-radius: var(--vg-table-container-radius);
+	background: var(--vg-table-container-bg);
+
+	// Fixed Header расширяет общий scroll-контейнер слоями header/body.
+	@include table-sticky-header.container-styles;
 }

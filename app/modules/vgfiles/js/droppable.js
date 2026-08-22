@@ -1,3 +1,7 @@
+/**
+ * Описание: Управляет локальными и smartdrop-событиями файловых dropzone VGFiles.
+ * Возможности: Отличает внешнее добавление файлов от внутренней сортировки, подсвечивает активную зону и передаёт файлы input-элементу.
+ */
 import { isElement } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -62,16 +66,6 @@ class VGFilesDroppable extends BaseModule {
     _setupEvents() {
         if (!isElement(this._element)) return;
 
-        const isSortableDrag = (e) => {
-            // 1) если sortable реально активен — на элементе есть класс dragging
-            if (document.querySelector('.dragging')) return true;
-
-            // 2) маркер, который ставит sortable
-            let plain = '';
-            try { plain = e.dataTransfer?.getData?.('text/plain') || ''; } catch (_) {}
-            return plain === 'vgsortable';
-        };
-
         EventHandler.on(this._element, `click.${NAME_KEY}`, (e) => {
             if (this._element.tagName !== 'LABEL') return;
 
@@ -86,7 +80,7 @@ class VGFilesDroppable extends BaseModule {
             e.stopPropagation();
 
             // ✅ Сортировка: НЕ подсвечиваем dropzone
-            if (isSortableDrag(e)) {
+            if (this._isSortableDrag(e)) {
                 Classes.remove(this._element, [CLASS_NAME_DROP_ACTIVE, CLASS_NAME_DROP_HOVER]);
                 VGFilesDroppable._setDropMessageTitleState(this._element, false);
                 e.dataTransfer.dropEffect = 'none';
@@ -103,7 +97,7 @@ class VGFilesDroppable extends BaseModule {
             e.stopPropagation();
 
             // ✅ Сортировка: НЕ подсвечиваем dropzone
-            if (isSortableDrag(e)) {
+            if (this._isSortableDrag(e)) {
                 Classes.remove(this._element, [CLASS_NAME_DROP_ACTIVE, CLASS_NAME_DROP_HOVER]);
                 VGFilesDroppable._setDropMessageTitleState(this._element, false);
                 return;
@@ -118,7 +112,7 @@ class VGFilesDroppable extends BaseModule {
             e.stopPropagation();
 
             // ✅ Сортировка: гарантированно без подсветки
-            if (isSortableDrag(e)) {
+            if (this._isSortableDrag(e)) {
                 Classes.remove(this._element, [CLASS_NAME_DROP_ACTIVE, CLASS_NAME_DROP_HOVER]);
                 VGFilesDroppable._setDropMessageTitleState(this._element, false);
                 return;
@@ -143,7 +137,7 @@ class VGFilesDroppable extends BaseModule {
             VGFilesDroppable._setDropMessageTitleState(this._element, false);
 
             // ✅ сортировка: не трогаем input
-            if (isSortableDrag(e)) {
+            if (this._isSortableDrag(e)) {
                 return;
             }
 
@@ -238,6 +232,8 @@ class VGFilesDroppable extends BaseModule {
 
     _isFileDrag(e) {
         try {
+            if (this._isSortableDrag(e)) return false;
+
             const dt = e?.dataTransfer;
             if (!dt) return false;
 
@@ -252,6 +248,16 @@ class VGFilesDroppable extends BaseModule {
             }
 
             return false;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    _isSortableDrag(e) {
+        if (document.querySelector('.dragging')) return true;
+
+        try {
+            return (e?.dataTransfer?.getData?.('text/plain') || '') === 'vgsortable';
         } catch (_) {
             return false;
         }

@@ -1,3 +1,7 @@
+/**
+ * Описание: рендерер видеофайлов для VGFilePreview.
+ * Возможности: создаёт действие предпросмотра и собирает актуальный плейлист соседних видео при открытии.
+ */
 import VideoModal from "./video-modal";
 import { buildMediaPlaylist } from "./playlist";
 
@@ -31,7 +35,6 @@ class VideoFilePreviewRenderer {
 			return false;
 		}
 
-		const playlist = buildMediaPlaylist(context?.element, (ext) => VIDEO_EXTENSIONS.has(ext));
 		const labels = {
 			prev: i18n?.button('prev') || '',
 			next: i18n?.button('next') || ''
@@ -41,6 +44,8 @@ class VideoFilePreviewRenderer {
 			if (event) {
 				event.preventDefault();
 			}
+
+			const playlist = buildMediaPlaylist(context?.element, (ext) => VIDEO_EXTENSIONS.has(ext));
 
 			this._modal.open({
 				src,

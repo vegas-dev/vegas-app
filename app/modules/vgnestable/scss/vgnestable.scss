@@ -12,12 +12,33 @@
 
 .vg-nestable {
 	@include vg.mix-vars('nestable', vars.$nestable-map);
+	position: relative;
+	display: block;
+	width: 100%;
+	max-width: var(--vg-nestable-max-width);
+
+	&-empty {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: var(--vg-nestable-empty-min-height);
+		padding: var(--vg-nestable-empty-padding);
+		border: var(--vg-nestable-empty-border);
+		background: var(--vg-nestable-empty-bg);
+		color: var(--vg-nestable-empty-color);
+		border-radius: var(--vg-nestable-empty-border-radius);
+		text-align: center;
+	}
 
 	&-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		transition: var(--vg-nestable-list-transition);
+
+		&.is-empty {
+			min-height: var(--vg-nestable-empty-min-height);
+		}
 
 		&.is-drop-target {
 			background: var(--vg-nestable-list-drop-target-bg);
@@ -94,6 +115,7 @@
 		border: var(--vg-nestable-inner-border);
 		background: var(--vg-nestable-inner-bg);
 		border-radius: var(--vg-nestable-inner-border-radius);
+		box-shadow: 0 1px 1px rgba(0, 0, 0, .025);
 	}
 
 	&-handle {
@@ -110,6 +132,14 @@
 		cursor: var(--vg-nestable-handle-cursor);
 		user-select: none;
 		touch-action: none;
+		color: var(--vg-nestable-handle-icon-color);
+
+		&:hover,
+		&:focus-visible {
+			background: var(--vg-nestable-toggle-hover-bg);
+			color: var(--vg-text-color, currentColor);
+			outline: none;
+		}
 
 		&:active {
 			cursor: var(--vg-nestable-handle-active-cursor);
@@ -178,6 +208,7 @@
 		border-radius: var(--vg-nestable-placeholder-border-radius);
 		margin: var(--vg-nestable-placeholder-margin);
 		min-height: var(--vg-nestable-placeholder-min-height);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vg-nestable-item-drop-line) 12%, transparent);
 	}
 
 	&-placeholder-hidden {
@@ -191,10 +222,12 @@
 	&-item.is-drag-ghost#{&}-drag-element {
 		opacity: var(--vg-nestable-drag-element-opacity);
 		transform: var(--vg-nestable-drag-element-transform);
-		box-shadow: var(--vg-nestable-drag-element-shadow);
+		transform-origin: top left;
+		filter: drop-shadow(var(--vg-nestable-drag-element-shadow));
 
-		> .vg-nestable-inner {
+		.vg-nestable-inner {
 			background: var(--vg-nestable-inner-bg);
+			box-shadow: 0 2px 5px rgba(0, 0, 0, .08);
 		}
 	}
 }

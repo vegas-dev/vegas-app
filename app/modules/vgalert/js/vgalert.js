@@ -1,3 +1,7 @@
+/**
+ * Описание: компонент подтверждений и информационных сообщений VGAlert.
+ * Возможности: modal, overlay и dropdown-рендер, компактный размер, Data API, AJAX и Promise-сценарии.
+ */
 import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal";
 import VGDropdown from "../../vgdropdown";
@@ -18,6 +22,7 @@ const CLASS_NAME_ALERT = "vg-alert";
 const CLASS_NAME_SHOW = "show";
 const CLASS_NAME_FADE = "fade";
 const CLASS_NAME_CLOSING = "closing";
+const CLASS_NAME_COMPACT = `${CLASS_NAME_ALERT}-compact`;
 const DATA_AGREE = "data-vg-alert-agree";
 const DATA_CANCEL = "data-vg-alert-cancel";
 
@@ -31,6 +36,7 @@ class VGAlert {
 	constructor(params = {}, lang = 'ru') {
 		this.lang = lang;
 		this._defaultParams = {
+			size: "default", // default or compact
 			render: {
 				type: "modal", // modal, overlay or dropdown
 				dismiss: false,
@@ -349,6 +355,7 @@ class VGAlert {
 
 	_setParams(params) {
 		const merged = mergeDeepObject(this._defaultParams, params);
+		merged.size = merged.size === "compact" ? "compact" : "default";
 		merged.buttons = mergeDeepObject(this._elementsDefault.buttons, merged.buttons);
 		merged.message = mergeDeepObject(this._elementsDefault.message, merged.message);
 		merged.icon = this._elementsDefault.icons[merged.theme];
@@ -356,11 +363,20 @@ class VGAlert {
 		return merged;
 	}
 
+	_applySizeClass(element) {
+		if (this._params.size === "compact") {
+			element?.classList.add(CLASS_NAME_COMPACT);
+		}
+
+		return element;
+	}
+
 	_buildModal() {
 		const id = `${CLASS_NAME_ALERT}-${makeRandomString()}`;
 
 		return VGModal.build(id, this._params.modal, (modal) => {
 			modal._element.classList.add(`${CLASS_NAME_ALERT}-modal`);
+			this._applySizeClass(modal._element);
 			const body = Selectors.find(".vg-modal-body", modal._element);
 			body.append(this._buildContent());
 		});
@@ -391,8 +407,10 @@ class VGAlert {
 			this._createButton(buttons, "cancel");
 		}
 
+		const sizeClass = this._params.size === "compact" ? ` ${CLASS_NAME_COMPACT}` : "";
+
 		return html.div(
-			{class: `${CLASS_NAME_ALERT}-wrapper ${CLASS_NAME_ALERT}-${this._params.theme}`},
+			{class: `${CLASS_NAME_ALERT}-wrapper ${CLASS_NAME_ALERT}-${this._params.theme}${sizeClass}`},
 			[
 				html.div(
 					{class: `${CLASS_NAME_ALERT}-content`},
@@ -438,6 +456,7 @@ class VGAlert {
 		const overlay = document.createElement('div');
 
 		overlay.className = `${CLASS_NAME_ALERT}-overlay`;
+		this._applySizeClass(overlay);
 		overlay.append(this._buildContent());
 
 		container.append(overlay);
@@ -533,6 +552,7 @@ class VGAlert {
 
 		container.id = id;
 		container.className = `vg-dropdown-content ${CLASS_NAME_ALERT}-dropdown`;
+		this._applySizeClass(container);
 		container.setAttribute('tabindex', '-1');
 		container.setAttribute('role', 'dialog');
 		container._vgAlertDropdownParent = parent;

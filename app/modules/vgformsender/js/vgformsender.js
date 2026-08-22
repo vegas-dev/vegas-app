@@ -1,4 +1,4 @@
-﻿/**
+/**
  * VGFormSender Module
  *
  * Этот модуль отвечает за отправку форм с поддержкой AJAX, валидации, отображения уведомлений
@@ -702,7 +702,10 @@ class VGFormSender extends BaseModule {
 			$collapse.classList.add(_this._params.classes.alertCollapse);
 			$collapse.classList.add('vg-collapse');
 			$collapse.id = _this._params.classes.general + '-' + makeRandomString();
-			$collapse.append(_this.setDataRelationStatus($collapse, status, data, 'collapse'));
+
+			const $alert = _this.setDataRelationStatus($collapse, status, data, 'collapse');
+			$alert.classList.add(CLASS_NAME_ALERT, CLASS_NAME_ALERT + '-' + status);
+			$collapse.append($alert);
 
 			_this._element.prepend($collapse);
 		}

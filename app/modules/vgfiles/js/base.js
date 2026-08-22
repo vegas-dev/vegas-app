@@ -1,3 +1,7 @@
+/**
+ * Описание: базовая логика выбора, валидации и отображения файлов VGFiles.
+ * Возможности: управляет набором файлов, ошибками, списками, статистикой и скрытыми полями формы.
+ */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
 import Html from "../../../utils/js/components/templater";
@@ -547,7 +551,11 @@ class VGFilesBase extends BaseModule {
 
 		this._initFilePreviewInInfo($list);
 
-		Classes.add(this._nodes.info, 'show')
+		if (files.length) {
+			Classes.add(this._nodes.info, 'show');
+		} else {
+			Classes.remove(this._nodes.info, 'show');
+		}
 	}
 
 	_getInfoItemSignature(file, index) {
@@ -898,7 +906,11 @@ class VGFilesBase extends BaseModule {
 			$count.innerHTML = this._files.length ? `${this._files.length}<span>[${totalSize}]</span>` : '';
 		}
 
-		Classes.add(this._nodes.stat, 'show');
+		if (this._files.length) {
+			Classes.add(this._nodes.stat, 'show');
+		} else {
+			Classes.remove(this._nodes.stat, 'show');
+		}
 	}
 
 	_generateHiddenInputs(files) {

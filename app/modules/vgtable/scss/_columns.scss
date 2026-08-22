@@ -1,0 +1,52 @@
+@mixin styles {
+	.vg-table-column-resize-handle {
+		position: absolute;
+		z-index: var(--vg-table-columns-resize-z-index);
+		inset-block: 0;
+		inset-inline-end: calc(var(--vg-table-columns-resize-hit-area) / -2);
+		width: var(--vg-table-columns-resize-hit-area);
+		cursor: col-resize;
+		touch-action: none;
+	}
+
+	.vg-table-column-resize-handle::after {
+		content: "";
+		position: absolute;
+		inset-block: var(--vg-table-columns-resize-line-inset);
+		inset-inline-start: 50%;
+		width: var(--vg-table-columns-resize-line-width);
+		background: var(--vg-table-columns-resize-line-color);
+		opacity: 0;
+		transform: translateX(-50%);
+		transition: opacity var(--vg-table-transition);
+	}
+
+	.vg-table th:hover > .vg-table-column-resize-handle::after,
+	&--column-resizing .vg-table-column-resize-handle::after {
+		opacity: 1;
+	}
+
+	.vg-table [data-vg-table-column-reorder="enabled"] {
+		cursor: grab;
+	}
+
+	.vg-table [data-vg-table-column-reorder="locked"] {
+		cursor: default;
+	}
+
+	.vg-table [data-vg-table-column-dragging] {
+		opacity: var(--vg-table-columns-drag-opacity);
+		cursor: grabbing;
+	}
+
+	.vg-table [data-vg-table-column-drag-over] {
+		outline: var(--vg-table-columns-drag-outline-width) dashed var(--vg-table-columns-drag-outline-color);
+		outline-offset: calc(var(--vg-table-columns-drag-outline-width) * -1);
+	}
+
+	&--column-resizing,
+	&--column-resizing * {
+		cursor: col-resize !important;
+		user-select: none !important;
+	}
+}

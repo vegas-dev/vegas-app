@@ -1,3 +1,7 @@
+/**
+ * Описание: основной класс выбора, отображения и AJAX-загрузки файлов VGFiles.
+ * Возможности: управляет списками и dropzone, прогрессом, удалением, повторной загрузкой и сортировкой.
+ */
 import VGFilesBase from "./base";
 import FileUploader from "./loader";
 import VGFilesDroppable from "./droppable";
@@ -810,8 +814,7 @@ class VGFiles extends VGFilesBase {
     }
 
     _setButtonElement(file, isAjax = false, status = '') {
-        let icon = getSVG('trash'), action = 'data-vg-dismiss';
-        if (!this._params.info) icon = getSVG('cross');
+        let icon = getSVG('remove'), action = 'data-vg-dismiss';
         if (isAjax) {
             icon = getSVG('spinner');
             if (status === 'completed') icon = getSVG('check');

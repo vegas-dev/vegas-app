@@ -1,3 +1,7 @@
+/**
+ * Описание: доступная вложенная сортировка списков в стиле Nestable без зависимости от jQuery.
+ * Возможности: drag-and-drop мышью и touch, клавиатурное перемещение, связанные списки, collapse API, сериализация и AJAX-сохранение.
+ */
 import BaseModule from "../../base-module";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
 import { mergeDeepObject, normalizeData } from "../../../utils/js/functions";
@@ -11,6 +15,7 @@ const NAME = "nestable";
 const NAME_KEY = "vg.nestable";
 
 const SELECTOR_DATA_TOGGLE = '[data-vg-toggle="nestable"]';
+const SELECTOR_DATA_ACTION = '[data-vg-nestable-action]';
 
 const CLASS_ITEM_DRAGGING = "is-dragging";
 const CLASS_ITEM_GHOST = "is-drag-ghost";
@@ -24,6 +29,7 @@ const CLASS_INNER = "vg-nestable-inner";
 const CLASS_HANDLE = "vg-nestable-handle";
 const CLASS_HANDLE_ICON = "vg-nestable-handle-icon";
 const CLASS_COLLAPSE_TOGGLE = "vg-nestable-collapse-toggle";
+const CLASS_EMPTY = "vg-nestable-empty";
 const CLASS_DROP_TARGET = "is-drop-target";
 const CLASS_DROP_DENIED = "is-drop-denied";
 const CLASS_DROP_BEFORE = "is-drop-before";
@@ -44,6 +50,8 @@ const EVENT_KEY_DROP = `${NAME_KEY}.drop`;
 const EVENT_KEY_TRANSFER = `${NAME_KEY}.transfer`;
 const EVENT_KEY_PLACEHOLDER_MOVE = `${NAME_KEY}.placeholdermove`;
 const EVENT_KEY_DESTROY = `${NAME_KEY}.destroy`;
+const EVENT_KEY_COLLAPSE = `${NAME_KEY}.collapse`;
+const EVENT_KEY_EXPAND = `${NAME_KEY}.expand`;
 
 class VGNestable extends BaseModule {
 	static _groups = new Map();
@@ -58,8 +66,10 @@ class VGNestable extends BaseModule {
 			itemselector: ".vg-nestable-item", // Sortable item selector.
 			handleselector: ".vg-nestable-handle", // Drag handle selector.
 			idattribute: "data-id", // Item id attribute used by serialize().
+			serializedata: true, // Include the remaining data-* attributes, like the original Nestable.
 			childlistclass: "vg-nestable-list", // Class for auto-created child list.
 			handleicon: '', // иконка для хендлера
+			emptytext: "Drop items here", // Accessible empty-list hint.
 			indent: 18, // Small horizontal gesture (px) that moves the item under the previous sibling.
 			maxdepth: 6, // Maximum nesting depth.
 			moveaxis: "default", // Drag direction: default | vertical | horizontal.
@@ -85,6 +95,8 @@ class VGNestable extends BaseModule {
 				drop: null,
 				transfer: null,
 				change: null,
+				collapse: null,
+				expand: null,
 				end: null,
 				save: null,
 				destroy: null
@@ -143,6 +155,7 @@ class VGNestable extends BaseModule {
 		this._activeTouchId = null;
 		this._keyboardDraggedItem = null;
 		this._keyboardStartSnapshot = "";
+		this._keyboardOrigin = null;
 		this._liveRegion = null;
 
 		if (!this._rootList) {
@@ -192,6 +205,10 @@ class VGNestable extends BaseModule {
 			return EVENT_KEY_SAVE;
 		case "destroy":
 			return EVENT_KEY_DESTROY;
+		case "collapse":
+			return EVENT_KEY_COLLAPSE;
+		case "expand":
+			return EVENT_KEY_EXPAND;
 		default:
 			return `${NAME_KEY}.${action}`;
 		}
@@ -307,9 +324,98 @@ class VGNestable extends BaseModule {
 			this._syncItemCollapse(item);
 		});
 
+		this._syncEmptyState();
+
 		this._emit("refresh", {
 			items: this._getItems().length
 		});
+	}
+
+	/**
+	 * Expands one branch and keeps its toggle state synchronized.
+	 * @param {HTMLElement|string} item Item element or selector inside this tree.
+	 * @returns {boolean}
+	 */
+	expandItem(item) {
+		return this._setItemExpanded(item, true);
+	}
+
+	/**
+	 * Collapses one branch and keeps its toggle state synchronized.
+	 * @param {HTMLElement|string} item Item element or selector inside this tree.
+	 * @returns {boolean}
+	 */
+	collapseItem(item) {
+		return this._setItemExpanded(item, false);
+	}
+
+	/** Expand every branch, matching the original Nestable public method. */
+	expandAll() {
+		let changed = 0;
+		this._getItems().forEach((item) => {
+			if (this.expandItem(item)) changed += 1;
+		});
+		return changed;
+	}
+
+	/** Collapse every branch, matching the original Nestable public method. */
+	collapseAll() {
+		let changed = 0;
+		this._getItems().forEach((item) => {
+			if (this.collapseItem(item)) changed += 1;
+		});
+		return changed;
+	}
+
+	_setItemExpanded(item, expanded) {
+		const target = typeof item === "string" ? this._element.querySelector(item) : item;
+		if (!target || !target.matches?.(this._params.itemselector) || !this._rootList.contains(target)) {
+			return false;
+		}
+
+		const childList = this._getDirectChildBySelector(target, this._params.listselector);
+		if (!childList) return false;
+
+		const isExpanded = childList.classList.contains("show");
+		if (isExpanded === expanded) return false;
+
+		const collapse = VGCollapse.getOrCreateInstance(childList, { toggle: false });
+		if (expanded) {
+			collapse.show();
+		} else {
+			collapse.hide();
+		}
+
+		this._emit(expanded ? "expand" : "collapse", {
+			item: target,
+			list: childList,
+			expanded
+		});
+		return true;
+	}
+
+	_syncEmptyState() {
+		if (!this._rootList) return;
+
+		const hasItems = Array.from(this._rootList.children)
+			.some((child) => child.matches(this._params.itemselector));
+		let empty = this._getDirectChildBySelector(this._rootList, `.${CLASS_EMPTY}`);
+
+		if (hasItems) {
+			empty?.remove();
+			this._rootList.classList.remove("is-empty");
+			return;
+		}
+
+		if (!empty) {
+			empty = document.createElement(this._rootList.tagName?.toLowerCase() === "ol" ? "li" : "div");
+			empty.className = CLASS_EMPTY;
+			empty.setAttribute("aria-live", "polite");
+			this._rootList.append(empty);
+		}
+
+		empty.textContent = String(this._params.emptytext || "Drop items here");
+		this._rootList.classList.add("is-empty");
 	}
 
 	_syncItemCollapse(item) {
@@ -826,6 +932,10 @@ class VGNestable extends BaseModule {
 
 		this._keyboardDraggedItem = item;
 		this._keyboardStartSnapshot = JSON.stringify(this.serialize());
+		this._keyboardOrigin = {
+			parent: item.parentElement,
+			next: item.nextSibling
+		};
 		item.classList.add(CLASS_ITEM_DRAGGING);
 		item.setAttribute("aria-grabbed", "true");
 
@@ -844,6 +954,13 @@ class VGNestable extends BaseModule {
 
 		const draggedItem = this._keyboardDraggedItem;
 		const previousPayload = this._keyboardStartSnapshot ? JSON.parse(this._keyboardStartSnapshot) : [];
+		if (options.cancelled && this._keyboardOrigin?.parent) {
+			const { parent, next } = this._keyboardOrigin;
+			parent.insertBefore(draggedItem, next?.parentElement === parent ? next : null);
+			this._cleanupEmptyLists();
+			this.refresh();
+			draggedItem.focus?.();
+		}
 		const payload = this.serialize();
 		const changed = this._keyboardStartSnapshot !== JSON.stringify(payload);
 
@@ -890,6 +1007,7 @@ class VGNestable extends BaseModule {
 
 		this._keyboardDraggedItem = null;
 		this._keyboardStartSnapshot = "";
+		this._keyboardOrigin = null;
 	}
 
 	_moveKeyboardUp(item) {
@@ -1878,6 +1996,15 @@ class VGNestable extends BaseModule {
 			const childList = item.querySelector(`:scope > ${this._params.listselector}`);
 
 			const data = { id: id ?? null };
+			if (normalizeData(this._params.serializedata) !== false) {
+				Array.from(item.attributes).forEach((attribute) => {
+					if (!attribute.name.startsWith("data-") || attribute.name === this._params.idattribute) return;
+					const key = attribute.name
+						.slice(5)
+						.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+					data[key] = normalizeData(attribute.value === "" ? "true" : attribute.value);
+				});
+			}
 
 			if (childList) {
 				const children = this._serializeList(childList);
@@ -1893,6 +2020,19 @@ class VGNestable extends BaseModule {
 
 EventHandler.on(document, `DOMContentLoaded.${NAME_KEY}.data.api`, () => {
 	Selectors.findAll(SELECTOR_DATA_TOGGLE).forEach((el) => VGNestable.getOrCreateInstance(el));
+});
+
+EventHandler.on(document, `click.${NAME_KEY}.data.api`, SELECTOR_DATA_ACTION, function (event) {
+	event.preventDefault();
+	const selector = this.getAttribute("data-vg-target");
+	const element = selector ? Selectors.find(selector) : this.closest(SELECTOR_DATA_TOGGLE);
+	if (!element) return;
+
+	const instance = VGNestable.getOrCreateInstance(element);
+	const action = String(this.getAttribute("data-vg-nestable-action") || "").trim();
+	if (["expandAll", "collapseAll"].includes(action)) {
+		instance[action]();
+	}
 });
 
 export default VGNestable;

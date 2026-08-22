@@ -1,0 +1,45 @@
+@mixin styles {
+	.vg-table-row-reorder-handle,
+	[data-row-reorder-handle] {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: var(--vg-table-row-reorder-handle-size);
+		block-size: var(--vg-table-row-reorder-handle-size);
+		cursor: grab;
+		user-select: none;
+		touch-action: none;
+
+		&:focus-visible {
+			outline: var(--vg-table-row-reorder-focus-outline);
+			outline-offset: var(--vg-table-row-reorder-focus-outline-offset);
+		}
+	}
+
+	tr[data-vg-table-row-reorder="row"] {
+		cursor: grab;
+	}
+
+	tr[data-vg-table-row-reorder="disabled"] [data-row-reorder-handle] {
+		cursor: not-allowed;
+		opacity: var(--vg-table-row-reorder-disabled-opacity);
+	}
+
+	tr[data-vg-table-row-dragging] > * {
+		opacity: var(--vg-table-row-reorder-drag-opacity);
+	}
+
+	tr[data-vg-table-row-drag-over="before"] > * {
+		box-shadow: inset 0 var(--vg-table-row-reorder-indicator-width) 0 var(--vg-table-row-reorder-indicator-color);
+	}
+
+	tr[data-vg-table-row-drag-over="after"] > * {
+		box-shadow: inset 0 calc(var(--vg-table-row-reorder-indicator-width) * -1) 0 var(--vg-table-row-reorder-indicator-color);
+	}
+
+	&.vg-table-wrapper--row-dragging,
+	&.vg-table-wrapper--row-dragging * {
+		cursor: grabbing;
+		user-select: none;
+	}
+}

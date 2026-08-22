@@ -1,7 +1,296 @@
+@use "sass:map";
+@use "../../../utils/scss/theme" as vg-theme;
 @use "../../../utils/scss" as vg;
 
-$table-map-prop: ();
-$table-map-sizing: ();
-$table-map-colors: (
-	thead-bg: vg.theme-token(vg.$theme-light, table-thead-bg)
+// Базовые свойства таблицы: границы, выравнивание текста и общая скорость переходов.
+// Формирует переменные --vg-table-*.
+$table-prop: (
+		border-style: solid,
+		thead-text-align: left,
+		tbody-text-align: left,
+		transition: vg.$transition-base
+);
+
+// Обёртка адаптивной таблицы: независимые граница, радиус и фон контейнера.
+// По умолчанию оформление обнулено; формирует переменные --vg-table-wrapper-*.
+$table-wrapper: (
+	border-width: 0,
+	border-style: solid,
+	border-color: transparent,
+	radius: 0,
+	bg: transparent
+) !default;
+
+// Обязательный scroll-контейнер владеет внешней рамкой: она остаётся на месте
+// при горизонтальной прокрутке широкой таблицы.
+$table-container: (
+	border-width: 1px,
+	border-style: var(--vg-table-border-style),
+	border-color: var(--vg-table-border-color),
+	radius: vg.$border-radius,
+	bg: var(--vg-table-bg)
+) !default;
+
+// Общие значения границы и радиуса, переиспользуемые всеми размерными вариантами.
+$table-size-base: (
+	border-width: 1px,
+	radius: vg.$border-radius
+) !default;
+
+// Размеры таблицы xs–xl: отступы ячеек, шрифт, граница и радиус.
+// md используется обычным .vg-table, остальные значения — модификаторами .vg-table-{size}.
+$table-sizing: (
+	xs: (
+		cell-padding-block: .375rem,
+		cell-padding-inline: .5rem,
+		font-size: .75rem,
+		border-width: map.get($table-size-base, border-width),
+		radius: map.get($table-size-base, radius)
+	),
+	sm: (
+		cell-padding-block: .625rem,
+		cell-padding-inline: .75rem,
+		font-size: .8125rem,
+		border-width: map.get($table-size-base, border-width),
+		radius: map.get($table-size-base, radius)
+	),
+	md: (
+		cell-padding-block: 1rem,
+		cell-padding-inline: 1rem,
+		font-size: 1rem,
+		border-width: map.get($table-size-base, border-width),
+		radius: map.get($table-size-base, radius)
+	),
+	lg: (
+		cell-padding-block: 1.25rem,
+		cell-padding-inline: 1.25rem,
+		font-size: 1.0625rem,
+		border-width: map.get($table-size-base, border-width),
+		radius: map.get($table-size-base, radius)
+	),
+	xl: (
+		cell-padding-block: 1.5rem,
+		cell-padding-inline: 1.5rem,
+		font-size: 1.125rem,
+		border-width: map.get($table-size-base, border-width),
+		radius: map.get($table-size-base, radius)
+	)
+) !default;
+
+// Локальная сортировка: зона заголовка, шевроны, focus-состояние и подсветка колонки.
+// Формирует переменные --vg-table-sort-*.
+$table-sort: (
+		padding-inline-end: calc(var(--vg-table-cell-padding-inline) + 1.25rem),
+		multiple-padding-inline-end: calc(var(--vg-table-cell-padding-inline) + 2.5rem),
+		cursor: pointer,
+		user-select: none,
+		controls-position: absolute,
+		controls-inset-inline-end: .75rem,
+		controls-top: 50%,
+		controls-display: flex,
+		controls-flex-direction: column,
+		controls-gap: .12rem,
+		controls-transform: translateY(-50%),
+		controls-pointer-events: none,
+		controls-hidden-opacity: 0,
+		controls-visible-opacity: 1,
+		controls-transition: opacity var(--vg-table-transition),
+		priority-position: absolute,
+		priority-inset-inline-end: calc(100% + .35rem),
+		priority-top: 50%,
+		priority-transform: translateY(-50%),
+		priority-min-width: 1rem,
+		priority-height: 1rem,
+		priority-padding-inline: .2rem,
+		priority-radius: 999px,
+		priority-bg: var(--vg-table-thead-text),
+		priority-color: var(--vg-table-thead-bg),
+		priority-font-size: .625rem,
+		priority-font-weight: 700,
+		chevron-display: block,
+		chevron-width: .4rem,
+		chevron-height: .4rem,
+		chevron-border-width: 1.5px,
+		chevron-border-style: solid,
+		chevron-border-color: currentColor,
+		chevron-opacity: .25,
+		chevron-transition: opacity var(--vg-table-transition),
+		chevron-asc-transform: rotate(225deg),
+		chevron-desc-transform: rotate(45deg),
+		chevron-active-opacity: 1,
+		column-background: rgba(0, 0, 0, .025),
+		focus-outline: 2px solid currentColor,
+		focus-outline-offset: -2px
+) !default;
+
+// Управление колонками: resize-handle и состояния нативного drag-and-drop.
+// Формирует переменные --vg-table-columns-*.
+$table-columns: (
+	resize-z-index: 9,
+	resize-hit-area: .75rem,
+	resize-line-inset: .4rem,
+	resize-line-width: 2px,
+	resize-line-color: var(--vg-primary),
+	drag-opacity: .55,
+	drag-outline-width: 2px,
+	drag-outline-color: var(--vg-primary)
+) !default;
+
+// Перестановка строк: размер handle, drag-индикатор, focus и недоступное состояние.
+// Формирует переменные --vg-table-row-reorder-*.
+$table-row-reorder: (
+	handle-size: 2rem,
+	indicator-width: 2px,
+	indicator-color: var(--vg-primary),
+	drag-opacity: .5,
+	disabled-opacity: .4,
+	focus-outline: 2px solid currentColor,
+	focus-outline-offset: 2px
+) !default;
+
+// Shift-перетаскивание адаптивной таблицы: курсор и запрет выделения текста.
+// Формирует переменные --vg-table-pan-*.
+$table-pan: (
+		cursor: grabbing,
+		user-select: none
+) !default;
+
+// Sticky-заголовок: высота внутреннего viewport, верхний отступ, слой и визуальный разделитель.
+// Формирует переменные --vg-table-sticky-*.
+$table-sticky: (
+	max-height: 24rem,
+	top: 0px,
+	z-index: 3,
+	shadow: 0 1px 0 var(--vg-table-border-color),
+	border-width: map.get($table-size-base, border-width),
+	border-style: var(--vg-table-border-style),
+	border-color: var(--vg-table-border-color),
+	radius: map.get($table-size-base, radius),
+	bg: var(--vg-table-bg)
+) !default;
+
+// Фиксированные колонки: уровни настоящих sticky-ячеек и синхронная краевая тень без transform.
+// Формирует переменные --vg-table-fixed-*.
+$table-fixed: (
+	z-index: 5,
+	header-z-index: 7,
+	radius: map.get($table-size-base, radius),
+	cell-bg: var(--vg-table-bg),
+	header-bg: var(--vg-table-thead-bg),
+	shadow-size: 1rem,
+	shadow-blur: .5rem,
+	shadow-spread: .5rem,
+	shadow-color: rgba(0, 0, 0, .15)
+) !default;
+
+// Skeleton Remote-загрузки: геометрия строки, shimmer-анимация и нейтральные цвета.
+// Формирует переменные --vg-table-skeleton-*.
+$table-skeleton: (
+	padding-block: var(--vg-table-cell-padding-block),
+	padding-inline: var(--vg-table-cell-padding-inline),
+	content-height: 1.25em,
+	line-height: .625rem,
+	radius: 999px,
+	duration: 1.2s,
+	row-bg: color-mix(in srgb, var(--vg-table-bg) 50%, transparent),
+	border-color: var(--vg-table-border-color),
+	gradient-1: var(--vg-table-border-color),
+	gradient-2: var(--vg-table-thead-bg),
+	glow: color-mix(in srgb, var(--vg-table-bg) 55%, transparent)
+) !default;
+
+// Empty, filtered-empty и error: геометрия, иконка и кнопки восстановления.
+// Формирует переменные --vg-table-state-*.
+$table-state: (
+	padding-block: 2rem,
+	padding-inline: var(--vg-table-cell-padding-inline),
+	min-height: 10rem,
+	gap: .75rem,
+	bg: var(--vg-table-bg),
+	text: var(--vg-table-thead-text),
+	font-size: .9375rem,
+	font-weight: 500,
+	icon-size: 2.5rem,
+	icon-border-width: 2px,
+	icon-color: var(--vg-table-thead-text),
+	icon-opacity: .35,
+	action-padding-block: .375rem,
+	action-padding-inline: .75rem,
+	action-border-width: 1px,
+	action-border-color: var(--vg-table-border-color),
+	action-radius: var(--vg-table-radius),
+	action-bg: var(--vg-table-bg),
+	action-bg-hover: var(--vg-table-thead-bg),
+	action-text: var(--vg-primary)
+) !default;
+
+// Выбор строк: курсор, фон выбранной строки и цвет её границы.
+// Формирует переменные --vg-table-selection-*.
+$table-selection: (
+		row-cursor: pointer,
+		row-background: color-mix(in srgb, var(--vg-primary) 8%, transparent),
+		row-background-hovered: color-mix(in srgb, var(--vg-primary) 12%, transparent),
+		row-border-selected: color-mix(in srgb, var(--vg-primary) 20%, transparent)
+) !default;
+
+// Многоуровневые строки: отступ уровня, размеры и состояния кнопки плюс/минус.
+// Формирует переменные --vg-table-expandable-*.
+$table-expandable: (
+	indent: 1.5rem,
+	toggle-size: 1.25rem,
+	toggle-margin-inline-end: .5rem,
+	toggle-border-width: 1px,
+	toggle-border-style: solid,
+	toggle-border-color: var(--vg-table-border-color),
+	toggle-radius: .25rem,
+	toggle-bg: var(--vg-table-bg),
+	toggle-color: currentColor,
+	toggle-icon-size: .625rem,
+	toggle-icon-width: 1px,
+	toggle-focus-outline: 2px solid currentColor,
+	toggle-focus-outline-offset: 2px
+) !default;
+
+// Локальная и серверная пагинация: размеры контролов, dropdown, шевроны, подписи и состояния кнопок.
+// Формирует переменные --vg-table-pagination-*.
+$table-pagination: (
+		padding-block: .75rem,
+		padding-inline: 1rem,
+		gap: .75rem,
+		control-gap: .5rem,
+		control-size: 2rem,
+		border-width: 1px,
+		border-style: solid,
+		border-color: var(--vg-table-border-color),
+		chevron-size: 1rem,
+		chevron-stroke-width: 1.8,
+		control-padding-inline: .625rem,
+		button-padding-inline: .625rem,
+		radius: vg.$border-radius,
+		quick-width: 5rem,
+		size-width: 9rem,
+		size-dropdown-width: 10.5rem,
+		font-size: .875rem,
+		heading-color: var(--vg-table-pagination-text),
+		heading-font-size: .875rem,
+		heading-font-weight: 400,
+		heading-line-height: 1.25,
+		disabled-opacity: .45,
+		text: rgba(0, 0, 0, .88),
+		active-bg: var(--vg-primary),
+		active-text: #ffffff,
+		option-hover-bg: rgba(0, 0, 0, .04)
+) !default;
+
+// Основная цветовая схема таблицы: фон, заголовок, разделители и состояния строк.
+// Формирует цветовые переменные --vg-table-*.
+$table-colors: (
+		border-color: #f0f0f0,
+		bg: #ffffff,
+		thead-bg: #fafafa,
+		thead-text: rgba(0, 0, 0, .88),
+		thead-spliter: #f0f0f0,
+		tbody-bg: transparent,
+		tbody-bg-hovered: #fafafa,
+		tbody-bg-striped: #fafafa
 );

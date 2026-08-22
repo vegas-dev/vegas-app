@@ -1,3 +1,7 @@
+/**
+ * Описание: модальное окно видеопредпросмотра VGFilePreview.
+ * Возможности: воспроизводит видео и переключает соседние записи плейлиста кнопками и горячими клавишами.
+ */
 import VGModal from "../../../vgmodal";
 
 class VideoModal {
@@ -139,7 +143,7 @@ class VideoModal {
 			this._video.addEventListener('ended', () => this._goNext(true));
 
 			header.appendChild(this._title);
-			//header.appendChild(navigation);
+			header.appendChild(navigation);
 			body.appendChild(this._video);
 
 			this._bindEvents(element);

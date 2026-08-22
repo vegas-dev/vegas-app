@@ -52,9 +52,11 @@ $files-map: (
 	drop-file-flex: calc(25% - 6px),
 
 	drop-remove-offset: 10px,
-	drop-remove-size: 36px,
+	drop-remove-size: 28px,
 	drop-remove-radius: 3px,
 	drop-remove-hover-bg: rgb(var(--vg-body-bg-rgb, 255 255 255) / .4),
+	drop-actions-gap: 4px,
+	drop-control-icon-size: 16px,
 
 	// stat
 	stat-padding: 12px 8px,

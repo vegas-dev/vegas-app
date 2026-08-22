@@ -11,12 +11,33 @@ test('connects VGTable and leaves VGDynamicTable outside the main bundle', () =>
 	const packageEntry = read('index.js');
 	const styleEntry = read('index.scss');
 	const packageJson = JSON.parse(read('package.json'));
+	const tableModule = read('app/modules/vgtable/js/vgtable.js');
+	const tableOptions = read('app/modules/vgtable/js/_options.js');
 
 	assert.match(appEntry, /import VGTable from ["']\.\/modules\/vgtable["']/);
 	assert.match(appEntry, /\bVGTable,\s*\n/);
 	assert.match(packageEntry, /export \{ default as VGTable \}/);
 	assert.match(styleEntry, /modules\/vgtable\/scss\/vgtable/);
 	assert.equal(packageJson.exports['./table'].sass, './app/modules/vgtable/scss/vgtable.scss');
+	assert.match(tableModule, /from ["']\.\/_options\.js["']/);
+	assert.doesNotMatch(tableModule, /const DEFAULT_OPTIONS\s*=/);
+	assert.match(tableOptions, /const DEFAULT_OPTIONS\s*=\s*\{/);
+	assert.match(tableOptions, /export \{[\s\S]*DEFAULT_OPTIONS/);
+	const tableVariables = read('app/modules/vgtable/scss/_variables.scss');
+	const tableStyles = read('app/modules/vgtable/scss/vgtable.scss');
+	assert.match(tableVariables, /\$table-wrapper:\s*\(/);
+	assert.match(tableVariables, /\$table-container:\s*\(/);
+	assert.match(tableStyles, /mix-vars\('table-wrapper', table\.\$table-wrapper\)/);
+	assert.match(tableStyles, /mix-vars\('table-container', table\.\$table-container\)/);
+	assert.doesNotMatch(tableStyles, /\.vg-table-wrapper\s*\{[\s\S]*?mix-vars\('table', map\.get\(table\.\$table-sizing, md\)\);[\s\S]*?\.vg-table\s*\{/);
+	assert.match(tableStyles, /border: var\(--vg-table-wrapper-border-width\) var\(--vg-table-wrapper-border-style\) var\(--vg-table-wrapper-border-color\)/);
+	assert.match(tableStyles, /\.vg-table-wrapper > \.vg-table-container[\s\S]*border: var\(--vg-table-container-border-width\) var\(--vg-table-container-border-style\) var\(--vg-table-container-border-color\)/);
+	assert.match(tableStyles, /\.vg-table\s*\{[\s\S]*?border: 0;[\s\S]*?border-radius: 0;/);
+	assert.match(tableVariables, /\$table-sizing:\s*\(/);
+	for (const size of ['xs', 'sm', 'md', 'lg', 'xl']) {
+		assert.match(tableVariables, new RegExp(`\\b${size}: \\(`));
+	}
+	assert.match(tableStyles, /@each \$size, \$values in table\.\$table-sizing/);
 
 	assert.doesNotMatch(appEntry, /modules\/vgdynamictable|VGDynamicTable|\bEditable\b/);
 	assert.doesNotMatch(packageEntry, /modules\/vgdynamictable|VGDynamicTable|\bEditable\b/);

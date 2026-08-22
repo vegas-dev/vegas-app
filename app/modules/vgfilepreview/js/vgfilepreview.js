@@ -1,3 +1,7 @@
+/**
+ * Описание: основной контроллер предпросмотра файлов и синхронизации полей карточки.
+ * Возможности: валидирует путь, выбирает рендерер, управляет медиа, скачиванием, состояниями и публичным API.
+ */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
 import FilePreviewHelper from "../../../utils/js/components/file-preview";
@@ -761,7 +765,7 @@ class VGFilePreview extends BaseModule {
 		}
 
 		if (this._isImageFile()) {
-			return false;
+			return this._isPreviewGroupEnabled('image');
 		}
 
 		if (this._isOfficeFile()) {

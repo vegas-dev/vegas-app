@@ -1,3 +1,7 @@
+/**
+ * Описание: расчёт позиции всплывающих элементов относительно триггера и доступных границ.
+ * Возможности: auto-flip, clipping-родители, ограничение координат и позиционирование внутри offsetParent.
+ */
 import {mergeDeepObject} from "../functions";
 
 class Placement {
@@ -36,18 +40,20 @@ class Placement {
 	_getOverflowConstraints() {
 		const refRect = this._getPlacementRect(this.reference);
 		const dropRect = this._getPlacementRect(this.drop);
-		const viewRect = this._getViewportRect();
+		const boundaryRect = this._getBoundaryRect();
 		const [xOffset, yOffset] = this.offset;
 
 		let placement = this.placement;
 
 		if (this.overflowProtection) {
-			const fallbacks = [this.placement, ...this.fallbackPlacements];
+			const fallbacks = this.autoFlip
+				? Array.from(new Set([this.placement, ...this.fallbackPlacements]))
+				: [this.placement];
 			let best = null;
 
 			for (const p of fallbacks) {
 				const position = this._calculatePosition(p, refRect, dropRect, xOffset, yOffset);
-				const overflow = this._calculateOverflow(position, dropRect, viewRect);
+				const overflow = this._calculateOverflow(position, dropRect, boundaryRect);
 
 				if (!best || overflow < best.overflow) {
 					best = { placement: p, position, overflow };
@@ -59,7 +65,7 @@ class Placement {
 			placement = best.placement;
 
 			const finalPosition = this.clamp
-				? this._clampPosition(best.position, dropRect, viewRect)
+				? this._clampPosition(best.position, dropRect, boundaryRect)
 				: best.position;
 
 			this._setStyles(finalPosition);
@@ -67,13 +73,53 @@ class Placement {
 			const position = this._calculatePosition(placement, refRect, dropRect, xOffset, yOffset);
 
 			const finalPosition = this.clamp
-				? this._clampPosition(position, dropRect, viewRect)
+				? this._clampPosition(position, dropRect, boundaryRect)
 				: position;
 
 			this._setStyles(finalPosition);
 		}
 
 		this.drop.setAttribute('data-vg-placement', placement);
+	}
+
+	_getBoundaryRect() {
+		const viewport = this._getViewportRect();
+		if (this.boundary instanceof Element) {
+			return this._intersectRects(viewport, this._getPlacementRect(this.boundary));
+		}
+		if (typeof this.boundary === 'string' && this.boundary !== 'viewport' && this.boundary !== 'clippingParents') {
+			const boundary = this.reference.closest(this.boundary);
+			if (boundary) return this._intersectRects(viewport, this._getPlacementRect(boundary));
+		}
+		if (this.boundary !== 'clippingParents') return viewport;
+
+		let result = viewport;
+		let parent = this.reference.parentElement;
+		while (parent && parent !== document.body && parent !== document.documentElement) {
+			if (this._isClippingElement(parent)) {
+				result = this._intersectRects(result, this._getPlacementRect(parent));
+			}
+			parent = parent.parentElement;
+		}
+		return result;
+	}
+
+	_isClippingElement(element) {
+		const style = window.getComputedStyle(element);
+		return [style.overflow, style.overflowX, style.overflowY]
+			.some((value) => /(auto|scroll|hidden|clip)/.test(value || ''));
+	}
+
+	_intersectRects(left, right) {
+		const result = {
+			left: Math.max(left.left, right.left),
+			top: Math.max(left.top, right.top),
+			right: Math.min(left.right, right.right),
+			bottom: Math.min(left.bottom, right.bottom),
+		};
+		result.width = Math.max(0, result.right - result.left);
+		result.height = Math.max(0, result.bottom - result.top);
+		return result;
 	}
 
 	_calculatePosition(placement, refRect, dropRect, xOffset = 0, yOffset = 0) {
@@ -191,18 +237,26 @@ class Placement {
 
 	_setStyles(pos) {
 		if (!pos || !this.drop) return;
+		const offsetParent = this.drop.offsetParent;
+		let top = pos.top + window.pageYOffset;
+		let left = pos.left + window.pageXOffset;
+		if (offsetParent && offsetParent !== document.body && offsetParent !== document.documentElement) {
+			const parentRect = this._getPlacementRect(offsetParent);
+			top = pos.top - parentRect.top + offsetParent.scrollTop - offsetParent.clientTop;
+			left = pos.left - parentRect.left + offsetParent.scrollLeft - offsetParent.clientLeft;
+		}
 
 		if (this.isMerge) {
 			mergeDeepObject(this.drop.style, {
 				position: 'absolute',
-				top: `${pos.top + window.pageYOffset}px`,
-				left: `${pos.left + window.pageXOffset}px`,
+				top: `${top}px`,
+				left: `${left}px`,
 				margin: '0'
 			});
 		} else {
 			this.drop.style.position = 'absolute';
-			this.drop.style.top = `${pos.top + window.pageYOffset}px`;
-			this.drop.style.left = `${pos.left + window.pageXOffset}px`;
+			this.drop.style.top = `${top}px`;
+			this.drop.style.left = `${left}px`;
 			this.drop.style.margin = '0';
 		}
 	}

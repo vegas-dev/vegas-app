@@ -1,3 +1,7 @@
+/**
+ * Описание: выпадающее меню VGDropdown с управлением мышью и клавиатурой.
+ * Возможности: автоматическое размещение, hover/click режимы, outside-click, анимация и AJAX-контент.
+ */
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -44,6 +48,8 @@ const EVENT_KEYDOWN_DATA_API   = `keydown.${NAME_KEY}.data.api`;
 const EVENT_CLICK_DATA_API     = `click.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOVER_DATA_API = `mouseover.${NAME_KEY}.data.api`;
 const EVENT_MOUSEOUT_DATA_API  = `mouseout.${NAME_KEY}.data.api`;
+
+let isDocumentDataApiInitialized = false;
 
 /**
  * Компонент выпадающего списка (Dropdown).
@@ -179,6 +185,7 @@ class VGDropdown extends BaseModule {
 		this._setPlacement();
 
 		const completeCallback = () => {
+			if (!this._element || !this._drop || !this._params) return;
 			this._route((status, data) => {
 				EventHandler.trigger(this._element, EVENT_KEY_LOADED, { stats: status, data });
 			});
@@ -210,6 +217,13 @@ class VGDropdown extends BaseModule {
 	 * @return {void}
 	 */
 	dispose() {
+		if (this._element) {
+			this._element.classList.remove(CLASS_NAME_SHOW);
+			this._element.setAttribute('aria-expanded', 'false');
+		}
+		if (this._drop) {
+			this._drop.classList.remove(CLASS_NAME_SHOW, CLASS_NAME_FADE, CLASS_NAME_OPEN);
+		}
 		super.dispose();
 	}
 
@@ -247,7 +261,9 @@ class VGDropdown extends BaseModule {
 		}
 
 		setTimeout(() => {
+			if (!this._element || !this._drop || !this._params) return;
 			const completeCallback = () => {
+				if (!this._element || !this._drop) return;
 				this._drop.classList.remove(CLASS_NAME_SHOW);
 				EventHandler.trigger(this._drop, EVENT_KEY_HIDDEN, relatedTarget);
 			};
@@ -262,30 +278,28 @@ class VGDropdown extends BaseModule {
 	_setPlacement() {
 		if (!this._drop) return;
 
-		if (!this._isPlacement) {
-			let placementDefault = 'bottom-start',
-				autoFlip = false,
-				overflowProtection = false;
+		let placementDefault = 'bottom-start',
+			autoFlip = false,
+			overflowProtection = false;
 
-			if (this._params.placement === 'auto') {
-				autoFlip = true;
-				overflowProtection = true;
-			} else {
-				placementDefault = this._params.placement
-			}
-
-			const placement = new Placement({
-				reference: this._element,
-				drop: this._drop,
-				placement: placementDefault,
-				boundary: 'clippingParents',
-				autoFlip: autoFlip,
-				overflowProtection: overflowProtection,
-				fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
-			});
-
-			placement._setPlacement(); // позиционируем
+		if (this._params.placement === 'auto') {
+			autoFlip = true;
+			overflowProtection = true;
+		} else {
+			placementDefault = this._params.placement
 		}
+
+		const placement = new Placement({
+			reference: this._element,
+			drop: this._drop,
+			placement: placementDefault,
+			boundary: 'clippingParents',
+			autoFlip: autoFlip,
+			overflowProtection: overflowProtection,
+			fallbackPlacements: ['bottom-end', 'top-start', 'top-end', 'right-start', 'left-start', 'right-end', 'left-end'],
+		});
+
+		placement._setPlacement(); // позиционируем при каждом открытии
 
 		this._isPlacement = true;
 	}
@@ -298,6 +312,9 @@ class VGDropdown extends BaseModule {
 	 */
 	static init(element, params = {}) {
 		const instance = VGDropdown.getOrCreateInstance(element, params);
+		if (instance._isDataApiInitialized) return instance;
+
+		instance._isDataApiInitialized = true;
 
 		if (instance._params.hover && !isMobileDevice()) {
 			let currentElem = null;
@@ -329,11 +346,14 @@ class VGDropdown extends BaseModule {
 			});
 		}
 
-		// Клавиатурные события
-		EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
-		EventHandler.on(document, EVENT_KEYDOWN_DATA_API, `.${TARGET_CONTAINER}`, VGDropdown.keydownHandler);
-		EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
-		EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
+		if (!isDocumentDataApiInitialized) {
+			// Клавиатура и outside-click подключаются один раз для всех экземпляров.
+			EventHandler.on(document, EVENT_KEYUP_DATA_API, SELECTOR_DATA_TOGGLE, VGDropdown.keydownHandler);
+			EventHandler.on(document, EVENT_KEYDOWN_DATA_API, `.${TARGET_CONTAINER}`, VGDropdown.keydownHandler);
+			EventHandler.on(document, EVENT_KEYUP_DATA_API, VGDropdown.clearDrops);
+			EventHandler.on(document, EVENT_CLICK_DATA_API, VGDropdown.clearDrops);
+			isDocumentDataApiInitialized = true;
+		}
 
 		// Клик по тоглу
 		EventHandler.on(element, EVENT_CLICK_DATA_API, (event) => {
@@ -342,6 +362,17 @@ class VGDropdown extends BaseModule {
 		});
 
 		return instance;
+	}
+
+	/**
+	 * Инициализирует все Dropdown-триггеры в документе.
+	 * Повторный вызов безопасен и возвращает уже созданные экземпляры.
+	 * @param {Object} [params] - Общие параметры для найденных элементов.
+	 * @return {VGDropdown[]} Экземпляры найденных Dropdown.
+	 */
+	static initAll(params = {}) {
+		return Selectors.findAll(SELECTOR_DATA_TOGGLE)
+			.map(element => VGDropdown.init(element, params));
 	}
 
 	/**

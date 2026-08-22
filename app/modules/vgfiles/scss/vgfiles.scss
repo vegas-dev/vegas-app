@@ -48,6 +48,7 @@
 
 			svg {
 				width: 24px;
+				height: 24px;
 
 				path {
 					fill: var(--vg-files-label-color);
@@ -195,7 +196,7 @@
 				.stat-label {
 					svg {
 						path {
-							fill: var(--vg-secondary-bg);
+							fill: var(--vg-text-color);
 						}
 					}
 				}
@@ -261,7 +262,7 @@
 			}
 
 			.file {
-				--vg-button-color: var(--vg-secondary);
+				--vg-button-color: var(--vg-secondary-color, var(--vg-secondary, var(--vg-text-muted-color, #6b7280)));
 				display: flex;
 				align-items: center;
 				gap: var(--vg-files-info-gap);
@@ -434,7 +435,7 @@
 						position: relative;
 
 						&:hover {
-							--vg-button-color: var(--vg-danger);
+							--vg-button-color: var(--vg-danger-color, var(--vg-danger, #ff2a2c));
 						}
 
 						i {
@@ -531,6 +532,7 @@
 	}
 
 	&-drop {
+		display: block;
 		background-color: var(--vg-files-drop-bg);
 		border: var(--vg-files-drop-border-width) var(--vg-files-drop-border-style) var(--vg-files-drop-border-color);
 		cursor: pointer;
@@ -547,6 +549,14 @@
 			border: none;
 			height: auto;
 			min-height: var(--vg-files-drop-height);
+
+			&:has(.vg-files-drop-message.has-files) {
+				cursor: default;
+			}
+
+			.vg-files-drop-message.has-files {
+				cursor: pointer;
+			}
 
 			&:hover {
 				animation: none;
@@ -637,7 +647,7 @@
 			overflow: hidden;
 
 			.file {
-				--vg-button-color: var(--vg-body-color);
+				--vg-button-color: var(--vg-text-color, var(--vg-body-color, #000000));
 				border-radius: var(--vg-files-drop-file-radius);
 				position: relative;
 				overflow: hidden;
@@ -708,7 +718,33 @@
 					top: var(--vg-files-drop-remove-offset);
 					display: flex;
 					flex-direction: column;
-					gap: 8px;
+					align-items: flex-end;
+					gap: var(--vg-files-drop-actions-gap);
+					opacity: .2;
+					transform: var(--vg-transition-base);
+
+					.file-actions {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						gap: var(--vg-files-drop-actions-gap);
+
+						button {
+							width: var(--vg-files-drop-remove-size);
+							height: var(--vg-files-drop-remove-size);
+							min-width: var(--vg-files-drop-remove-size);
+							min-height: var(--vg-files-drop-remove-size);
+							max-width: var(--vg-files-drop-remove-size);
+							max-height: var(--vg-files-drop-remove-size);
+							padding: 0;
+							justify-content: center;
+
+							svg {
+								width: var(--vg-files-drop-control-icon-size);
+								height: var(--vg-files-drop-control-icon-size);
+							}
+						}
+					}
 
 					.file-remove {
 						.file-failing-actions {
@@ -717,7 +753,7 @@
 
 						button {
 							background: var(--vg-body-bg);
-							color: var(--vg-body-color);
+							color: var(--vg-text-color, var(--vg-body-color, #000000));
 							border: none;
 							cursor: pointer;
 							outline: none;
@@ -729,11 +765,11 @@
 							position: relative;
 							width: var(--vg-files-drop-remove-size);
 							height: var(--vg-files-drop-remove-size);
+							min-width: var(--vg-files-drop-remove-size);
+							min-height: var(--vg-files-drop-remove-size);
+							max-width: var(--vg-files-drop-remove-size);
+							max-height: var(--vg-files-drop-remove-size);
 							border-radius: var(--vg-files-drop-remove-radius);
-
-							&:hover {
-								background-color: var(--vg-files-drop-remove-hover-bg);
-							}
 
 							i {
 								position: absolute;
@@ -746,12 +782,21 @@
 								justify-content: center;
 
 								svg {
+									width: var(--vg-files-drop-control-icon-size);
+									height: var(--vg-files-drop-control-icon-size);
+
 									path {
 										fill: var(--vg-button-color);
 									}
 								}
 							}
 						}
+					}
+				}
+
+				&:hover {
+					.file-custom {
+						opacity: 1;
 					}
 				}
 			}
