@@ -1,10 +1,4 @@
 @mixin styles {
-	&.vg-table-wrapper--fixed-columns .vg-table {
-		// Таблица не должна становиться собственным overflow-контейнером:
-		// sticky-ячейки обязаны ориентироваться на прокручиваемый container/body.
-		overflow: visible;
-	}
-
 	// У обычной таблицы внешний clip принадлежит обязательному container.
 	// Fixed Header исключён: его углы формируют отдельные header/body слои.
 	&.vg-table-wrapper--fixed-columns:not(.vg-table-wrapper--sticky-container):not(.vg-table-wrapper--sticky-page) {

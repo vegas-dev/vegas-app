@@ -1,3 +1,7 @@
+/**
+ * Описание: базовый класс модулей VGApp с общими параметрами, жизненным циклом и сетевыми запросами.
+ * Возможности: хранит экземпляры, нормализует Data API, управляет событиями и выполняет AJAX-запросы.
+ */
 import {
 	execute,
 	executeAfterTransition,
@@ -54,7 +58,7 @@ class BaseModule {
 	 * - timeout = задержка перед отправкой, по умолчанию 0
 	 * @param callback
 	 */
-	_route(callback) {
+	_route(callback, errorCallback) {
 		if (typeof callback !== 'function') {
 			return this._requestRoute(callback);
 		}
@@ -121,13 +125,21 @@ class BaseModule {
 				completeAjaxRequest(data, 'success')
 			},
 			onError: (err) => {
+				if ('loader' in this._params.ajax && this._params.ajax.loader) setData('');
+
+				if (typeof errorCallback === 'function') {
+					execute(errorCallback, [err]);
+					return;
+				}
+
 				completeAjaxRequest(err, 'error')
 			}
 		}
 
 		setTimeout(() => {
 			if (this._params.ajax.method.toLowerCase() === 'get') {
-				ajax.get(this._params.ajax.route, ajaxData);
+				const route = this._buildRouteUrl(this._params.ajax.data, this._params.ajax.route);
+				ajax.get(route.toString(), ajaxData);
 			}
 
 			if (this._params.ajax.method.toLowerCase() === 'post') {

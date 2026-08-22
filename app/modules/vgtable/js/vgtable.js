@@ -571,7 +571,6 @@ class VGTable extends BaseModule {
 			this._params.filters,
 			{
 				buttons: Object.assign({}, this._params.filters.buttons),
-				url: Object.assign({}, this._params.filters.url),
 			}
 		);
 		const filters = this._params.filters;
@@ -608,20 +607,8 @@ class VGTable extends BaseModule {
 		assign('operator-attr', (value) => { filters.operatorAttr = value; });
 		assign('button-apply', (value) => { filters.buttons.apply = value; });
 		assign('button-reset', (value) => { filters.buttons.reset = value; });
-		assign('url-enable', (value) => { filters.url.enabled = boolean(value); });
-		assign('url-read', (value) => { filters.url.read = boolean(value); });
-		assign('url-write', (value) => { filters.url.write = boolean(value); });
-		assign('url-listen', (value) => { filters.url.listen = boolean(value); });
-		assign('url-mode', (value) => { filters.url.mode = value; });
-		assign('url-prefix', (value) => { filters.url.prefix = value; });
-		assign('urlstate-enable', (value) => { filters.url.enabled = boolean(value); });
-		assign('urlstate-read-on-init', (value) => { filters.url.read = boolean(value); });
-		assign('urlstate-write-on-change', (value) => { filters.url.write = boolean(value); });
-		assign('urlstate-history-mode', (value) => { filters.url.mode = value; });
-		assign('urlstate-prefix', (value) => { filters.url.prefix = value; });
 
 		filters.apply = String(filters.apply).toLowerCase() === 'manual' ? 'manual' : 'auto';
-		filters.url.mode = String(filters.url.mode).toLowerCase() === 'push' ? 'push' : 'replace';
 	}
 
 	/** Подготовка текстов и включения state-layer из Data API. */
@@ -672,7 +659,6 @@ class VGTable extends BaseModule {
 		assign('include-search', (value) => { state.include.search = boolean(value); });
 		assign('include-filters', (value) => { state.include.filters = boolean(value); });
 		state.mode = String(state.mode).toLowerCase() === 'push' ? 'push' : 'replace';
-		if (state.enabled === true) this._params.filters.url.enabled = false;
 	}
 
 	/**

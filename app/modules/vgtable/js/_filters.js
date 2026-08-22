@@ -1,9 +1,8 @@
 /**
  * Описание: форма локальных и remote-фильтров VGTable.
- * Возможности: auto/manual применение, debounce, операторы, reset, совместимость с legacy URL-state и публичное состояние.
+ * Возможности: auto/manual применение, debounce, операторы, reset и публичное состояние.
  */
 import EventHandler from "../../../utils/js/dom/event";
-
 
 const EVENT_CHANGE = 'filterschange.vg.table';
 
@@ -19,7 +18,6 @@ class _filters {
 		this._boundChange = this._handleChange.bind(this);
 		this._boundClick = this._handleClick.bind(this);
 		this._boundSubmit = this._handleSubmit.bind(this);
-		this._boundPopState = this._handlePopState.bind(this);
 	}
 
 	init() {
@@ -30,12 +28,6 @@ class _filters {
 		this._form.addEventListener('change', this._boundChange);
 		this._form.addEventListener('click', this._boundClick);
 		this._form.addEventListener('submit', this._boundSubmit);
-		if (this._urlOptions().enabled === true && this._urlOptions().read === true) {
-			this.setValues(this._readUrl(), {emit: false});
-		}
-		if (this._urlOptions().enabled === true && this._urlOptions().listen === true && typeof window !== 'undefined') {
-			window.addEventListener('popstate', this._boundPopState);
-		}
 		return this;
 	}
 
@@ -46,7 +38,6 @@ class _filters {
 			this._form.removeEventListener('click', this._boundClick);
 			this._form.removeEventListener('submit', this._boundSubmit);
 		}
-		if (typeof window !== 'undefined') window.removeEventListener('popstate', this._boundPopState);
 		if (this._timer) window.clearTimeout(this._timer);
 		this._timer = null;
 		this._controls = [];
@@ -102,10 +93,6 @@ class _filters {
 			if (normalized.operator) params[`${field}_op`] = normalized.operator;
 		});
 		return {filters, params, fields: Object.keys(filters), meta: {count: Object.keys(filters).length}};
-	}
-
-	getValues() {
-		return Object.assign({}, this.getState().params);
 	}
 
 	getFields() {
@@ -169,15 +156,8 @@ class _filters {
 		this._emit('submit');
 	}
 
-	_handlePopState() {
-		this.setValues(this._readUrl(), {emit: true, source: 'popstate'});
-	}
-
 	_emit(source) {
 		const state = Object.assign(this.getState(), {source});
-		if (this._urlOptions().enabled === true && this._urlOptions().write === true && source !== 'popstate') {
-			this._writeUrl(state.params);
-		}
 		EventHandler.trigger(this._table, EVENT_CHANGE, state);
 		this._onChange?.(state);
 	}
@@ -251,36 +231,6 @@ class _filters {
 		else control.value = control.defaultValue || '';
 	}
 
-	_readUrl() {
-		if (typeof window === 'undefined') return {};
-		const result = {};
-		const prefix = String(this._urlOptions().prefix || 'f-');
-		const params = new URLSearchParams(window.location.search);
-		this._fieldNames().forEach((field) => {
-			const values = params.getAll(`${prefix}${field}`);
-			if (values.length) result[field] = values.length === 1 ? values[0] : values;
-			const operator = params.get(`${prefix}${field}_op`);
-			if (operator !== null) result[`${field}_op`] = operator;
-		});
-		return result;
-	}
-
-	_writeUrl(values) {
-		if (typeof window === 'undefined' || !window.history) return;
-		const url = new URL(window.location.href);
-		const prefix = String(this._urlOptions().prefix || 'f-');
-		this._fieldNames().forEach((field) => {
-			url.searchParams.delete(`${prefix}${field}`);
-			url.searchParams.delete(`${prefix}${field}_op`);
-		});
-		Object.entries(values || {}).forEach(([key, value]) => {
-			const valuesList = Array.isArray(value) ? value : [value];
-			valuesList.filter((entry) => String(entry ?? '') !== '').forEach((entry) => url.searchParams.append(`${prefix}${key}`, String(entry)));
-		});
-		const method = String(this._urlOptions().mode).toLowerCase() === 'push' ? 'pushState' : 'replaceState';
-		window.history[method]({}, '', url);
-	}
-
 	_fieldNames() {
 		return Array.from(new Set(this._controls.map((control) => String(control.getAttribute(this._fieldAttr()) || '').trim()).filter(Boolean)));
 	}
@@ -298,10 +248,6 @@ class _filters {
 
 	_isManual() {
 		return String(this._options.apply || 'auto').toLowerCase() === 'manual';
-	}
-
-	_urlOptions() {
-		return this._options.url || {};
 	}
 
 	_fieldAttr() { return String(this._options.fieldAttr || 'data-filter-field'); }

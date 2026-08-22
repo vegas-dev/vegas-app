@@ -216,21 +216,6 @@ const DEFAULT_OPTIONS = {
 			reset: '[data-filter-reset]',
 		},
 
-		/** Синхронизация активных фильтров с query string. */
-		url: {
-			// Data API: data-filters-url-enable. Варианты: true | false.
-			enabled: false,
-			// Читать фильтры при инициализации. Data API: data-filters-url-read. Варианты: true | false.
-			read: true,
-			// Записывать фильтры после изменения. Data API: data-filters-url-write. Варианты: true | false.
-			write: true,
-			// Реагировать на навигацию history. Data API: data-filters-url-listen. Варианты: true | false.
-			listen: true,
-			// Способ обновления history. Data API: data-filters-url-mode. Варианты: 'replace' | 'push'.
-			mode: 'replace',
-			// Префикс query-параметров. Data API: data-filters-url-prefix. Варианты: string.
-			prefix: 'f-',
-		},
 	},
 
 	/** Состояния результата, ошибки и восстановления таблицы. */

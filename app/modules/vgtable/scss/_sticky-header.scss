@@ -35,16 +35,6 @@
 			border-start-start-radius: var(--vg-table-sticky-inner-radius);
 			border-start-end-radius: var(--vg-table-sticky-inner-radius);
 
-			/*&:before {
-				content: '';
-				height: 100%;
-				width: var(--vg-table-sticky-scrollbar-width, 0);
-				position: absolute;
-				right: 0;
-				top: 0;
-				background-color: var(--vg-table-thead-bg);
-			}*/
-
 			&--scrollbar::after {
 				content: "";
 				position: absolute;
@@ -108,20 +98,19 @@
 			z-index: var(--vg-table-sticky-z-index);
 			box-shadow: var(--vg-table-sticky-shadow);
 
-			&.is-stuck .vg-table-header__table thead > tr:first-child {
-				> th:first-child {
-					border-start-start-radius: 0;
-				}
-
-				> th:last-child {
-					border-start-end-radius: 0;
-				}
-			}
-
 			&.is-stuck {
 				border-start-start-radius: 0;
 				border-start-end-radius: 0;
 
+				.vg-table-header__table thead > tr:first-child {
+					> th:first-child {
+						border-start-start-radius: 0;
+					}
+
+					> th:last-child {
+						border-start-end-radius: 0;
+					}
+				}
 			}
 		}
 

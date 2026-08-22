@@ -130,7 +130,7 @@
 
 		tbody {
 			tr {
-				transition: var(--vg-transition-base);
+				transition: var(--vg-table-transition);
 				background-color: var(--vg-table-tbody-bg);
 
 				td {
@@ -154,7 +154,7 @@
 			}
 		}
 
-		//
+		// Чередование фона строк
 		&-striped {
 			tbody {
 				tr:nth-child(even) {
@@ -172,7 +172,10 @@
 
 		tbody tr.vg-table-row-selected {
 			background-color: var(--vg-table-selection-row-background);
-			border-bottom-color: var(--vg-table-selection-row-border-selected);
+
+			> td {
+				border-bottom-color: var(--vg-table-selection-row-border-selected);
+			}
 
 			&:hover {
 				background-color: var(--vg-table-selection-row-background-hovered);

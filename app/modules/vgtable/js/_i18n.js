@@ -72,9 +72,4 @@ const resolveDictionary = (locale, dictionaries = {}) => {
 	return merge({}, fallback, localized);
 };
 
-const translate = (dictionary, path, fallback = '', variables = {}) => {
-	const value = String(path || '').split('.').reduce((current, key) => current?.[key], dictionary);
-	return String(value ?? fallback ?? '').replace(/\{([\w-]+)}/g, (match, key) => String(variables[key] ?? match));
-};
-
-export {DEFAULT_I18N, DEFAULT_LOCALE, merge, normalizeLocale, resolveDictionary, translate};
+export {normalizeLocale, resolveDictionary};

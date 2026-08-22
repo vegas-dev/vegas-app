@@ -1,3 +1,7 @@
+/**
+ * Описание: подгрузка статического и удалённого контента по кнопке или при прокрутке.
+ * Возможности: Data API, AJAX-пагинация, infinite scroll, события, анимация и автоcкрытие триггера.
+ */
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import { execute, isObject, mergeDeepObject, normalizeData } from "../../../utils/js/functions";
@@ -213,7 +217,7 @@ class VGLoadMore extends BaseModule {
 
 		const buttonData = {
 			limit: this._params.limit,
-			offset: this._params.offset,
+			offset: this._params.offset || this._params.limit,
 			output: this._params.output,
 			autohide: this._params.autohide,
 			animate: this._params.animate,
@@ -278,7 +282,7 @@ class VGLoadMore extends BaseModule {
 
 		this._observer.disconnect();
 
-		const container = Selectors.find(this._params.target) || this._element.parentNode;
+		const container = this._getTargetContainer();
 		const items = Selectors.findAll(`.${this._params.elements}`, container);
 		const visibleItems = items.filter(item => item.classList.contains(CLASS_NAME_SHOW));
 		const lastVisible = visibleItems[visibleItems.length - 1];
@@ -331,7 +335,10 @@ class VGLoadMore extends BaseModule {
 
 		const originalText = this._params.button.text;
 
-		this._params.ajax.data = { limit: this._params.limit, offset: this._params.offset };
+		this._params.ajax.data = mergeDeepObject(this._params.ajax.data, {
+			limit: this._params.limit,
+			offset: this._params.offset
+		});
 
 		this._route((status, data, responseTarget) => {
 			if (status === 'error' || typeof data?.response !== 'string') return;
@@ -348,7 +355,7 @@ class VGLoadMore extends BaseModule {
 			this._observeLastVisibleItem();
 
 			const noMoreData = !data.response.trim();
-			if (this._params.autohide && this._params.detach && noMoreData) {
+			if (this._params.autohide && noMoreData) {
 				this._autohideTrigger();
 			}
 
@@ -366,7 +373,7 @@ class VGLoadMore extends BaseModule {
 	 * @private
 	 */
 	staticLoad(callback) {
-		const container = Selectors.find(this._params.target) || this._element.parentNode;
+		const container = this._getTargetContainer();
 		const items = Selectors.findAll(`.${this._params.elements}`, container);
 		const start = this._params.offset;
 		const end = start + this._params.limit;
@@ -394,12 +401,30 @@ class VGLoadMore extends BaseModule {
 		this._observeLastVisibleItem();
 
 		const remaining = items.slice(end);
-		if (this._params.autohide && this._params.detach && remaining.length === 0) {
+		if (this._params.autohide && remaining.length === 0) {
 			this._autohideTrigger();
 		}
 
 		this._restoreElementState(this._params.button.text);
+		EventHandler.trigger(this._element, EVENT_KEY_LOADED, {
+			stats: 'success',
+			data: {
+				items: newItems,
+				offset: this._params.offset,
+				remaining: remaining.length
+			}
+		});
 		execute(callback, [this, this._element]);
+	}
+
+	/**
+	 * Возвращает контейнер элементов для container- и trigger-режимов.
+	 * @returns {Element|null}
+	 * @private
+	 */
+	_getTargetContainer() {
+		return Selectors.find(this._params.target)
+			|| (this._isToggleElement ? this._element.parentNode : this._element);
 	}
 
 	/**
@@ -425,6 +450,9 @@ class VGLoadMore extends BaseModule {
 			this._observer = null;
 		} else if (this._params.detach && this._element.parentNode) {
 			this._element.remove();
+		} else {
+			this._element.classList.add(CLASS_NAME_HIDE);
+			this._element.setAttribute('aria-hidden', 'true');
 		}
 	}
 
