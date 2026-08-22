@@ -245,6 +245,154 @@ test('uses page sticky mode and preserves an existing table container on dispose
 	assert.equal(wrapper.classList.contains('custom-wrapper'), true);
 });
 
+test('keeps an empty sticky header cell as wide as its populated body column', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th data-field="name">Название</th><th data-field="actions" data-sort-enabled="false"></th></tr></thead>
+			<tbody><tr><td>Запись</td><td><button type="button">Действие</button></td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	const cells = Array.from(table.tBodies[0].rows[0].cells);
+	[240, 96].forEach((width, index) => {
+		cells[index].getBoundingClientRect = () => ({width});
+	});
+	const emptyHeader = table.tHead.rows[0].cells[1];
+	const instance = new VGTable(table).init();
+	const headerCells = wrapper.querySelectorAll('.vg-table-header th');
+	const headerCols = wrapper.querySelectorAll('.vg-table-header col');
+
+	assert.equal(headerCells[0].style.width, '240px');
+	assert.equal(headerCells[1].style.width, '96px');
+	assert.equal(headerCols[0].style.width, '240px');
+	assert.equal(headerCols[1].style.width, '96px');
+
+	instance.dispose();
+	assert.equal(emptyHeader.style.width, '');
+});
+
+test('keeps hard header widths while remote table moves through empty and skeleton states', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th style="width: 180px">ID</th><th>Название</th></tr></thead>
+			<tbody><tr data-vg-table-state-row><td colspan="2" data-vg-table-state="empty">Нет данных</td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	const headerCells = Array.from(table.tHead.rows[0].cells);
+	headerCells[0].getBoundingClientRect = () => ({width: 180});
+	headerCells[1].getBoundingClientRect = () => ({width: 420});
+	table.tBodies[0].rows[0].cells[0].getBoundingClientRect = () => ({width: 600});
+	const instance = new VGTable(table).init();
+	const bodyCols = wrapper.querySelectorAll('.vg-table-body col');
+	const stickyHeaderCells = wrapper.querySelectorAll('.vg-table-header th');
+
+	assert.equal(bodyCols[0].style.width, '180px');
+	assert.equal(bodyCols[1].style.width, '420px');
+	assert.equal(stickyHeaderCells[0].style.width, '180px');
+	assert.equal(stickyHeaderCells[1].style.width, '420px');
+
+	table.tBodies[0].innerHTML = '<tr data-vg-table-skeleton><td></td><td></td></tr>';
+	Array.from(table.tBodies[0].rows[0].cells).forEach((cell) => {
+		cell.getBoundingClientRect = () => ({width: 300});
+	});
+	instance.refreshStickyHeader();
+	const refreshedBodyCols = wrapper.querySelectorAll('.vg-table-body col');
+	assert.equal(refreshedBodyCols[0].style.width, '180px');
+	assert.equal(refreshedBodyCols[1].style.width, '420px');
+
+	instance.dispose();
+});
+
+test('refreshes sticky header geometry when its layout container changes width', () => {
+	const originalResizeObserver = global.ResizeObserver;
+	const originalRequestAnimationFrame = global.requestAnimationFrame;
+	const originalCancelAnimationFrame = global.cancelAnimationFrame;
+	const observers = [];
+	const frames = new Map();
+	let frameId = 0;
+	let cancelledFrame = null;
+
+	global.ResizeObserver = class {
+		constructor(callback) {
+			this.callback = callback;
+			this.targets = [];
+			this.disconnected = false;
+			observers.push(this);
+		}
+
+		observe(target) {
+			this.targets.push(target);
+		}
+
+		disconnect() {
+			this.disconnected = true;
+		}
+	};
+	global.requestAnimationFrame = (callback) => {
+		frameId += 1;
+		frames.set(frameId, callback);
+		return frameId;
+	};
+	global.cancelAnimationFrame = (id) => {
+		cancelledFrame = id;
+		frames.delete(id);
+	};
+
+	try {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'vg-table-wrapper';
+		wrapper.innerHTML = `
+			<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+				<thead><tr><th>Название</th><th>Действия</th></tr></thead>
+				<tbody><tr><td>Запись</td><td>Открыть</td></tr></tbody>
+			</table>
+		`;
+		document.body.append(wrapper);
+		const table = wrapper.querySelector('table');
+		const cells = Array.from(table.tBodies[0].rows[0].cells);
+		let widths = [240, 96];
+		cells.forEach((cell, index) => {
+			cell.getBoundingClientRect = () => ({width: widths[index]});
+		});
+		const instance = new VGTable(table).init();
+		const observer = observers[0];
+		const headerCells = wrapper.querySelectorAll('.vg-table-header th');
+
+		assert.ok(observer.targets.includes(wrapper.querySelector('.vg-table-container')));
+		assert.ok(observer.targets.includes(wrapper.querySelector('.vg-table-body')));
+		assert.equal(headerCells[0].style.width, '240px');
+		assert.equal(headerCells[1].style.width, '96px');
+
+		widths = [320, 128];
+		observer.callback([]);
+		observer.callback([]);
+		assert.equal(frames.size, 1);
+		const [scheduledId, scheduledRefresh] = frames.entries().next().value;
+		frames.delete(scheduledId);
+		scheduledRefresh();
+		assert.equal(headerCells[0].style.width, '320px');
+		assert.equal(headerCells[1].style.width, '128px');
+
+		observer.callback([]);
+		const pendingId = frameId;
+		instance.dispose();
+		assert.equal(observer.disconnected, true);
+		assert.equal(cancelledFrame, pendingId);
+		assert.equal(frames.size, 0);
+	} finally {
+		global.ResizeObserver = originalResizeObserver;
+		global.requestAnimationFrame = originalRequestAnimationFrame;
+		global.cancelAnimationFrame = originalCancelAnimationFrame;
+	}
+});
+
 test('fixes left and right columns with native offsets and synchronous scroll edges', () => {
 	const wrapper = document.createElement('div');
 	wrapper.className = 'vg-table-wrapper';

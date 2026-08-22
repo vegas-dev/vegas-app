@@ -24,6 +24,16 @@
 }
 
 @mixin vgfiles-state() {
+	&.hide-custom-buttons-on-upload-state {
+		&.pending,
+		&.loading,
+		&.failing {
+			.file-actions {
+				display: none;
+			}
+		}
+	}
+
 	&.pending {
 		> * {
 			opacity: .32;

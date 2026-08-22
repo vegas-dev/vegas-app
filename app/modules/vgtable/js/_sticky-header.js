@@ -1,6 +1,6 @@
 /**
  * Описание: разметка Fixed Header с отдельными слоями заголовка и тела VGTable.
- * Возможности: перенос настоящего thead без клона, синхронизация колонок и горизонтальной прокрутки.
+ * Возможности: перенос настоящего thead без клона, автоматическая синхронизация ширин колонок и горизонтальной прокрутки.
  */
 
 const MODE_CLASSES = ['vg-table-wrapper--sticky-container', 'vg-table-wrapper--sticky-page'];
@@ -21,8 +21,11 @@ class _stickyHeader {
 		this._previousClasses = new Map();
 		this._previousContainerClasses = new Map();
 		this._previousStyles = new Map();
+		this._previousHeaderWidths = new Map();
+		this._resizeObserver = null;
+		this._resizeFrame = null;
 		this._boundScroll = this._syncScroll.bind(this);
-		this._boundResize = this.refresh.bind(this);
+		this._boundResize = this._scheduleRefresh.bind(this);
 		this._boundPageScroll = this._syncStickyState.bind(this);
 	}
 
@@ -44,10 +47,14 @@ class _stickyHeader {
 
 		this._buildLayers(widths);
 		this._body.addEventListener('scroll', this._boundScroll, {passive: true});
-		if (typeof window !== 'undefined') {
+		if (typeof ResizeObserver !== 'undefined') {
+			this._resizeObserver = new ResizeObserver(this._boundResize);
+			this._resizeObserver.observe(this._container);
+			this._resizeObserver.observe(this._body);
+		} else if (typeof window !== 'undefined') {
 			window.addEventListener('resize', this._boundResize);
-			if (this._params.mode === 'page') window.addEventListener('scroll', this._boundPageScroll, {passive: true});
 		}
+		if (this._params.mode === 'page' && typeof window !== 'undefined') window.addEventListener('scroll', this._boundPageScroll, {passive: true});
 		this.refresh();
 		return this;
 	}
@@ -71,6 +78,7 @@ class _stickyHeader {
 		const widths = this._measureBodyColumns();
 		this._applyColgroup(this._headerTable, widths);
 		this._applyColgroup(this._element, widths);
+		this._applyHeaderWidths(widths);
 		const scrollbar = Math.max(0, this._body.offsetWidth - this._body.clientWidth);
 		this._header.style.paddingInlineEnd = `${scrollbar}px`;
 		this._header.style.setProperty('--vg-table-sticky-scrollbar-width', `${scrollbar}px`);
@@ -83,8 +91,13 @@ class _stickyHeader {
 
 	dispose() {
 		if (this._body) this._body.removeEventListener('scroll', this._boundScroll);
+		this._resizeObserver?.disconnect();
+		if (this._resizeFrame !== null && typeof cancelAnimationFrame === 'function') {
+			cancelAnimationFrame(this._resizeFrame);
+			this._resizeFrame = null;
+		}
 		if (typeof window !== 'undefined') {
-			window.removeEventListener('resize', this._boundResize);
+			if (!this._resizeObserver) window.removeEventListener('resize', this._boundResize);
 			window.removeEventListener('scroll', this._boundPageScroll);
 		}
 		this._header?.classList.remove('is-stuck');
@@ -106,7 +119,23 @@ class _stickyHeader {
 			if (previous) this._container.style.setProperty(property, previous);
 			else this._container.style.removeProperty(property);
 		});
+		this._previousHeaderWidths.forEach((width, cell) => {
+			cell.style.width = width;
+		});
+		this._previousHeaderWidths.clear();
 		this._element.removeAttribute('data-vg-table-sticky-header');
+	}
+
+	_scheduleRefresh() {
+		if (this._resizeFrame !== null) return;
+		if (typeof requestAnimationFrame !== 'function') {
+			this.refresh();
+			return;
+		}
+		this._resizeFrame = requestAnimationFrame(() => {
+			this._resizeFrame = null;
+			this.refresh();
+		});
 	}
 
 	_buildLayers(widths) {
@@ -132,14 +161,20 @@ class _stickyHeader {
 	}
 
 	_measureColumns() {
-		const row = this._element.tBodies[0]?.rows[0] || this._head.rows[this._head.rows.length - 1];
-		return this._measureRow(row);
+		return this._measureBodyColumns();
 	}
 
 	_measureBodyColumns() {
-		const row = this._element.tBodies[0]?.rows[0];
-		const widths = this._measureRow(row);
-		return widths.some((width) => width > 0) ? widths : this._measureRow(this._head.rows[this._head.rows.length - 1]);
+		const headerRow = this._head?.rows[this._head.rows.length - 1];
+		const headerWidths = this._measureRow(headerRow);
+		const rows = Array.from(this._element.tBodies || []).flatMap((body) => Array.from(body.rows || []));
+		for (const row of rows) {
+			if (row.hidden || row.hasAttribute('data-vg-table-state-row') || row.hasAttribute('data-vg-table-skeleton') || row.hasAttribute('data-vg-table-skeleton-row')) continue;
+			if (row.querySelector('[data-vg-table-state]')) continue;
+			const widths = this._measureRow(row);
+			if (widths.length === headerWidths.length && widths.some((width) => width > 0)) return widths;
+		}
+		return headerWidths;
 	}
 
 	_measureRow(row) {
@@ -165,6 +200,19 @@ class _stickyHeader {
 			if (width > 0) col.style.width = `${width}px`;
 			return col;
 		}));
+	}
+
+	_applyHeaderWidths(widths) {
+		const row = this._head?.rows[this._head.rows.length - 1];
+		if (!row || !widths.length) return;
+		let columnIndex = 0;
+		Array.from(row.cells).forEach((cell) => {
+			if (!this._previousHeaderWidths.has(cell)) this._previousHeaderWidths.set(cell, cell.style.width);
+			const span = Math.max(1, cell.colSpan || 1);
+			const width = widths.slice(columnIndex, columnIndex + span).reduce((total, value) => total + value, 0);
+			if (width > 0) cell.style.width = `${width}px`;
+			columnIndex += span;
+		});
 	}
 
 	_syncScroll() {

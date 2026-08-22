@@ -25,6 +25,7 @@ test('connects VGTable and leaves VGDynamicTable outside the main bundle', () =>
 	assert.match(tableOptions, /export \{[\s\S]*DEFAULT_OPTIONS/);
 	const tableVariables = read('app/modules/vgtable/scss/_variables.scss');
 	const tableStyles = read('app/modules/vgtable/scss/vgtable.scss');
+	const stickyHeaderStyles = read('app/modules/vgtable/scss/_sticky-header.scss');
 	assert.match(tableVariables, /\$table-wrapper:\s*\(/);
 	assert.match(tableVariables, /\$table-container:\s*\(/);
 	assert.match(tableStyles, /mix-vars\('table-wrapper', table\.\$table-wrapper\)/);
@@ -38,6 +39,10 @@ test('connects VGTable and leaves VGDynamicTable outside the main bundle', () =>
 		assert.match(tableVariables, new RegExp(`\\b${size}: \\(`));
 	}
 	assert.match(tableStyles, /@each \$size, \$values in table\.\$table-sizing/);
+	assert.match(stickyHeaderStyles, /&--sticky-page\s*\{[\s\S]*?overflow: visible;[\s\S]*?\.vg-table-body\s*\{\s*overflow-x: auto;\s*overflow-y: hidden;/);
+	assert.doesNotMatch(stickyHeaderStyles, /&--sticky-page\s*\{[\s\S]*?\.vg-table-body\s*\{\s*overflow: auto;/);
+	assert.match(stickyHeaderStyles, /\.vg-table-header\s*\{[\s\S]*?position: relative;[\s\S]*?z-index: var\(--vg-table-sticky-z-index\);/);
+	assert.match(stickyHeaderStyles, /\.vg-table-body\s*\{\s*position: relative;\s*z-index: 0;/);
 
 	assert.doesNotMatch(appEntry, /modules\/vgdynamictable|VGDynamicTable|\bEditable\b/);
 	assert.doesNotMatch(packageEntry, /modules\/vgdynamictable|VGDynamicTable|\bEditable\b/);

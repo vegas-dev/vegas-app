@@ -30,6 +30,7 @@
 
 		.vg-table-header {
 			position: relative;
+			z-index: var(--vg-table-sticky-z-index);
 			overflow: hidden;
 			background: var(--vg-table-thead-bg);
 			border-start-start-radius: var(--vg-table-sticky-inner-radius);
@@ -47,6 +48,11 @@
 				background: var(--vg-table-fixed-header-bg, var(--vg-table-thead-bg));
 				pointer-events: none;
 			}
+		}
+
+		.vg-table-body {
+			position: relative;
+			z-index: 0;
 		}
 
 		.vg-table-header__table,
@@ -115,7 +121,8 @@
 		}
 
 		.vg-table-body {
-			overflow: visible;
+			overflow-x: auto;
+			overflow-y: hidden;
 		}
 	}
 }

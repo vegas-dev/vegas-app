@@ -1,6 +1,6 @@
 /**
  * Описание: основной класс выбора, отображения и AJAX-загрузки файлов VGFiles.
- * Возможности: управляет списками и dropzone, прогрессом, удалением, повторной загрузкой и сортировкой.
+ * Возможности: управляет списками и dropzone, прогрессом, кастомными действиями, удалением, повторной загрузкой и сортировкой.
  */
 import VGFilesBase from "./base";
 import FileUploader from "./loader";
@@ -48,6 +48,9 @@ class VGFiles extends VGFilesBase {
             replace: true,
             rename: false,
             smartdrop: false,
+            customButtons: {
+                hideOnUploadState: true
+            },
             uploads: {
                 mode: 'sequential',
                 route: '',

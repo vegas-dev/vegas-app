@@ -1,6 +1,6 @@
 /**
  * Описание: базовая логика выбора, валидации и отображения файлов VGFiles.
- * Возможности: управляет набором файлов, ошибками, списками, статистикой и скрытыми полями формы.
+ * Возможности: управляет набором файлов, ошибками, списками, кастомными действиями, статистикой и скрытыми полями формы.
  */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
@@ -435,9 +435,10 @@ class VGFilesBase extends BaseModule {
 		const fragment = document.createDocumentFragment();
 
 		files.forEach((file) => {
-			let classes = $itemsTemplateClasses;
+			let classes = [...$itemsTemplateClasses];
 
 			if (this._params.detach) classes.push('with-remove')
+			if (this._params.customButtons?.hideOnUploadState) classes.push('hide-custom-buttons-on-upload-state')
 			if (this._params.sortable.enabled) classes.push('with-sortable')
 			if (this._params.limits.count === 1) {
 				classes.push('single');
@@ -612,6 +613,7 @@ class VGFilesBase extends BaseModule {
 		if (this._params.image) classes.push('with-image');
 		if (this._params.info) classes.push('with-info');
 		if (this._params.detach) classes.push('with-remove')
+		if (this._params.customButtons?.hideOnUploadState) classes.push('hide-custom-buttons-on-upload-state')
 		if (this._params.sortable.enabled) classes.push('with-sortable');
 		const previewPath = this._resolveFilePreviewPath(file);
 		const displayName = this._resolveDisplayName(file);

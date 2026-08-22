@@ -168,6 +168,72 @@ test('file dismiss uses the compact remove icon in list and dropzone modes', () 
 	instance.dispose();
 });
 
+test('custom file buttons are hidden for unavailable upload states by default', () => {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	container.innerHTML = `
+		<div class="vg-files-info">
+			<ul class="vg-files-info--list">
+				<li class="file">
+					<div class="file-info"></div>
+					<div class="file-actions"><button type="button">Custom action</button></div>
+					<div class="file-remove"></div>
+				</li>
+			</ul>
+		</div>
+		<input type="file" multiple>
+	`;
+	document.body.append(container);
+
+	const instance = new VGFiles(container, { ajax: true });
+	const file = new File(['content'], 'document.pdf', { type: 'application/pdf' });
+	instance._files = [file];
+	instance._pendingUploadedKeys.add(instance._getFileKey(file));
+	instance._renderUI(instance._files);
+
+	const item = container.querySelector('.vg-files-info--list > li');
+	assert.equal(item.classList.contains('hide-custom-buttons-on-upload-state'), true);
+	assert.equal(item.classList.contains('pending'), true);
+	assert.ok(item.querySelector('.file-actions button'));
+	assert.ok(item.querySelector('.file-remove'));
+
+	instance.dispose();
+});
+
+test('custom file button upload-state hiding can be disabled', () => {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	container.innerHTML = `
+		<div class="vg-files-info">
+			<ul class="vg-files-info--list">
+				<li class="file">
+					<div class="file-info"></div>
+					<div class="file-actions"><button type="button">Custom action</button></div>
+					<div class="file-remove"></div>
+				</li>
+			</ul>
+		</div>
+		<input type="file" multiple>
+	`;
+	document.body.append(container);
+
+	const instance = new VGFiles(container, {
+		ajax: true,
+		customButtons: { hideOnUploadState: false }
+	});
+	const file = new File(['content'], 'document.pdf', { type: 'application/pdf' });
+	instance._files = [file];
+	instance._failingUploadedKeys.add(instance._getFileKey(file));
+	instance._renderUI(instance._files);
+
+	const item = container.querySelector('.vg-files-info--list > li');
+	assert.equal(instance._params.customButtons.hideOnUploadState, false);
+	assert.equal(item.classList.contains('hide-custom-buttons-on-upload-state'), false);
+	assert.ok(item.querySelector('.file-actions button'));
+
+	instance.dispose();
+});
+
 test('smartdrop ignores an internal sortable drag even when DataTransfer exposes files', () => {
 	const drop = document.createElement('label');
 	drop.className = 'vg-files-drop';
