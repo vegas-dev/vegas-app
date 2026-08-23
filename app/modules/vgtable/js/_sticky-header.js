@@ -21,7 +21,9 @@ class _stickyHeader {
 		this._previousClasses = new Map();
 		this._previousContainerClasses = new Map();
 		this._previousStyles = new Map();
-		this._previousHeaderWidths = new Map();
+		this._columnWeights = new Map();
+		this._hardColumnWidths = new Map();
+		this._hasSourceColgroup = false;
 		this._resizeObserver = null;
 		this._resizeFrame = null;
 		this._boundScroll = this._syncScroll.bind(this);
@@ -33,6 +35,7 @@ class _stickyHeader {
 		if (!this._wrapper || !this._container || !this._head) return this;
 
 		const widths = this._measureColumns();
+		this._rememberColumnGeometry(widths);
 		MODE_CLASSES.forEach((className) => this._previousClasses.set(className, this._wrapper.classList.contains(className)));
 		CONTAINER_MODE_CLASSES.forEach((className) => this._previousContainerClasses.set(className, this._container.classList.contains(className)));
 		STYLE_PROPERTIES.forEach((property) => this._previousStyles.set(property, this._container.style.getPropertyValue(property)));
@@ -75,10 +78,9 @@ class _stickyHeader {
 	refresh() {
 		if (!this._header || !this._headerTable || !this._body) return this;
 
-		const widths = this._measureBodyColumns();
+		const widths = this._resolveLayoutWidths();
 		this._applyColgroup(this._headerTable, widths);
 		this._applyColgroup(this._element, widths);
-		this._applyHeaderWidths(widths);
 		const scrollbar = Math.max(0, this._body.offsetWidth - this._body.clientWidth);
 		this._header.style.paddingInlineEnd = `${scrollbar}px`;
 		this._header.style.setProperty('--vg-table-sticky-scrollbar-width', `${scrollbar}px`);
@@ -119,10 +121,6 @@ class _stickyHeader {
 			if (previous) this._container.style.setProperty(property, previous);
 			else this._container.style.removeProperty(property);
 		});
-		this._previousHeaderWidths.forEach((width, cell) => {
-			cell.style.width = width;
-		});
-		this._previousHeaderWidths.clear();
 		this._element.removeAttribute('data-vg-table-sticky-header');
 	}
 
@@ -195,24 +193,111 @@ class _stickyHeader {
 			colgroup.setAttribute('data-vg-table-sticky-colgroup', '');
 			table.prepend(colgroup);
 		}
-		colgroup.replaceChildren(...widths.map((width) => {
-			const col = table.ownerDocument.createElement('col');
+		while (colgroup.children.length < widths.length) colgroup.append(table.ownerDocument.createElement('col'));
+		while (colgroup.children.length > widths.length) colgroup.lastElementChild.remove();
+		const headers = this._getHeaders();
+		widths.forEach((width, index) => {
+			const col = colgroup.children[index];
 			if (width > 0) col.style.width = `${width}px`;
-			return col;
-		}));
+			else col.style.removeProperty('width');
+			const hidden = headers[index]?.hidden === true;
+			col.hidden = hidden;
+			col.toggleAttribute('data-vg-table-column-hidden', hidden);
+		});
 	}
 
-	_applyHeaderWidths(widths) {
-		const row = this._head?.rows[this._head.rows.length - 1];
-		if (!row || !widths.length) return;
-		let columnIndex = 0;
-		Array.from(row.cells).forEach((cell) => {
-			if (!this._previousHeaderWidths.has(cell)) this._previousHeaderWidths.set(cell, cell.style.width);
-			const span = Math.max(1, cell.colSpan || 1);
-			const width = widths.slice(columnIndex, columnIndex + span).reduce((total, value) => total + value, 0);
-			if (width > 0) cell.style.width = `${width}px`;
-			columnIndex += span;
+	_rememberColumnGeometry(widths) {
+		const headers = this._getHeaders();
+		const sourceCols = Array.from(this._element.querySelector(':scope > colgroup:not([data-vg-table-sticky-colgroup])')?.children || []);
+		this._hasSourceColgroup = sourceCols.length > 0;
+		headers.forEach((header, index) => {
+			const key = this._columnKey(header, index);
+			this._columnWeights.set(key, widths[index] > 0 ? widths[index] : 1);
+			if (this._hasDeclaredWidth(header) || this._hasDeclaredWidth(sourceCols[index])) {
+				this._hardColumnWidths.set(key, widths[index] > 0 ? widths[index] : 0);
+			}
 		});
+	}
+
+	_resolveLayoutWidths() {
+		const headers = this._getHeaders();
+		const measured = this._measureBodyColumns();
+		if (this._hasSourceColgroup || !headers.length) return measured;
+
+		const bodyRow = Array.from(this._element.tBodies || [])
+			.flatMap((body) => Array.from(body.rows || []))
+			.find((row) => !row.hidden && !row.hasAttribute('data-vg-table-state-row'));
+		const hard = new Map();
+		const flexible = [];
+		headers.forEach((header, index) => {
+			const key = this._columnKey(header, index);
+			const bodyCell = bodyRow?.cells[index];
+			if (this._hasDeclaredWidth(header) || this._hasDeclaredWidth(bodyCell) || this._hardColumnWidths.has(key)) {
+				const declared = this._readDeclaredPixelWidth(header) || this._readDeclaredPixelWidth(bodyCell);
+				const width = declared || this._hardColumnWidths.get(key) || measured[index] || 0;
+				this._hardColumnWidths.set(key, width);
+				hard.set(index, width);
+			} else {
+				flexible.push(index);
+			}
+		});
+
+		const measuredTotal = measured.reduce((total, width) => total + width, 0);
+		const viewport = this._body?.clientWidth || this._container?.clientWidth || measuredTotal;
+		const minimum = this._readTableMinimumWidth();
+		const target = Math.max(viewport, minimum, 0);
+		const hardTotal = Array.from(hard.values()).reduce((total, width) => total + width, 0);
+		const available = Math.max(0, target - hardTotal);
+		const widths = Array(headers.length).fill(0);
+		hard.forEach((width, index) => { widths[index] = width; });
+
+		if (!flexible.length) return widths;
+		const weights = flexible.map((index) => {
+			const key = this._columnKey(headers[index], index);
+			return this._columnWeights.get(key) || measured[index] || 1;
+		});
+		const weightTotal = weights.reduce((total, weight) => total + weight, 0) || flexible.length;
+		let distributed = 0;
+		flexible.forEach((index, position) => {
+			const width = position === flexible.length - 1
+				? Math.max(0, available - distributed)
+				: available * weights[position] / weightTotal;
+			widths[index] = width;
+			distributed += width;
+		});
+		return widths;
+	}
+
+	_getHeaders() {
+		const rows = Array.from(this._head?.rows || []);
+		return rows.length ? Array.from(rows.at(-1).cells || []) : [];
+	}
+
+	_columnKey(header, index) {
+		return String(header?.getAttribute('data-field') || index).trim();
+	}
+
+	_hasDeclaredWidth(element) {
+		if (!element) return false;
+		return element.hasAttribute('width')
+			|| element.hasAttribute('data-column-width')
+			|| Boolean(element.style?.width || element.style?.minWidth || element.style?.maxWidth);
+	}
+
+	_readDeclaredPixelWidth(element) {
+		if (!element || !this._hasDeclaredWidth(element)) return 0;
+		const fixed = element.style?.minWidth && element.style.minWidth === element.style.maxWidth
+			? Number.parseFloat(element.style.width || element.style.minWidth)
+			: 0;
+		if (Number.isFinite(fixed) && fixed > 0) return fixed;
+		const measured = element.getBoundingClientRect?.().width || element.offsetWidth || 0;
+		return measured > 0 ? measured : 0;
+	}
+
+	_readTableMinimumWidth() {
+		if (typeof getComputedStyle !== 'function') return 0;
+		const value = Number.parseFloat(getComputedStyle(this._element).minWidth || '0');
+		return Number.isFinite(value) ? value : 0;
 	}
 
 	_syncScroll() {

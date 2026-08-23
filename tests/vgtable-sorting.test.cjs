@@ -264,11 +264,14 @@ test('keeps an empty sticky header cell as wide as its populated body column', (
 	const instance = new VGTable(table).init();
 	const headerCells = wrapper.querySelectorAll('.vg-table-header th');
 	const headerCols = wrapper.querySelectorAll('.vg-table-header col');
+	const bodyCols = wrapper.querySelectorAll('.vg-table-body col');
 
-	assert.equal(headerCells[0].style.width, '240px');
-	assert.equal(headerCells[1].style.width, '96px');
+	assert.equal(headerCells[0].style.width, '');
+	assert.equal(headerCells[1].style.width, '');
 	assert.equal(headerCols[0].style.width, '240px');
 	assert.equal(headerCols[1].style.width, '96px');
+	assert.equal(bodyCols[0].style.width, '240px');
+	assert.equal(bodyCols[1].style.width, '96px');
 
 	instance.dispose();
 	assert.equal(emptyHeader.style.width, '');
@@ -292,11 +295,14 @@ test('keeps hard header widths while remote table moves through empty and skelet
 	const instance = new VGTable(table).init();
 	const bodyCols = wrapper.querySelectorAll('.vg-table-body col');
 	const stickyHeaderCells = wrapper.querySelectorAll('.vg-table-header th');
+	const stickyHeaderCols = wrapper.querySelectorAll('.vg-table-header col');
 
 	assert.equal(bodyCols[0].style.width, '180px');
 	assert.equal(bodyCols[1].style.width, '420px');
 	assert.equal(stickyHeaderCells[0].style.width, '180px');
-	assert.equal(stickyHeaderCells[1].style.width, '420px');
+	assert.equal(stickyHeaderCells[1].style.width, '');
+	assert.equal(stickyHeaderCols[0].style.width, '180px');
+	assert.equal(stickyHeaderCols[1].style.width, '420px');
 
 	table.tBodies[0].innerHTML = '<tr data-vg-table-skeleton><td></td><td></td></tr>';
 	Array.from(table.tBodies[0].rows[0].cells).forEach((cell) => {
@@ -363,12 +369,12 @@ test('refreshes sticky header geometry when its layout container changes width',
 		});
 		const instance = new VGTable(table).init();
 		const observer = observers[0];
-		const headerCells = wrapper.querySelectorAll('.vg-table-header th');
+		const headerCols = () => wrapper.querySelectorAll('.vg-table-header col');
 
 		assert.ok(observer.targets.includes(wrapper.querySelector('.vg-table-container')));
 		assert.ok(observer.targets.includes(wrapper.querySelector('.vg-table-body')));
-		assert.equal(headerCells[0].style.width, '240px');
-		assert.equal(headerCells[1].style.width, '96px');
+		assert.equal(headerCols()[0].style.width, '240px');
+		assert.equal(headerCols()[1].style.width, '96px');
 
 		widths = [320, 128];
 		observer.callback([]);
@@ -377,8 +383,8 @@ test('refreshes sticky header geometry when its layout container changes width',
 		const [scheduledId, scheduledRefresh] = frames.entries().next().value;
 		frames.delete(scheduledId);
 		scheduledRefresh();
-		assert.equal(headerCells[0].style.width, '320px');
-		assert.equal(headerCells[1].style.width, '128px');
+		assert.equal(headerCols()[0].style.width, '320px');
+		assert.equal(headerCols()[1].style.width, '128px');
 
 		observer.callback([]);
 		const pendingId = frameId;
@@ -390,6 +396,71 @@ test('refreshes sticky header geometry when its layout container changes width',
 		global.ResizeObserver = originalResizeObserver;
 		global.requestAnimationFrame = originalRequestAnimationFrame;
 		global.cancelAnimationFrame = originalCancelAnimationFrame;
+	}
+});
+
+test('preserves declared hard columns and distributes layout growth across flexible columns', () => {
+	const originalResizeObserver = global.ResizeObserver;
+	const originalRequestAnimationFrame = global.requestAnimationFrame;
+	const observers = [];
+	const frames = [];
+	global.ResizeObserver = class {
+		constructor(callback) {
+			this.callback = callback;
+			observers.push(this);
+		}
+
+		observe() {}
+		disconnect() {}
+	};
+	global.requestAnimationFrame = (callback) => {
+		frames.push(callback);
+		return frames.length;
+	};
+
+	try {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'vg-table-wrapper';
+		wrapper.innerHTML = `
+			<div class="vg-table-container">
+				<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+					<thead><tr>
+						<th data-field="select" style="width: 60px"></th>
+						<th data-field="user">Пользователь</th>
+						<th data-field="form">Форма</th>
+						<th data-field="date">Дата</th>
+						<th data-field="actions" style="width: 120px"></th>
+					</tr></thead>
+					<tbody><tr><td></td><td>Анна</td><td>Общая форма</td><td>16.08.2026</td><td>Действия</td></tr></tbody>
+				</table>
+			</div>
+		`;
+		document.body.append(wrapper);
+		const table = wrapper.querySelector('table');
+		const initialWidths = [60, 300, 240, 280, 120];
+		Array.from(table.tBodies[0].rows[0].cells).forEach((cell, index) => {
+			cell.getBoundingClientRect = () => ({width: initialWidths[index]});
+		});
+		const instance = new VGTable(table).init();
+		const body = wrapper.querySelector('.vg-table-body');
+		Object.defineProperty(body, 'clientWidth', {configurable: true, get: () => 1200});
+
+		observers[0].callback([]);
+		frames.shift()();
+		const widths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+		const flexibleTotal = widths[1] + widths[2] + widths[3];
+
+		assert.equal(widths[0], 60);
+		assert.equal(widths[4], 120);
+		assert.ok(Math.abs(flexibleTotal - 1020) < 0.001);
+		assert.ok(Math.abs(widths.reduce((total, width) => total + width, 0) - 1200) < 0.001);
+		assert.ok(widths[1] > initialWidths[1]);
+		assert.equal(wrapper.querySelector('th[data-field="user"]').style.width, '');
+
+		instance.dispose();
+	} finally {
+		global.ResizeObserver = originalResizeObserver;
+		global.requestAnimationFrame = originalRequestAnimationFrame;
 	}
 });
 

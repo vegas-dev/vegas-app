@@ -113,6 +113,12 @@
 						display: none;
 					}
 				}
+
+				&.not-splitter {
+					&:before {
+						display: none;
+					}
+				}
 			}
 		}
 
