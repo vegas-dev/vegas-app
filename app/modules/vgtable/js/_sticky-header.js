@@ -1,6 +1,6 @@
 /**
  * Описание: разметка Fixed Header с отдельными слоями заголовка и тела VGTable.
- * Возможности: перенос настоящего thead без клона, автоматическая синхронизация ширин колонок и горизонтальной прокрутки.
+ * Возможности: перенос настоящего thead без клона, intrinsic-минимумы и синхронизация ширин колонок и горизонтальной прокрутки.
  */
 
 const MODE_CLASSES = ['vg-table-wrapper--sticky-container', 'vg-table-wrapper--sticky-page'];
@@ -70,6 +70,16 @@ class _stickyHeader {
 
 	getBody() {
 		return this._body;
+	}
+
+	refreshIntrinsicMinimums() {
+		const widths = this._measureIntrinsicColumnMinimums();
+		this._getHeaders().forEach((header, index) => {
+			const key = this._columnKey(header, index);
+			if (this._hasDeclaredWidth(header) || this._hardColumnWidths.has(key) || !(widths[index] > 0)) return;
+			this._columnMinimumWidths.set(key, Math.max(this._columnMinimumWidths.get(key) || 0, widths[index]));
+		});
+		return this.refresh();
 	}
 
 	syncScroll() {
@@ -213,6 +223,36 @@ class _stickyHeader {
 			col.hidden = hidden;
 			col.toggleAttribute('data-vg-table-column-hidden', hidden);
 		});
+	}
+
+	_measureIntrinsicColumnMinimums() {
+		if (!this._wrapper || !this._head) return [];
+
+		const probe = this._element.cloneNode(true);
+		probe.removeAttribute('data-vg-table');
+		probe.removeAttribute('data-vg-table-sticky-header');
+		probe.setAttribute('aria-hidden', 'true');
+		probe.querySelector(':scope > colgroup[data-vg-table-sticky-colgroup]')?.remove();
+		probe.insertBefore(this._head.cloneNode(true), probe.tBodies[0] || null);
+		probe.querySelectorAll('thead th').forEach((header) => header.style.setProperty('white-space', 'nowrap', 'important'));
+		[
+			['position', 'absolute'],
+			['inset', '0 auto auto 0'],
+			['visibility', 'hidden'],
+			['pointer-events', 'none'],
+			['width', 'min-content'],
+			['min-width', '0'],
+			['max-width', 'none'],
+			['table-layout', 'auto'],
+		].forEach(([property, value]) => probe.style.setProperty(property, value, 'important'));
+
+		this._wrapper.append(probe);
+		try {
+			const rows = Array.from(probe.tHead?.rows || []);
+			return this._measureRow(rows.at(-1));
+		} finally {
+			probe.remove();
+		}
 	}
 
 	_rememberColumnGeometry(widths) {

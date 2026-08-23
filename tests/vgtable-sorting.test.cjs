@@ -399,6 +399,38 @@ test('uses overflowing sortable header content as a flexible table minimum', () 
 	assert.equal(container.style.getPropertyValue('--vg-table-sticky-content-min-width'), '');
 });
 
+test('uses intrinsic column minimums when the table initializes inside a narrow viewport', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th data-field="price">Цена</th><th data-field="actions"></th></tr></thead>
+			<tbody><tr><td>4 670 руб.</td><td><button>Открыть</button><button>Удалить</button></td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	Array.from(table.tBodies[0].rows[0].cells).forEach((cell) => {
+		cell.getBoundingClientRect = () => ({width: 70});
+	});
+	const instance = new VGTable(table).init();
+	const sticky = instance._stickyHeader;
+	const body = wrapper.querySelector('.vg-table-body');
+	Object.defineProperty(body, 'clientWidth', {configurable: true, value: 140});
+	sticky._measureIntrinsicColumnMinimums = () => [112, 128];
+
+	sticky.refreshIntrinsicMinimums();
+	const headerWidths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+	const bodyWidths = Array.from(wrapper.querySelectorAll('.vg-table-body col'), (col) => Number.parseFloat(col.style.width));
+
+	assert.deepEqual(headerWidths, [112, 128]);
+	assert.deepEqual(bodyWidths, headerWidths);
+	assert.equal(wrapper.querySelector('.vg-table-container').style.getPropertyValue('--vg-table-sticky-content-min-width'), '240px');
+	assert.equal(wrapper.querySelector('th[data-field="price"]').style.width, '');
+
+	instance.dispose();
+});
+
 test('keeps hard header widths while remote table moves through empty and skeleton states', () => {
 	const wrapper = document.createElement('div');
 	wrapper.className = 'vg-table-wrapper';

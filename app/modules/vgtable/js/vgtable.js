@@ -150,8 +150,8 @@ class VGTable extends BaseModule {
 				'sortchange.vg.table',
 				this._isRemote ? this._boundRemoteSortChange : this._boundLocalSortChange
 			);
-			this._stickyHeader?.refresh?.();
 		}
+		this._stickyHeader?.refreshIntrinsicMinimums?.();
 
 		// Фиксируем настоящие ячейки через native sticky, включая отдельный слой Fixed Header
 		if (!this._complex && !this._fixedColumns && this._params.fixedColumns.enabled === true) {
@@ -1137,7 +1137,7 @@ class VGTable extends BaseModule {
 
 	_refreshColumnsLayout(structure = false) {
 		this._sorting?.refresh?.(structure);
-		this._stickyHeader?.refresh?.();
+		this._stickyHeader?.refreshIntrinsicMinimums?.();
 		this._fixedColumns?.refresh?.();
 	}
 
@@ -1429,7 +1429,7 @@ class VGTable extends BaseModule {
 		this._sorting?.refresh?.();
 		this._expandable?.refresh?.();
 		this._rowReorder?.refresh?.();
-		this._stickyHeader?.refresh?.();
+		this._stickyHeader?.refreshIntrinsicMinimums?.();
 		this._fixedColumns?.refresh?.();
 	}
 
