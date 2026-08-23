@@ -35,6 +35,7 @@ import {
 } from "./_options.js";
 
 const FILTER_HIDDEN_ATTRIBUTE = 'data-vg-table-filter-hidden';
+const NOT_SPLITTER_CLASS = 'not-splitter';
 
 class VGTable extends BaseModule {
 	constructor(element, params = {}) {
@@ -78,6 +79,9 @@ class VGTable extends BaseModule {
 		this._columns = null;
 		this._rowReorder = null;
 		this._remote = null;
+		this._autoNotSplitterHeaders = new Set();
+		this._emptyHeaderSortOptions = new Map();
+		this._emptyHeaderSplittersSynced = false;
 		this._isRemote = Boolean(String(this._params.request.route || '').trim());
 		this._complex = false;
 		this._wrapper = null;
@@ -110,6 +114,7 @@ class VGTable extends BaseModule {
 		this._ensureWrapper();
 		this._ensureTableContainer();
 		this._syncComplexState();
+		this._syncEmptyHeaderSplitters();
 
 		// Включаем нативный sticky-заголовок без клонирования DOM
 		if (!this._stickyHeader && this._params.stickyHeader.enabled === true) {
@@ -145,6 +150,7 @@ class VGTable extends BaseModule {
 				'sortchange.vg.table',
 				this._isRemote ? this._boundRemoteSortChange : this._boundLocalSortChange
 			);
+			this._stickyHeader?.refresh?.();
 		}
 
 		// Фиксируем настоящие ячейки через native sticky, включая отдельный слой Fixed Header
@@ -453,6 +459,29 @@ class VGTable extends BaseModule {
 		this._complex = Boolean((this._element.tHead?.rows.length || 0) > 1 || hasSpans);
 		this._element.classList.toggle('vg-table-complex', this._complex);
 		this._element.toggleAttribute('data-vg-table-complex', this._complex);
+	}
+
+	/**
+	 * Скрывает разделитель и отключает сортировку у пустых заголовочных ячеек.
+	 * @private
+	 */
+	_syncEmptyHeaderSplitters() {
+		if (this._emptyHeaderSplittersSynced) return;
+
+		Array.from(this._element.tHead?.querySelectorAll('th') || []).forEach((header) => {
+			const isEmpty = header.childElementCount === 0 && String(header.textContent || '').trim() === '';
+			if (!isEmpty) return;
+
+			if (!header.classList.contains(NOT_SPLITTER_CLASS)) {
+				header.classList.add(NOT_SPLITTER_CLASS);
+				this._autoNotSplitterHeaders.add(header);
+			}
+			if (String(header.getAttribute('data-sort-enabled')).toLowerCase() !== 'false') {
+				this._emptyHeaderSortOptions.set(header, header.getAttribute('data-sort-enabled'));
+				header.setAttribute('data-sort-enabled', 'false');
+			}
+		});
+		this._emptyHeaderSplittersSynced = true;
 	}
 
 	/**
@@ -1427,6 +1456,13 @@ class VGTable extends BaseModule {
 		this._element.removeEventListener('sortchange.vg.table', this._boundLocalSortChange);
 		this._element.removeEventListener('sortchange.vg.table', this._boundRemoteSortChange);
 		if (this._pagination) this._pagination.dispose();
+		this._autoNotSplitterHeaders.forEach((header) => header.classList.remove(NOT_SPLITTER_CLASS));
+		this._autoNotSplitterHeaders.clear();
+		this._emptyHeaderSortOptions.forEach((value, header) => {
+			if (value === null) header.removeAttribute('data-sort-enabled');
+			else header.setAttribute('data-sort-enabled', value);
+		});
+		this._emptyHeaderSortOptions.clear();
 		this._element.classList.remove('vg-table-complex');
 		this._element.removeAttribute('data-vg-table-complex');
 		this._removeGeneratedTableContainer();

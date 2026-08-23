@@ -7,6 +7,7 @@ import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import { Classes } from "../../../utils/js/dom/manipulator";
 import BaseModule from "../../base-module";
+import {isVGFilesSortableDragActive, VG_FILES_SORTABLE_DATA_TYPE} from "./sortable";
 
 const CLASS_NAME_CONTAINER = 'vg-files';
 const CLASS_NAME_DROP = `${CLASS_NAME_CONTAINER}-drop`;
@@ -254,10 +255,16 @@ class VGFilesDroppable extends BaseModule {
     }
 
     _isSortableDrag(e) {
+        if (isVGFilesSortableDragActive()) return true;
         if (document.querySelector('.dragging')) return true;
 
         try {
-            return (e?.dataTransfer?.getData?.('text/plain') || '') === 'vgsortable';
+			const dataTransfer = e?.dataTransfer;
+			const types = Array.from(dataTransfer?.types || []);
+			if (types.includes(VG_FILES_SORTABLE_DATA_TYPE)) return true;
+
+			return (dataTransfer?.getData?.(VG_FILES_SORTABLE_DATA_TYPE) || '') === '1' ||
+				(dataTransfer?.getData?.('text/plain') || '') === 'vgsortable';
         } catch (_) {
             return false;
         }

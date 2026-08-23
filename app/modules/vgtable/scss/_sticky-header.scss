@@ -58,7 +58,7 @@
 		.vg-table-header__table,
 		.vg-table-body > .vg-table {
 			width: 100%;
-			min-width: 100%;
+			min-width: max(100%, var(--vg-table-sticky-content-min-width, 0px));
 			table-layout: fixed;
 			overflow: visible;
 			border: 0;

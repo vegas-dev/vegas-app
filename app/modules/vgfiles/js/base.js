@@ -28,6 +28,7 @@ class VGFilesBase extends BaseModule {
 		this._tpl = Html('dom');
 		this._files = [];
 		this._errors = new Set();
+		this._validationErrorsByKey = new Map();
 		this._fileObjectUrls = new Map();
 		this._audioMetaPromises = new Map();
 
@@ -198,6 +199,7 @@ class VGFilesBase extends BaseModule {
 		}
 
 		this._files = this._filterFiles(filesToProcess);
+		this._syncSingleInputSubmission();
 
 		this._renderErrors();
 		this._enrichAudioMetadata(this._files);
@@ -282,44 +284,116 @@ class VGFilesBase extends BaseModule {
 
 	_filterFiles(files) {
 		this._errors.clear();
+		this._validationErrorsByKey.clear();
 		const { count, sizes, total } = this._params.limits;
 		const maxSize = sizes * 1024 * 1024;
 		const maxTotalSize = total * 1024 * 1024;
 
 		let currentTotalSize = 0;
-		const filtered = [];
+		let validCount = 0;
+		const visibleFiles = [];
 
 		for (const file of files) {
-			if (count > 0 && filtered.length >= count) {
+			const fileErrors = new Set();
+
+			if (count > 0 && validCount >= count) {
 				this._errors.add('is-count');
-				break;
+				continue;
 			}
 
-			let isValid = true;
-
 			if (this._params.types.length && !this._params.types.includes(file.type)) {
-				this._errors.add('is-types');
-				isValid = false;
+				fileErrors.add('is-types');
 			}
 
 			if (file.size > maxSize) {
-				this._errors.add('is-sizes');
-				isValid = false;
+				fileErrors.add('is-sizes');
 			}
 
-			if (isValid && maxTotalSize > 0) {
-				if (currentTotalSize + file.size > maxTotalSize) {
-					this._errors.add('is-total-size');
-					isValid = false;
-				} else {
-					currentTotalSize += file.size;
-				}
+			if (!fileErrors.size && maxTotalSize > 0 && currentTotalSize + file.size > maxTotalSize) {
+				fileErrors.add('is-total-size');
 			}
 
-			if (isValid) filtered.push(file);
+			visibleFiles.push(file);
+
+			if (fileErrors.size) {
+				fileErrors.forEach(error => this._errors.add(error));
+				this._validationErrorsByKey.set(this._getFileKey(file), fileErrors);
+				continue;
+			}
+
+			validCount += 1;
+			currentTotalSize += file.size;
 		}
 
-		return filtered;
+		return visibleFiles;
+	}
+
+	_isFileValid(file) {
+		return !this._validationErrorsByKey.has(this._getFileKey(file));
+	}
+
+	_syncSingleInputSubmission() {
+		if (Number(this._params?.limits?.count) !== 1) return;
+
+		const selectedFile = this._files[0];
+		const canSubmit = !this._params.ajax && (!selectedFile || this._isFileValid(selectedFile));
+		this._preventOriginalInputFromSubmit(canSubmit);
+	}
+
+	_getFileValidationMessages(file) {
+		const errors = this._validationErrorsByKey.get(this._getFileKey(file));
+		if (!errors?.size) return [];
+
+		const messages = lang_messages(this._params.lang, 'files') || this._getFallbackErrors();
+		return Array.from(errors, error => messages[error] || error);
+	}
+
+	_getFileValidationLabel(file) {
+		const messages = this._getFileValidationMessages(file);
+		if (!messages.length) return '';
+
+		const fileName = this._getShortValidationFileName(file?.name);
+		return [fileName, messages.join('. ')].filter(Boolean).join(' — ');
+	}
+
+	_getFullFileValidationLabel(file) {
+		const messages = this._getFileValidationMessages(file);
+		if (!messages.length) return '';
+
+		const fileName = String(file?.name || '').trim();
+		return [fileName, messages.join('. ')].filter(Boolean).join(' — ');
+	}
+
+	_getShortValidationFileName(fileName) {
+		const name = String(fileName || '').trim();
+		if (name.length <= 24) return name;
+
+		const dotIndex = name.lastIndexOf('.');
+		const hasExtension = dotIndex > 0 && name.length - dotIndex <= 10;
+		const baseName = hasExtension ? name.slice(0, dotIndex) : name;
+		const extension = hasExtension ? name.slice(dotIndex) : '';
+
+		return `${baseName.slice(0, 5)}...${extension}`;
+	}
+
+	_decorateValidationItem(item, file) {
+		if (this._isFileValid(file)) return item;
+
+		Classes.add(item, 'failing');
+		Classes.add(item, 'validation-error');
+
+		return item;
+	}
+
+	_forgetFileValidation(file) {
+		if (!file) return;
+
+		this._validationErrorsByKey.delete(this._getFileKey(file));
+		this._errors.clear();
+		this._validationErrorsByKey.forEach(errors => {
+			errors.forEach(error => this._errors.add(error));
+		});
+		this._renderErrors();
 	}
 
 	_getSizes(size, isArray = false) {
@@ -345,7 +419,11 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_renderErrors() {
-		if (!this._errors.size) return;
+		if (!this._errors.size) {
+			const $errorCont = Selectors.find(`.${this._getClass('errors')}`, this._element);
+			if ($errorCont) $errorCont.remove();
+			return;
+		}
 
 		const messages = lang_messages(this._params.lang, 'files') || this._getFallbackErrors();
 		let $errorCont = Selectors.find(`.${this._getClass('errors')}`, this._element);
@@ -355,6 +433,28 @@ class VGFilesBase extends BaseModule {
 			this._element.prepend($errorCont);
 		} else {
 			$errorCont.innerHTML = '';
+		}
+
+		if (this._validationErrorsByKey.size) {
+			const renderedErrors = new Set();
+			this._files.forEach(file => {
+				const msg = this._getFileValidationLabel(file);
+				if (!msg) return;
+
+				const fileErrors = this._validationErrorsByKey.get(this._getFileKey(file));
+				fileErrors?.forEach(error => renderedErrors.add(error));
+				const fullMsg = this._getFullFileValidationLabel(file);
+				const attrs = { class: 'error-item' };
+				if (fullMsg && fullMsg !== msg) attrs.title = fullMsg;
+				$errorCont.append(this._tpl.span(attrs, msg));
+			});
+
+			this._errors.forEach(errKey => {
+				if (renderedErrors.has(errKey)) return;
+				const msg = messages[errKey] || errKey;
+				$errorCont.append(this._tpl.span({ class: 'error-item' }, msg));
+			});
+			return;
 		}
 
 		this._errors.forEach(errKey => {
@@ -466,7 +566,7 @@ class VGFilesBase extends BaseModule {
 				parts
 			);
 
-			fragment.appendChild($li);
+			fragment.appendChild(this._decorateValidationItem($li, file));
 		});
 
 		$list.innerHTML = '';
@@ -641,10 +741,12 @@ class VGFilesBase extends BaseModule {
 			liAttrs['data-vg-filepreview-display-name'] = displayName || file.name || '';
 		}
 
-		return this._tpl.li(
+		const item = this._tpl.li(
 			this._buildFileDataAttributes(file, liAttrs),
 			parts
 		);
+
+		return this._decorateValidationItem(item, file);
 	}
 
 	_renderTemplatePart(element, file, index = null, options = {}) {
@@ -926,7 +1028,7 @@ class VGFilesBase extends BaseModule {
 
 		if (isSingle) return;
 
-		files.forEach((file, index) => {
+		files.filter(file => this._isFileValid(file)).forEach((file, index) => {
 			const input = document.createElement('input');
 			input.type = 'file';
 			input.name = `${baseName}[${index}]`;
@@ -970,6 +1072,7 @@ class VGFilesBase extends BaseModule {
 		}
 		this._cleanupFakeInputs();
 		this._cleanupErrors();
+		this._validationErrorsByKey.clear();
 		this._files = [];
 
 		if (this._nodes.info) {

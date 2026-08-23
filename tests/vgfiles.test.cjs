@@ -45,14 +45,16 @@ Module._extensions['.js'] = (module, filename) => {
 
 const VGFiles = require('../app/modules/vgfiles/js/vgfiles').default;
 const VGFilesDroppable = require('../app/modules/vgfiles/js/droppable').default;
-const VGFilesSortable = require('../app/modules/vgfiles/js/sortable').default;
+const sortableModule = require('../app/modules/vgfiles/js/sortable');
+const VGFilesSortable = sortableModule.default;
+const { VG_FILES_SORTABLE_DATA_TYPE } = sortableModule;
 Module._extensions['.js'] = originalJavaScriptLoader;
 
 test.beforeEach(() => {
 	document.body.replaceChildren();
 });
 
-test('keeps the size validation error visible in single replace mode', () => {
+test('keeps an invalid file visible with its error in single replace mode', () => {
 	const container = document.createElement('div');
 	container.className = 'vg-files';
 	container.innerHTML = `
@@ -76,11 +78,16 @@ test('keeps the size validation error visible in single replace mode', () => {
 
 	instance.change({ files: [oversizedFile] });
 
-	assert.equal(instance._files.length, 0);
+	assert.deepEqual(instance._files, [oversizedFile]);
 	assert.equal(instance._errors.has('is-sizes'), true);
+	const invalidItem = container.querySelector('.vg-files-info--list > li');
+	assert.equal(invalidItem.classList.contains('failing'), true);
+	assert.equal(invalidItem.classList.contains('validation-error'), true);
+	assert.equal(invalidItem.querySelector('.file-validation-error'), null);
+	assert.equal(container.querySelector('#single-file').hasAttribute('name'), false);
 	assert.equal(
 		container.querySelector('.vg-files-errors .error-item')?.textContent,
-		'File size exceeded'
+		'oversized.bin — File size exceeded'
 	);
 
 	const validFile = new File(['content'], 'valid.bin', {
@@ -89,12 +96,13 @@ test('keeps the size validation error visible in single replace mode', () => {
 	instance.change({ files: [validFile] });
 
 	assert.deepEqual(instance._files, [validFile]);
+	assert.equal(container.querySelector('#single-file').name, 'file');
 	assert.equal(container.querySelector('.vg-files-errors'), null);
 
 	instance.dispose();
 });
 
-test('keeps stat and info hidden when AJAX validation rejects every file', () => {
+test('shows an AJAX-invalid file as failed and never sends it to the uploader', async () => {
 	const container = document.createElement('div');
 	container.className = 'vg-files';
 	container.innerHTML = `
@@ -119,13 +127,24 @@ test('keeps stat and info hidden when AJAX validation rejects every file', () =>
 
 	instance.change({ files: [oversizedFile] });
 
-	assert.equal(instance._files.length, 0);
-	assert.equal(container.querySelector('.vg-files-stat').classList.contains('show'), false);
-	assert.equal(container.querySelector('.vg-files-info').classList.contains('show'), false);
+	assert.deepEqual(instance._files, [oversizedFile]);
+	assert.equal(container.querySelector('.vg-files-stat').classList.contains('show'), true);
+	assert.equal(container.querySelector('.vg-files-info').classList.contains('show'), true);
+	assert.equal(container.querySelector('.vg-files-info--list > li').classList.contains('failing'), true);
 	assert.equal(
 		container.querySelector('.vg-files-errors .error-item')?.textContent,
-		'File size exceeded'
+		'oversized.bin — File size exceeded'
 	);
+
+	let uploadedFiles = null;
+	instance._params.uploads.route = '/upload';
+	instance._uploader = {
+		isIdle: () => false,
+		uploadFiles: async files => { uploadedFiles = files; }
+	};
+	await instance.uploadAll(instance._files);
+	assert.equal(uploadedFiles, null);
+	assert.equal(instance._pendingUploadedKeys.size, 0);
 
 	const validFile = new File(['content'], 'valid.bin', {
 		type: 'application/octet-stream'
@@ -134,6 +153,10 @@ test('keeps stat and info hidden when AJAX validation rejects every file', () =>
 
 	assert.equal(container.querySelector('.vg-files-stat').classList.contains('show'), true);
 	assert.equal(container.querySelector('.vg-files-info').classList.contains('show'), true);
+	await instance.uploadAll(instance._files);
+	assert.deepEqual(uploadedFiles, [validFile]);
+	assert.equal(instance._pendingUploadedKeys.has(instance._getFileKey(validFile)), true);
+	assert.equal(instance._pendingUploadedKeys.has(instance._getFileKey(oversizedFile)), false);
 
 	instance.dispose();
 });
@@ -168,6 +191,86 @@ test('file dismiss uses the compact remove icon in list and dropzone modes', () 
 	instance.dispose();
 });
 
+test('highlights a rejected dropzone tile without rendering an inline error', () => {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	container.innerHTML = `
+		<label class="vg-files-drop">
+			<span class="vg-files-drop-message show"><span class="title">Drop files</span></span>
+			<ul class="vg-files-drop--list"></ul>
+		</label>
+		<input type="file" data-vg-toggle="files" multiple>
+	`;
+	document.body.append(container);
+
+	const instance = new VGFiles(container, {
+		lang: 'en',
+		limits: { count: 0, sizes: 1, total: 0 }
+	});
+	const oversizedFile = new File(['content'], 'large-photo.jpg', { type: 'image/jpeg' });
+	Object.defineProperty(oversizedFile, 'size', { value: 5 * 1024 * 1024 });
+
+	instance.change({ files: [oversizedFile] });
+
+	const tile = container.querySelector('.vg-files-drop--list > li');
+	assert.equal(tile.classList.contains('validation-error'), true);
+	assert.equal(tile.querySelector('.file-validation-error'), null);
+	assert.equal(container.querySelector('.vg-files-errors .error-item')?.textContent, 'large-photo.jpg — File size exceeded');
+
+	instance.dispose();
+});
+
+test('shortens a long file name in the validation summary and keeps the full label in title', () => {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	container.innerHTML = `
+		<div class="vg-files-info"></div>
+		<input type="file" data-vg-toggle="files">
+	`;
+	document.body.append(container);
+
+	const instance = new VGFiles(container, {
+		lang: 'en',
+		limits: { count: 1, sizes: 1, total: 0 }
+	});
+	const longFile = new File(['content'], 'beige-leaf-patterned-design-space.jpg', { type: 'image/jpeg' });
+	Object.defineProperty(longFile, 'size', { value: 5 * 1024 * 1024 });
+
+	instance.change({ files: [longFile] });
+
+	const error = container.querySelector('.vg-files-errors .error-item');
+	assert.equal(error?.textContent, 'beige....jpg — File size exceeded');
+	assert.equal(error?.title, 'beige-leaf-patterned-design-space.jpg — File size exceeded');
+
+	instance.dispose();
+});
+
+test('does not add files rejected by the count limit to the list', () => {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	container.innerHTML = `
+		<div class="vg-files-info"></div>
+		<input type="file" data-vg-toggle="files" multiple>
+	`;
+	document.body.append(container);
+
+	const instance = new VGFiles(container, {
+		lang: 'en',
+		limits: { count: 1, sizes: 10, total: 0 }
+	});
+	const firstFile = new File(['first'], 'first.txt', { type: 'text/plain' });
+	const extraFile = new File(['extra'], 'extra.txt', { type: 'text/plain' });
+
+	instance.change({ files: [firstFile, extraFile] });
+
+	assert.deepEqual(instance._files, [firstFile]);
+	assert.equal(container.querySelectorAll('.vg-files-info--list > li').length, 1);
+	assert.equal(container.querySelector('.vg-files-info--list > li')?.dataset.name, 'first.txt');
+	assert.equal(container.querySelector('.vg-files-errors .error-item')?.textContent, 'Exceeded the limit on the number of files');
+
+	instance.dispose();
+});
+
 test('custom file buttons are hidden for unavailable upload states by default', () => {
 	const container = document.createElement('div');
 	container.className = 'vg-files';
@@ -176,8 +279,12 @@ test('custom file buttons are hidden for unavailable upload states by default', 
 			<ul class="vg-files-info--list">
 				<li class="file">
 					<div class="file-info"></div>
-					<div class="file-actions"><button type="button">Custom action</button></div>
-					<div class="file-remove"></div>
+					<div class="file-custom">
+						<div class="file-remove"></div>
+						<div class="file-zoom"><button type="button">Zoom</button></div>
+						<div class="file-edit"><button type="button">Edit</button></div>
+						<div class="file-visible"><button type="button">Visibility</button></div>
+					</div>
 				</li>
 			</ul>
 		</div>
@@ -194,8 +301,10 @@ test('custom file buttons are hidden for unavailable upload states by default', 
 	const item = container.querySelector('.vg-files-info--list > li');
 	assert.equal(item.classList.contains('hide-custom-buttons-on-upload-state'), true);
 	assert.equal(item.classList.contains('pending'), true);
-	assert.ok(item.querySelector('.file-actions button'));
 	assert.ok(item.querySelector('.file-remove'));
+	assert.ok(item.querySelector('.file-zoom'));
+	assert.ok(item.querySelector('.file-edit'));
+	assert.ok(item.querySelector('.file-visible'));
 
 	instance.dispose();
 });
@@ -286,7 +395,7 @@ test('sortable reorders uploaded drop tiles without handing them to smartdrop', 
 	const dataTransfer = {
 		files: [new File(['content'], 'already-uploaded.jpg', { type: 'image/jpeg' })],
 		items: [{ kind: 'file' }],
-		types: ['Files', 'text/plain'],
+		get types() { return ['Files', ...transferData.keys()]; },
 		effectAllowed: 'all',
 		dropEffect: 'none',
 		setData(type, value) { transferData.set(type, value); },
@@ -303,6 +412,7 @@ test('sortable reorders uploaded drop tiles without handing them to smartdrop', 
 
 	const [first, second] = list.children;
 	dispatchDrag(first, 'dragstart');
+	assert.equal(dataTransfer.types.includes(VG_FILES_SORTABLE_DATA_TYPE), true);
 	dispatchDrag(document, 'dragenter');
 	dispatchDrag(second, 'dragover', 1);
 	dispatchDrag(second, 'drop', 1);
@@ -313,6 +423,12 @@ test('sortable reorders uploaded drop tiles without handing them to smartdrop', 
 
 	sortable._params.route = null;
 	dispatchDrag(first, 'dragend');
+	dataTransfer.getData = () => '';
+	dispatchDrag(document, 'dragenter');
+	assert.equal(document.querySelector('.dragging'), null);
+	assert.equal(inputChanges, 0);
+	assert.equal(VGFilesDroppable._activeSuggestedDrop, null);
+	assert.equal(drop.classList.contains('drop-active'), false);
 	sortable.destroy();
 	droppable.dispose();
 });

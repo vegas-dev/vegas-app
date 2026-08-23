@@ -1,4 +1,4 @@
-﻿/**
+/**
 *--------------------------------------------------------------------------
 * Модуль: VGFiles
 * Автор: Vegas DEV
@@ -62,11 +62,17 @@
 	}
 
 	&-errors {
-		padding: var(--vg-files-errors-padding-y) 0;
+		display: grid;
+		gap: var(--vg-files-errors-gap);
+		padding: var(--vg-files-errors-padding-y) var(--vg-files-errors-padding-x);
+		margin-bottom: var(--vg-files-errors-margin-bottom);
+		border-left: var(--vg-files-errors-border-width) solid var(--vg-files-errors-border-color);
+		border-radius: var(--vg-files-errors-border-radius);
+		background: var(--vg-files-errors-bg);
 
 		span {
 			font-size: var(--vg-files-errors-font-size);
-			color: var(--vg-danger);
+			color: var(--vg-danger-color, var(--vg-danger, #ff2a2c));
 			display: block;
 			overflow: hidden;
 			text-overflow: ellipsis;
@@ -524,6 +530,10 @@
 	}
 
 	&-info--list {
+		.file.validation-error {
+			box-shadow: inset 0 0 0 2px var(--vg-danger-color, var(--vg-danger, #ff2a2c));
+		}
+
 		.file.failing {
 			.file-remove {
 				margin-left: var(--vg-files-info-failing-actions-margin-start);
@@ -656,6 +666,10 @@
 
 				@include files.vgfiles-sortable();
 				@include files.vgfiles-state();
+
+				&.validation-error {
+					box-shadow: inset 0 0 0 2px var(--vg-danger-color, var(--vg-danger, #ff2a2c));
+				}
 
 				.file-image {
 					width: 100%;

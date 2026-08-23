@@ -11,7 +11,14 @@ $files-map: (
 
 	// errors
 	errors-padding-y: 10px,
+	errors-padding-x: 12px,
 	errors-font-size: 16px,
+	errors-gap: 4px,
+	errors-margin-bottom: 8px,
+	errors-bg: var(--vg-danger-subtle-bg, rgba(255, 42, 44, .06)),
+	errors-border-color: var(--vg-danger-color, var(--vg-danger, #ff2a2c)),
+	errors-border-width: 3px,
+	errors-border-radius: 6px,
 
 	// drop zone
 	drop-bg: var(--vg-secondary-bg, #{vg.$surface-muted-bg}),

@@ -1,7 +1,36 @@
+/**
+ * Описание: управляет сортировкой уже загруженных файлов VGFiles.
+ * Возможности: меняет порядок элементов, сохраняет ID на сервере и маркирует внутренний drag для защиты dropzone.
+ */
 import Selectors from "../../../utils/js/dom/selectors";
 import {isElement, normalizeData} from "../../../utils/js/functions";
 import Ajax from "../../../utils/js/components/ajax";
 import VGToast from "../../vgtoast";
+
+export const VG_FILES_SORTABLE_DATA_TYPE = 'application/x-vg-files-sortable';
+
+let isSortableDragActive = false;
+let sortableDragClearTimer = null;
+
+export function isVGFilesSortableDragActive() {
+    return isSortableDragActive;
+}
+
+function markSortableDragActive() {
+    if (sortableDragClearTimer) {
+        clearTimeout(sortableDragClearTimer);
+        sortableDragClearTimer = null;
+    }
+    isSortableDragActive = true;
+}
+
+function scheduleSortableDragClear() {
+    if (sortableDragClearTimer) clearTimeout(sortableDragClearTimer);
+    sortableDragClearTimer = setTimeout(() => {
+        isSortableDragActive = false;
+        sortableDragClearTimer = null;
+    }, 0);
+}
 
 class VGFilesSortable {
     constructor(vgFilesInstance, options = {}) {
@@ -76,8 +105,10 @@ class VGFilesSortable {
         if (!item) return;
 
         this._draggedItem = item;
+		markSortableDragActive();
 
         e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData(VG_FILES_SORTABLE_DATA_TYPE, '1');
         e.dataTransfer.setData('text/plain', 'vgsortable');
 
         item.classList.add('dragging');
@@ -90,6 +121,8 @@ class VGFilesSortable {
             this._draggedItem = null;
             this._saveOrder();
         }
+
+		scheduleSortableDragClear();
     }
 
     _onDragOver(e) {
@@ -149,6 +182,7 @@ class VGFilesSortable {
         this._list.removeEventListener('drop', this._boundOnDrop);
 
         this._draggedItem = null;
+		scheduleSortableDragClear();
     }
 }
 

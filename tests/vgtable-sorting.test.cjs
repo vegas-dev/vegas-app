@@ -173,6 +173,43 @@ test('reuses a supplied wrapper and generates only its required table container'
 	assert.equal(wrapper.isConnected, true);
 });
 
+test('adds not-splitter and disables sorting only for empty header cells', () => {
+	const host = document.createElement('div');
+	host.innerHTML = `
+		<table class="vg-table" data-vg-table>
+			<thead><tr>
+				<th>Название</th>
+				<th>   </th>
+				<th><span aria-hidden="true"></span></th>
+				<th class="not-splitter">Действия</th>
+				<th data-sort-enabled="true"></th>
+			</tr></thead>
+			<tbody><tr><td>Запись</td><td></td><td></td><td></td><td></td></tr></tbody>
+		</table>
+	`;
+	const table = host.firstElementChild;
+	document.body.append(table);
+	const headers = Array.from(table.tHead.rows[0].cells);
+	const instance = new VGTable(table).init();
+
+	assert.equal(headers[0].classList.contains('not-splitter'), false);
+	assert.equal(headers[1].classList.contains('not-splitter'), true);
+	assert.equal(headers[2].classList.contains('not-splitter'), false);
+	assert.equal(headers[3].classList.contains('not-splitter'), true);
+	assert.equal(headers[4].classList.contains('not-splitter'), true);
+	assert.equal(headers[1].getAttribute('data-sort-enabled'), 'false');
+	assert.equal(headers[4].getAttribute('data-sort-enabled'), 'false');
+	assert.equal(headers[0].classList.contains('vg-table-sortable'), true);
+	assert.equal(headers[1].classList.contains('vg-table-sortable'), false);
+	assert.equal(headers[4].classList.contains('vg-table-sortable'), false);
+
+	instance.dispose();
+	assert.equal(headers[1].classList.contains('not-splitter'), false);
+	assert.equal(headers[3].classList.contains('not-splitter'), true);
+	assert.equal(headers[1].hasAttribute('data-sort-enabled'), false);
+	assert.equal(headers[4].getAttribute('data-sort-enabled'), 'true');
+});
+
 test('builds Ant-like header and body layers inside a bounded table container', () => {
 	const wrapper = document.createElement('div');
 	wrapper.className = 'vg-table-wrapper';
@@ -272,9 +309,94 @@ test('keeps an empty sticky header cell as wide as its populated body column', (
 	assert.equal(headerCols[1].style.width, '96px');
 	assert.equal(bodyCols[0].style.width, '240px');
 	assert.equal(bodyCols[1].style.width, '96px');
+	assert.equal(emptyHeader.classList.contains('not-splitter'), true);
 
 	instance.dispose();
 	assert.equal(emptyHeader.style.width, '');
+	assert.equal(emptyHeader.classList.contains('not-splitter'), false);
+});
+
+test('keeps the body-derived minimum width of an empty flexible header column', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th data-field="name">Название</th><th data-field="actions"></th></tr></thead>
+			<tbody><tr><td>Запись</td><td>Действия</td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	const cells = Array.from(table.tBodies[0].rows[0].cells);
+	[240, 96].forEach((width, index) => {
+		cells[index].getBoundingClientRect = () => ({width});
+	});
+	const instance = new VGTable(table).init();
+	const body = wrapper.querySelector('.vg-table-body');
+	let clientWidth = 200;
+	Object.defineProperty(body, 'clientWidth', {configurable: true, get: () => clientWidth});
+
+	instance.refreshStickyHeader();
+	let widths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+
+	assert.equal(widths[0], 104);
+	assert.equal(widths[1], 96);
+	assert.equal(widths.reduce((total, width) => total + width, 0), 200);
+	assert.equal(wrapper.querySelector('th[data-field="actions"]').style.width, '');
+
+	clientWidth = 672;
+	instance.refreshStickyHeader();
+	widths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+
+	assert.equal(widths[0], 480);
+	assert.equal(widths[1], 192);
+	assert.equal(widths.reduce((total, width) => total + width, 0), 672);
+	assert.equal(wrapper.querySelector('th[data-field="actions"]').style.width, '');
+
+	instance.dispose();
+});
+
+test('uses overflowing sortable header content as a flexible table minimum', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<div class="vg-table-container">
+			<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+				<thead><tr><th data-field="address">Адрес</th><th data-field="params">Параметры запроса</th></tr></thead>
+				<tbody><tr><td>sdasc</td><td>*</td></tr></tbody>
+			</table>
+		</div>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	Array.from(table.tBodies[0].rows[0].cells).forEach((cell, index) => {
+		cell.getBoundingClientRect = () => ({width: [83, 117][index]});
+	});
+	const instance = new VGTable(table).init();
+	const body = wrapper.querySelector('.vg-table-body');
+	Object.defineProperty(body, 'clientWidth', {configurable: true, value: 200});
+	Object.defineProperty(table, 'scrollWidth', {configurable: true, value: 340});
+	const headers = Array.from(wrapper.querySelectorAll('.vg-table-header th'));
+	[104, 188].forEach((required, index) => {
+		headers[index].getBoundingClientRect = () => ({width: [83, 117][index]});
+		Object.defineProperty(headers[index], 'scrollWidth', {configurable: true, value: required});
+	});
+
+	instance.refreshStickyHeader();
+	const headerWidths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+	const bodyWidths = Array.from(wrapper.querySelectorAll('.vg-table-body col'), (col) => Number.parseFloat(col.style.width));
+	const container = wrapper.querySelector('.vg-table-container');
+
+	assert.deepEqual(bodyWidths, headerWidths);
+	assert.ok(headerWidths[0] >= 104);
+	assert.ok(headerWidths[1] >= 188);
+	assert.ok(Math.abs(headerWidths.reduce((total, width) => total + width, 0) - 340) < 0.001);
+	assert.equal(container.style.getPropertyValue('--vg-table-sticky-content-min-width'), '340px');
+	assert.equal(headers[0].style.width, '');
+	assert.equal(headers[1].style.width, '');
+
+	instance.dispose();
+	assert.equal(container.style.getPropertyValue('--vg-table-sticky-content-min-width'), '');
 });
 
 test('keeps hard header widths while remote table moves through empty and skeleton states', () => {

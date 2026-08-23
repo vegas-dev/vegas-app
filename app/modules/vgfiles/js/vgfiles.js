@@ -273,7 +273,10 @@ class VGFiles extends VGFilesBase {
             this._failingUploadedKeys.clear();
         }
 
-        const notUploadedFiles = files.filter(f => !this._uploadedKeys.has(this._getFileKey(f)));
+        const notUploadedFiles = files.filter(f =>
+            this._isFileValid(f) && !this._uploadedKeys.has(this._getFileKey(f))
+        );
+        this._setStatItem('failing', this._getFailingCount());
         if (!notUploadedFiles.length) return;
 
         if (!this._uploader || this._uploader.isIdle()) {
@@ -481,7 +484,7 @@ class VGFiles extends VGFilesBase {
             Classes.remove($item, CLASS_NAME_PENDING);
             Classes.replace($item, CLASS_NAME_LOADING, CLASS_NAME_FAILING);
 
-            this._setStatItem('failing', this._failingUploadedKeys.size);
+            this._setStatItem('failing', this._getFailingCount());
             this._setStatItem('pending', this._pendingUploadedKeys.size);
 
             const button = this._getButtonElement(file);
@@ -509,7 +512,7 @@ class VGFiles extends VGFilesBase {
             this._triggerEvent('upload.allComplete');
             this._updateStat(false);
 
-            if (!this._failingUploadedKeys.size) {
+            if (!this._getFailingCount()) {
                 if (this._params.sortable?.enabled && this._params.sortable.route) {
                     import('./sortable.js').then(module => {
                         if (this._sortable && typeof this._sortable.destroy === 'function') {
@@ -525,7 +528,7 @@ class VGFiles extends VGFilesBase {
 
             const payload = {
                 uploaded: this._uploadedKeys.size,
-                failed: this._failingUploadedKeys.size,
+                failed: this._getFailingCount(),
                 total: this._files.length
             };
 
@@ -698,6 +701,7 @@ class VGFiles extends VGFilesBase {
             this._uploadedKeys.delete(key);
             this._pendingUploadedKeys.delete(key);
             this._failingUploadedKeys.delete(key);
+            this._forgetFileValidation(fileToRemove);
         }
 
         this._getItemElement().forEach(el => {
@@ -791,7 +795,7 @@ class VGFiles extends VGFilesBase {
     _updateStatsAfterRemove() {
         this._setStatItem('completed', this._uploadedKeys.size);
         this._setStatItem('pending', this._pendingUploadedKeys.size);
-        this._setStatItem('failing', this._failingUploadedKeys.size);
+        this._setStatItem('failing', this._getFailingCount());
         this._updateStat();
     }
 
@@ -905,7 +909,10 @@ class VGFiles extends VGFilesBase {
             if (!$item) return;
 
             const key = this._getFileKey(file);
-            if (this._uploadedKeys.has(key)) {
+            if (!this._isFileValid(file)) {
+                Classes.remove($item, CLASS_NAME_PENDING);
+                Classes.add($item, CLASS_NAME_FAILING);
+            } else if (this._uploadedKeys.has(key)) {
                 Classes.replace($item, CLASS_NAME_PENDING, CLASS_NAME_COMPLETED);
                 Classes.add($item, CLASS_NAME_LOADED);
             } else if (this._failingUploadedKeys.has(key)) {
@@ -914,6 +921,14 @@ class VGFiles extends VGFilesBase {
                 Classes.add($item, CLASS_NAME_PENDING);
             }
         });
+
+        this._setStatItem('failing', this._getFailingCount());
+    }
+
+    _getFailingCount() {
+        const keys = new Set(this._failingUploadedKeys);
+        this._validationErrorsByKey.forEach((errors, key) => keys.add(key));
+        return keys.size;
     }
 
     _triggerCallback(name, data) {

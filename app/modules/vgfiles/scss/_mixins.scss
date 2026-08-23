@@ -28,7 +28,8 @@
 		&.pending,
 		&.loading,
 		&.failing {
-			.file-actions {
+			.file-actions,
+			.file-custom > :not(.file-remove):not(.file-info) {
 				display: none;
 			}
 		}

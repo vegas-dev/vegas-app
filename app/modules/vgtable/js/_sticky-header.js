@@ -5,7 +5,8 @@
 
 const MODE_CLASSES = ['vg-table-wrapper--sticky-container', 'vg-table-wrapper--sticky-page'];
 const CONTAINER_MODE_CLASSES = ['vg-table-container--sticky-container', 'vg-table-container--sticky-page'];
-const STYLE_PROPERTIES = ['--vg-table-sticky-top', '--vg-table-sticky-max-height'];
+const CONTENT_MIN_WIDTH_PROPERTY = '--vg-table-sticky-content-min-width';
+const STYLE_PROPERTIES = ['--vg-table-sticky-top', '--vg-table-sticky-max-height', CONTENT_MIN_WIDTH_PROPERTY];
 const GENERATED_LAYER_ATTRIBUTE = 'data-vg-table-sticky-generated';
 
 class _stickyHeader {
@@ -23,6 +24,7 @@ class _stickyHeader {
 		this._previousStyles = new Map();
 		this._columnWeights = new Map();
 		this._hardColumnWidths = new Map();
+		this._columnMinimumWidths = new Map();
 		this._hasSourceColgroup = false;
 		this._resizeObserver = null;
 		this._resizeFrame = null;
@@ -78,9 +80,16 @@ class _stickyHeader {
 	refresh() {
 		if (!this._header || !this._headerTable || !this._body) return this;
 
-		const widths = this._resolveLayoutWidths();
-		this._applyColgroup(this._headerTable, widths);
-		this._applyColgroup(this._element, widths);
+		let widths = this._resolveLayoutWidths();
+		const attempts = this._getHeaders().length + 2;
+		for (let attempt = 0; attempt < attempts; attempt += 1) {
+			this._applyColgroup(this._headerTable, widths);
+			this._applyColgroup(this._element, widths);
+			const headerChanged = this._captureOverflowingHeaderMinimums();
+			const contentChanged = this._syncContentMinimumWidth(widths);
+			if (!headerChanged && !contentChanged) break;
+			widths = this._resolveLayoutWidths();
+		}
 		const scrollbar = Math.max(0, this._body.offsetWidth - this._body.clientWidth);
 		this._header.style.paddingInlineEnd = `${scrollbar}px`;
 		this._header.style.setProperty('--vg-table-sticky-scrollbar-width', `${scrollbar}px`);
@@ -215,6 +224,8 @@ class _stickyHeader {
 			this._columnWeights.set(key, widths[index] > 0 ? widths[index] : 1);
 			if (this._hasDeclaredWidth(header) || this._hasDeclaredWidth(sourceCols[index])) {
 				this._hardColumnWidths.set(key, widths[index] > 0 ? widths[index] : 0);
+			} else if (this._isEmptyHeader(header) && widths[index] > 0) {
+				this._columnMinimumWidths.set(key, widths[index]);
 			}
 		});
 	}
@@ -252,20 +263,87 @@ class _stickyHeader {
 		hard.forEach((width, index) => { widths[index] = width; });
 
 		if (!flexible.length) return widths;
-		const weights = flexible.map((index) => {
-			const key = this._columnKey(headers[index], index);
-			return this._columnWeights.get(key) || measured[index] || 1;
-		});
-		const weightTotal = weights.reduce((total, weight) => total + weight, 0) || flexible.length;
-		let distributed = 0;
-		flexible.forEach((index, position) => {
-			const width = position === flexible.length - 1
-				? Math.max(0, available - distributed)
-				: available * weights[position] / weightTotal;
-			widths[index] = width;
-			distributed += width;
-		});
+		this._distributeFlexibleWidths(widths, flexible, available, headers, measured);
 		return widths;
+	}
+
+	_distributeFlexibleWidths(widths, indexes, available, headers, measured) {
+		let pending = indexes.slice();
+		let remaining = available;
+		const minimumTotal = pending.reduce((total, index) => {
+			const key = this._columnKey(headers[index], index);
+			return total + (this._columnMinimumWidths.get(key) || 0);
+		}, 0);
+
+		if (minimumTotal > remaining) {
+			pending.forEach((index) => {
+				const key = this._columnKey(headers[index], index);
+				widths[index] = this._columnMinimumWidths.get(key) || 0;
+			});
+			return;
+		}
+
+		while (pending.length) {
+			const weights = pending.map((index) => {
+				const key = this._columnKey(headers[index], index);
+				return this._columnWeights.get(key) || measured[index] || 1;
+			});
+			const weightTotal = weights.reduce((total, weight) => total + weight, 0) || pending.length;
+			const constrained = pending.filter((index, position) => {
+				const key = this._columnKey(headers[index], index);
+				const minimum = this._columnMinimumWidths.get(key) || 0;
+				return minimum > remaining * weights[position] / weightTotal;
+			});
+
+			if (!constrained.length) {
+				let distributed = 0;
+				pending.forEach((index, position) => {
+					const width = position === pending.length - 1
+						? Math.max(0, remaining - distributed)
+						: remaining * weights[position] / weightTotal;
+					widths[index] = width;
+					distributed += width;
+				});
+				return;
+			}
+
+			constrained.forEach((index) => {
+				const key = this._columnKey(headers[index], index);
+				const minimum = this._columnMinimumWidths.get(key) || 0;
+				widths[index] = minimum;
+				remaining -= minimum;
+			});
+			pending = pending.filter((index) => !constrained.includes(index));
+		}
+	}
+
+	_captureOverflowingHeaderMinimums() {
+		let changed = false;
+		this._getHeaders().forEach((header, index) => {
+			const key = this._columnKey(header, index);
+			if (this._hasDeclaredWidth(header) || this._hardColumnWidths.has(key)) return;
+
+			const rendered = header.getBoundingClientRect?.().width || header.clientWidth || 0;
+			const required = header.scrollWidth || 0;
+			const current = this._columnMinimumWidths.get(key) || 0;
+			if (required <= rendered + 1 || required <= current + 1) return;
+
+			this._columnMinimumWidths.set(key, required);
+			changed = true;
+		});
+		return changed;
+	}
+
+	_syncContentMinimumWidth(widths) {
+		const total = widths.reduce((sum, width) => sum + width, 0);
+		const viewport = this._body?.clientWidth || this._container?.clientWidth || total;
+		const previous = this._previousStyles.get(CONTENT_MIN_WIDTH_PROPERTY);
+		const required = Math.max(total, this._element?.scrollWidth || 0);
+		const next = required > viewport + 1 ? `${Math.ceil(required)}px` : previous;
+		const current = this._container.style.getPropertyValue(CONTENT_MIN_WIDTH_PROPERTY);
+		if (next) this._container.style.setProperty(CONTENT_MIN_WIDTH_PROPERTY, next);
+		else this._container.style.removeProperty(CONTENT_MIN_WIDTH_PROPERTY);
+		return current !== (next || '');
 	}
 
 	_getHeaders() {
@@ -275,6 +353,10 @@ class _stickyHeader {
 
 	_columnKey(header, index) {
 		return String(header?.getAttribute('data-field') || index).trim();
+	}
+
+	_isEmptyHeader(header) {
+		return Boolean(header) && header.childElementCount === 0 && String(header.textContent || '').trim() === '';
 	}
 
 	_hasDeclaredWidth(element) {
@@ -295,9 +377,10 @@ class _stickyHeader {
 	}
 
 	_readTableMinimumWidth() {
-		if (typeof getComputedStyle !== 'function') return 0;
-		const value = Number.parseFloat(getComputedStyle(this._element).minWidth || '0');
-		return Number.isFinite(value) ? value : 0;
+		const generated = Number.parseFloat(this._container?.style.getPropertyValue(CONTENT_MIN_WIDTH_PROPERTY) || '0');
+		if (typeof getComputedStyle !== 'function') return Number.isFinite(generated) ? generated : 0;
+		const declared = Number.parseFloat(getComputedStyle(this._element).minWidth || '0');
+		return Math.max(Number.isFinite(generated) ? generated : 0, Number.isFinite(declared) ? declared : 0);
 	}
 
 	_syncScroll() {
