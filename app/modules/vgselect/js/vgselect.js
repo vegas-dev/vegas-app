@@ -1,9 +1,14 @@
+/**
+ * Описание: кастомный select с синхронизацией исходного поля и выпадающего списка.
+ * Возможности: поиск, группы, дерево, теги, AJAX-пагинация, события и освобождение ресурсов.
+ */
 import BaseModule from "../../base-module";
 import {
 	isDisabled,
 	isEmptyObj,
 	mergeDeepObject,
 	normalizeData,
+	transliterate,
 } from "../../../utils/js/functions";
 import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import EventHandler from "../../../utils/js/dom/event";
@@ -73,10 +78,10 @@ class VGSelect extends BaseModule {
 			autosearch: true,
 			// Dropdown placement behavior:
 			// - none: default CSS positioning (no JS)
-			// - auto: choose top/bottom based on available space in overflow ancestor/viewport
+			// - auto (default): choose top/bottom based on available space in overflow ancestor/viewport
 			// - top: force open upwards
 			// - bottom: force open downwards
-			position: 'none',
+			position: 'auto',
 			search: {
 				enabled: false,
 				route: '',
@@ -105,6 +110,8 @@ class VGSelect extends BaseModule {
 
 		this._observer = null;
 		this._observerTimeout = null;
+		this._searchTimeout = null;
+		this._disposed = false;
 		this._visibilityTransitionId = 0;
 		this._drop = Selectors.find(SELECTOR_DROPDOWN, this._element);
 		this._searchTerm = '';
@@ -154,6 +161,7 @@ class VGSelect extends BaseModule {
 	 */
 	static buildListOptions(selector, drop, params = {}) {
 		let list = drop.querySelector(`.${CLASS_NAME_LIST}`);
+		const controls = list ? [...list.querySelectorAll(`.${CLASS_NAME_LOAD_MORE}, .${CLASS_NAME_LOADING}`)] : [];
 		if (!list) {
 			list = document.createElement('ul');
 			Classes.add(list, CLASS_NAME_LIST);
@@ -190,6 +198,7 @@ class VGSelect extends BaseModule {
 			});
 		}
 
+		controls.forEach(control => list.appendChild(control));
 		return list;
 	}
 
@@ -459,17 +468,16 @@ class VGSelect extends BaseModule {
 		search.appendChild(searchInput);
 		this._drop.insertBefore(search, this._drop.firstChild);
 
-		let searchTimeout;
 		searchInput.addEventListener('input', (e) => {
 			const term = e.target.value.trim();
 			const params = this._params;
 
 			this._callCallback('onSearch', { term });
 			if (params.search.remote && params.search.route) {
+				clearTimeout(this._searchTimeout);
+				this._remoteSearchAbortController?.abort();
 				if (term.length < (params.search.minterm || 1)) return;
-
-				clearTimeout(searchTimeout);
-				searchTimeout = setTimeout(() => {
+				this._searchTimeout = setTimeout(() => {
 					this._fetchRemoteData(term);
 				}, params.search.delay || 300);
 			} else {
@@ -520,7 +528,7 @@ class VGSelect extends BaseModule {
 		if (searchInput) searchInput.focus();
 
 		return this._queueCallback(() => {
-			if (transitionId !== this._visibilityTransitionId || !this._isShown()) return;
+			if (this._disposed || transitionId !== this._visibilityTransitionId || !this._isShown()) return;
 			this._updateDropdownPlacement();
 			EventHandler.trigger(this._element, EVENT_KEY_SHOWN, { relatedTarget });
 			this._triggerEvent(EVENT_KEY_OPEN);
@@ -552,7 +560,7 @@ class VGSelect extends BaseModule {
 		this._element.querySelector(SELECTOR_DATA_TOGGLE).setAttribute('aria-expanded', 'false');
 
 		this._queueCallback(() => {
-			if (transitionId !== this._visibilityTransitionId) return;
+			if (this._disposed || transitionId !== this._visibilityTransitionId) return;
 			this._element.classList.remove(CLASS_NAME_SHOW);
 			EventHandler.trigger(this._element, EVENT_KEY_HIDDEN, relatedTarget);
 			this._triggerEvent(EVENT_KEY_CLOSE);
@@ -647,6 +655,7 @@ class VGSelect extends BaseModule {
 	 * Освобождает ресурсы (отключает observer, очищает таймеры)
 	 */
 	dispose() {
+		if (this._disposed) return;
 		this._visibilityTransitionId++;
 		if (this._observer) {
 			this._observer.disconnect();
@@ -654,8 +663,12 @@ class VGSelect extends BaseModule {
 		}
 		clearTimeout(this._observerTimeout);
 		this._observerTimeout = null;
+		clearTimeout(this._searchTimeout);
+		this._remoteSearchAbortController?.abort();
+		if (this._isShown() && 'ontouchstart' in document.documentElement) document.body.style.pointerEvents = '';
 		this._teardownDropdownPlacement();
 		super.dispose();
+		this._disposed = true;
 	}
 
 	_setupDropdownPlacement() {
@@ -691,9 +704,9 @@ class VGSelect extends BaseModule {
 
 	_getPositionMode() {
 		const raw = this._params?.position;
-		const mode = raw == null ? 'none' : String(raw).trim().toLowerCase();
+		const mode = raw == null ? 'auto' : String(raw).trim().toLowerCase();
 		if (mode === 'auto' || mode === 'top' || mode === 'bottom' || mode === 'none') return mode;
-		return 'none';
+		return 'auto';
 	}
 
 	_getOverflowAncestor(startEl) {
@@ -765,8 +778,10 @@ class VGSelect extends BaseModule {
 	static destroy(select) {
 		const container = select.nextElementSibling;
 		if (container && container.classList.contains(CLASS_NAME_CONTAINER)) {
+			VGSelect.getInstance(container)?.dispose();
 			container.remove();
 		}
+		delete select.dataset.inited;
 	}
 
 	/**
@@ -781,6 +796,9 @@ class VGSelect extends BaseModule {
 		const placeholder = select.dataset.placeholder || '';
 		const isMultiple = select.multiple;
 		const instance = VGSelect.getInstance(container);
+		container.querySelectorAll(`.${CLASS_NAME_OPTION}`).forEach(item => {
+			item.classList.toggle('selected', !!select.options[Number(item.dataset.index)]?.selected);
+		});
 
 		if (isMultiple) {
 			const tags = current.querySelector(`.${CLASS_NAME_TAGS}`);
@@ -799,6 +817,10 @@ class VGSelect extends BaseModule {
 
 			if (selected.length === 0) {
 				input.placeholder = placeholder;
+				const label = document.createElement('span');
+				label.className = CLASS_NAME_PLACEHOLDER;
+				label.textContent = placeholder;
+				tags.insertBefore(label, input);
 			} else {
 				input.placeholder = '';
 				selected.forEach(opt => {
@@ -985,13 +1007,14 @@ class VGSelect extends BaseModule {
 
 		const list = this._element.querySelector(SELECTOR_LIST);
 		if (!list) return;
+		if (list.querySelector(SELECTOR_LOAD_MORE_BTN)) return;
 
 		const btn = document.createElement('li');
 		btn.className = CLASS_NAME_LOAD_MORE;
 		btn.style.textAlign = 'center';
 		btn.style.padding = '8px';
 		btn.style.cursor = 'pointer';
-		btn.style.color = '#007bff';
+		btn.style.color = 'var(--vg-primary-color, #007bff)';
 		btn.style.fontSize = '14px';
 		btn.style.fontWeight = '500';
 		btn.textContent = this._params.search.loadMoreText;
@@ -1045,6 +1068,7 @@ class VGSelect extends BaseModule {
 	async _loadNextPage() {
 		const { route, pageParam = 'page', termParam = 'q', perpage = 20 } = this._params.search;
 		const nextPage = this._currentPage + 1;
+		const requestId = this._remoteSearchRequestId;
 
 		const url = new URL(route, window.location.origin);
 		url.searchParams.set(termParam, this._searchTerm);
@@ -1057,7 +1081,9 @@ class VGSelect extends BaseModule {
 
 		try {
 			const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
+			if (this._disposed || requestId !== this._remoteSearchRequestId) return;
 
 			if (Array.isArray(data.results)) {
 				VGSelect.addOptions(this._element.previousElementSibling, data, { preserve: true });
@@ -1073,12 +1099,15 @@ class VGSelect extends BaseModule {
 				this._triggerEvent(EVENT_KEY_LOAD_NEXT, { page: this._currentPage, term: this._searchTerm });
 			}
 		} catch (err) {
+			if (this._disposed || requestId !== this._remoteSearchRequestId) return;
 			console.error('VGSelect: Failed to load next page', err);
 			this._triggerEvent(EVENT_KEY_ERROR, { error: 'Pagination fetch failed', term: this._searchTerm });
 			this._hideLoadMoreButton(false); // оставить кнопку при ошибке
 		} finally {
-			this._showLoading(false);
-			this._loading = false;
+			if (!this._disposed && requestId === this._remoteSearchRequestId) {
+				this._showLoading(false);
+				this._loading = false;
+			}
 		}
 	}
 
@@ -1101,6 +1130,7 @@ class VGSelect extends BaseModule {
 		this._searchTerm = term;
 		this._currentPage = 1;
 		this._totalPages = null;
+		this._loading = false;
 
 		// Отменяем предыдущий запрос (если ещё летит)
 		if (this._remoteSearchAbortController) {
@@ -1120,10 +1150,14 @@ class VGSelect extends BaseModule {
 			headers: { 'Content-Type': 'application/json' },
 			signal
 		})
-			.then(res => res.json())
+			.then(res => {
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+				return res.json();
+			})
 			.then(data => {
 				// Если прилетел не самый свежий ответ — игнорируем
-				if (requestId !== this._remoteSearchRequestId) return;
+				if (this._disposed || requestId !== this._remoteSearchRequestId) return;
+				if (!Array.isArray(data.results)) throw new Error('Invalid results');
 
 				// Если пользователь уже ввёл другой текст — тоже игнорируем
 				const liveTerm = searchInput ? searchInput.value.trim() : '';
@@ -1173,6 +1207,7 @@ class VGSelect extends BaseModule {
 				}
 			})
 			.catch(err => {
+				if (this._disposed || requestId !== this._remoteSearchRequestId) return;
 				// Abort — нормальная ситуация при быстром вводе
 				if (err && (err.name === 'AbortError')) return;
 
@@ -1182,7 +1217,7 @@ class VGSelect extends BaseModule {
 			})
 			.finally(() => {
 				// Лоадер убираем только для последнего актуального запроса
-				if (requestId === this._remoteSearchRequestId) {
+				if (!this._disposed && requestId === this._remoteSearchRequestId) {
 					this._showLoading(false);
 				}
 			});
@@ -1283,6 +1318,7 @@ class VGSelect extends BaseModule {
 			const drop = container.querySelector(`.${CLASS_NAME_DROPDOWN}`);
 			VGSelect.buildListOptions(select, drop, instance?._params || {});
 			instance?._syncSearch();
+			this.updateUI(select);
 			instance?._triggerEvent(EVENT_KEY_REBUILD);
 		} else {
 			this.updateUI(select);
@@ -1297,17 +1333,25 @@ class VGSelect extends BaseModule {
 	_filterLocalOptions(term) {
 		const list = this._drop.querySelector(`.${CLASS_NAME_LIST}`);
 		const options = list.querySelectorAll(`.${CLASS_NAME_OPTION}`);
-
-		if (!term) {
-			options.forEach(el => el.hidden = false);
-			return;
-		}
-
 		term = term.toLowerCase();
+		const search = [term, transliterate(term), transliterate(term, true)];
+		let results = 0;
 		options.forEach(el => {
 			const text = el.textContent.toLowerCase();
-			el.hidden = !text.includes(term);
+			const option = this._element.previousElementSibling.options[Number(el.dataset.index)];
+			const empty = option?.value === '' && text.trim() === '';
+			const visible = !empty && (!term || search.some(value => text.includes(value)));
+			el.hidden = !visible;
+			el.style.display = visible ? '' : 'none';
+			if (visible) results++;
 		});
+		list.querySelectorAll(`.${CLASS_NAME_OPTGROUP}`).forEach(group => {
+			const visible = [...group.querySelectorAll(`.${CLASS_NAME_OPTION}`)].some(option => !option.hidden);
+			group.hidden = !visible;
+			group.style.display = visible ? '' : 'none';
+		});
+		this._triggerEvent(`${NAME_KEY}.search`, {query: term, results});
+		this._callCallback('onSearch', {query: term, results});
 	}
 }
 

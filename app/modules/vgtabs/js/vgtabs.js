@@ -1,3 +1,7 @@
+/**
+ * Описание: вкладки VGTabs с декларативной и ручной инициализацией.
+ * Возможности: клавиатура, начальный hash, AJAX, отменяемые события и адаптивный индикатор.
+ */
 import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
 import EventHandler from "../../../utils/js/dom/event";
@@ -132,7 +136,7 @@ class VGTabs extends BaseModule {
 				once: true,
 				output: true,
 			},
-		}, this._params);
+		}, params || {});
 
 		this._parent = this._element.closest(SELECTOR.TAB_PANEL);
 		this._main_parent = this._parent?.closest(SELECTOR.TAB_CLASS) || null;
@@ -173,19 +177,19 @@ class VGTabs extends BaseModule {
 	show() {
 		const innerElem = this._element;
 
-		if (this._elemIsActive(innerElem)) return;
+		if (!innerElem || isDisabled(innerElem) || this._elemIsActive(innerElem)) return;
 
 		const activeElem = this._getActiveElem();
-		const relatedTarget = innerElem;
 
 		// События hide и show
-		const hideEvent = activeElem ? EventHandler.trigger(activeElem, EVENT_HIDE, {relatedTarget}) : null;
-		const showEvent = EventHandler.trigger(innerElem, EVENT_SHOW, {relatedTarget});
+		const hideEvent = activeElem ? EventHandler.trigger(activeElem, EVENT_HIDE, {relatedTarget: innerElem}) : null;
+		const showEvent = EventHandler.trigger(innerElem, EVENT_SHOW, {relatedTarget: activeElem});
 
 		if (showEvent.defaultPrevented || (hideEvent && hideEvent.defaultPrevented)) return;
 
 		this._deactivate(activeElem, innerElem);
-		this._activate(innerElem, relatedTarget);
+		this._activate(innerElem, activeElem);
+		this._updateSlider(innerElem);
 	}
 
 	/**
@@ -219,20 +223,27 @@ class VGTabs extends BaseModule {
 		if (target) this._activate(target, relatedTarget);
 
 		const complete = () => {
+			if (!this._element || !element.classList.contains(CLASS_NAME.ACTIVE)) return;
 			if (element.getAttribute('role') !== 'tab') {
 				element.classList.add(CLASS_NAME.SHOW);
 				return;
 			}
 
-			this._route((status, data) => {
-				EventHandler.trigger(this._element, EVENT_LOADED, { stats: status, data });
-			});
+			if (this._params.ajax.route && !this._isLoaded && !this._isLoading) {
+				this._isLoading = true;
+				const loaded = (status, data) => {
+					if (!this._element) return;
+					this._isLoading = false;
+					EventHandler.trigger(this._element, EVENT_LOADED, { stats: status, data });
+				};
+				this._route(loaded, error => loaded('error', error));
+			}
 
 			element.removeAttribute('tabindex');
 			element.setAttribute('aria-selected', 'true');
 			this._toggleDropDown(element, true);
 
-			EventHandler.trigger(element, EVENT_SHOWN, { relatedTarget }); // ← теперь relatedTarget определён
+			EventHandler.trigger(element, EVENT_SHOWN, { relatedTarget });
 		};
 
 		this._queueCallback(complete, element, element.classList.contains(CLASS_NAME.FADE));
@@ -253,6 +264,7 @@ class VGTabs extends BaseModule {
 		if (target) this._deactivate(target, relatedTarget);
 
 		const complete = () => {
+			if (!this._element || element.classList.contains(CLASS_NAME.ACTIVE)) return;
 			if (element.getAttribute('role') !== 'tab') {
 				element.classList.remove(CLASS_NAME.SHOW);
 				return;
@@ -300,13 +312,12 @@ class VGTabs extends BaseModule {
 	_setTabHash() {
 		if (!this._params.hash) return;
 
-		const url = document.location.toString();
-		if (!url.includes('#')) return;
-
-		const id = url.split('#')[1];
-		const element = Selectors.find(`[href="#${id}"]`, this._parent) ||
-			Selectors.find(`[data-vg-target="#${id}"]`, this._element) ||
-			null;
+		let hash = document.location.hash;
+		if (!hash) return;
+		try { hash = decodeURIComponent(hash); } catch { return; }
+		const element = this._getChildren().find(child =>
+			!isDisabled(child) && (child.getAttribute('href') === hash || child.getAttribute('data-vg-target') === hash)
+		);
 
 		if (element) {
 			VGTabs.getOrCreateInstance(element).show();
@@ -317,7 +328,7 @@ class VGTabs extends BaseModule {
 	 * Инициализация слайдера-индикатора под вкладками
 	 */
 	_setInitialSlider() {
-		if (!this._params.slide) return;
+		if (!this._params.slide || !this._main_parent) return;
 
 		let slider = Selectors.find(`.${CLASS_NAME.SLIDER}`, this._main_parent);
 		if (!slider) {
@@ -328,44 +339,57 @@ class VGTabs extends BaseModule {
 
 		this._main_parent.classList.add(CLASS_NAME.WITH_SLIDER);
 
-		const activeLink = Selectors.find(`.${CLASS_NAME.ACTIVE}`, this._parent);
-		if (!activeLink) return;
+		this._updateSlider(this._getActiveElem());
+		this._sliderOver = event => {
+			const target = event.delegateTarget;
+			if (target.closest(SELECTOR.TAB_PANEL) === this._parent && !isDisabled(target)) this._updateSlider(target);
+		};
+		this._sliderOut = () => this._updateSlider(this._getActiveElem());
+		// Только один владелец общих обработчиков на группу вкладок.
+		const owner = this._getChildren().some(child => VGTabs.getInstance(child)?._sliderOver && child !== this._element);
+		if (owner) {
+			this._sliderOver = null;
+			this._sliderOut = null;
+			return;
+		}
+		EventHandler.on(this._main_parent, EVENT_MOUSEOVER_DATA_API, SELECTOR.DATA_TOGGLE, this._sliderOver);
+		EventHandler.on(this._main_parent, EVENT_MOUSEOUT_DATA_API, SELECTOR.DATA_TOGGLE, this._sliderOut);
+		this._sliderResize = () => this._updateSlider(this._getActiveElem());
+		window.addEventListener('resize', this._sliderResize);
+		if (typeof ResizeObserver !== 'undefined') {
+			this._sliderObserver = new ResizeObserver(this._sliderResize);
+			this._sliderObserver.observe(this._parent);
+			this._getChildren().forEach(child => this._sliderObserver.observe(child));
+		}
+	}
 
-		const {width, height} = window.getComputedStyle(activeLink);
-		activeLink.classList.add(CLASS_NAME.HOVER);
+	_updateSlider(target) {
+		if (!target || !this._main_parent) return;
+		const slider = this._main_parent.querySelector(`.${CLASS_NAME.SLIDER}`);
+		if (!slider) return;
+		this._getChildren().forEach(child => child.classList.toggle(CLASS_NAME.HOVER, child === target));
+		const {width, height} = window.getComputedStyle(target);
+		Object.assign(slider.style, {width, height, left: `${target.offsetLeft}px`, top: `${target.offsetTop}px`});
+	}
 
-		slider.style.width = width;
-		slider.style.height = height;
-		slider.style.left = `${activeLink.offsetLeft}px`;
-
-		// Наведение
-		EventHandler.on(this._main_parent, EVENT_MOUSEOVER_DATA_API, SELECTOR.DATA_TOGGLE, (event) => {
-			const target = event.target;
-			if (['A', 'AREA'].includes(target.tagName)) event.preventDefault();
-			if (isDisabled(target)) return;
-
-			const hover = Selectors.find(`.${CLASS_NAME.HOVER}`, this._parent);
-			if (hover) hover.classList.remove(CLASS_NAME.HOVER);
-			target.classList.add(CLASS_NAME.HOVER);
-
-			const {width, height} = window.getComputedStyle(target);
-			slider.style.width = width;
-			slider.style.height = height;
-			slider.style.left = `${target.offsetLeft}px`;
-		});
-
-		// Уход курсора
-		EventHandler.on(this._main_parent, EVENT_MOUSEOUT_DATA_API, SELECTOR.DATA_TOGGLE, () => {
-			const active = Selectors.find(`.${CLASS_NAME.ACTIVE}`, this._parent);
-			const {width, height} = window.getComputedStyle(active);
-
-			Selectors.findAll(`.${CLASS_NAME.HOVER}`, this._parent).forEach(el => el.classList.remove(CLASS_NAME.HOVER));
-			active.classList.add(CLASS_NAME.HOVER);
-
-			slider.style.width = width;
-			slider.style.height = height;
-			slider.style.left = `${active.offsetLeft}px`;
-		});
+	dispose() {
+		if (!this._element) return;
+		const parent = this._main_parent;
+		const successor = this._sliderOver && this._getChildren()
+			.map(child => VGTabs.getInstance(child))
+			.find(instance => instance && instance !== this && instance._params.slide);
+		if (this._sliderOver) {
+			EventHandler.off(parent, EVENT_MOUSEOVER_DATA_API, SELECTOR.DATA_TOGGLE, this._sliderOver);
+			EventHandler.off(parent, EVENT_MOUSEOUT_DATA_API, SELECTOR.DATA_TOGGLE, this._sliderOut);
+			window.removeEventListener('resize', this._sliderResize);
+			this._sliderObserver?.disconnect();
+		}
+		super.dispose();
+		if (successor) successor._setInitialSlider();
+		else if (parent && !Selectors.findAll(SELECTOR.DATA_TOGGLE, parent).some(child => VGTabs.getInstance(child)?._params.slide)) {
+			parent.querySelector(`.${CLASS_NAME.SLIDER}`)?.remove();
+			parent.classList.remove(CLASS_NAME.WITH_SLIDER);
+		}
 	}
 
 	/**
@@ -393,7 +417,7 @@ class VGTabs extends BaseModule {
 		}
 		if (!isActive) {
 			child.setAttribute('tabindex', '-1');
-		}
+		} else child.removeAttribute('tabindex');
 		this._setAttributeIfNotExists(child, 'role', 'tab');
 		this._setInitialAttributesOnTargetPanel(child);
 	}
@@ -429,7 +453,8 @@ class VGTabs extends BaseModule {
 	 * @returns {HTMLElement[]}
 	 */
 	_getChildren() {
-		return Selectors.findAll(SELECTOR.INNER_ELEM, this._parent);
+		return Selectors.findAll(SELECTOR.INNER_ELEM, this._parent)
+			.filter(child => child.closest(SELECTOR.TAB_PANEL) === this._parent);
 	}
 
 	/**

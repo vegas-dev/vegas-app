@@ -1,5 +1,9 @@
+/**
+ * Описание: отслеживание активных секций и навигация по якорям.
+ * Возможности: Data API, нативная и виртуальная прокрутка, вложенные меню и обновление секций.
+ */
 import BaseModule from "../../base-module";
-import { mergeDeepObject, getElement, isDisabled, isVisible } from "../../../utils/js/functions";
+import { getElement, isDisabled, isVisible, normalizeData } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 
@@ -52,7 +56,7 @@ class VGSpy extends BaseModule {
 		 * @property {number[]|string} threshold - пороги видимости (0.1, 0.5, 1)
 		 */
 		this._params = this._configAfterMerge(
-			mergeDeepObject(
+			Object.assign(
 				{
 					offset: null, // Устаревшее, для обратной совместимости
 					rootMargin: '0px 0px -25%',
@@ -60,7 +64,8 @@ class VGSpy extends BaseModule {
 					target: this._element,
 					threshold: [0.1, 0.5, 1],
 				},
-				params
+				params,
+				this._getDataOptions()
 			)
 		);
 
@@ -134,10 +139,22 @@ class VGSpy extends BaseModule {
 		return NAME_KEY;
 	}
 
+	_getDataOptions() {
+		const options = {};
+		for (const name of ['target', 'offset', 'rootMargin', 'smoothScroll', 'threshold']) {
+			const attribute = `data-${name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`;
+			if (this._element.hasAttribute(attribute)) {
+				options[name] = normalizeData(this._element.getAttribute(attribute));
+			}
+		}
+		return options;
+	}
+
 	/**
 	 * Инициализирует или перезапускает модуль: находит ссылки и секции, создаёт observer
 	 */
 	refresh() {
+		this._process(null);
 		this._initializeTargetsAndObservables();
 		this._updateRootElement();
 		this._maybeEnableSmoothScroll();
@@ -164,7 +181,7 @@ class VGSpy extends BaseModule {
 		// Smooth Scrollbar can be initialized after the spy; retry once on the next tick.
 		if (this._rootElement && !this._isScrollableSelf(this._rootElement) && window.Scrollbar) {
 			setTimeout(() => {
-				if (this._scrollbar) return;
+				if (!this._element || this._scrollbar) return;
 				this._updateSmoothScrollbar();
 				if (this._scrollbar) this._setupScrollbarTracking();
 			}, 0);
@@ -357,6 +374,8 @@ class VGSpy extends BaseModule {
 	}
 
 	dispose() {
+		if (!this._element) return;
+		this._process(null);
 		if (this._observer) {
 			this._observer.disconnect();
 		}
@@ -416,6 +435,7 @@ class VGSpy extends BaseModule {
 			// don't hijack the click; allow UI to reveal it, then retry.
 			if (!isVisible(section)) {
 				setTimeout(() => {
+					if (!this._element) return;
 					const revealed = Selectors.findID(id);
 					if (!revealed || !isVisible(revealed)) return;
 
@@ -507,7 +527,7 @@ class VGSpy extends BaseModule {
 
 		for (const entry of entries) {
 			if (!entry.isIntersecting) {
-				this._clearActiveClass(getTargetLink(entry));
+				if (getTargetLink(entry) === this._activeTarget) this._process(null);
 				continue;
 			}
 
@@ -516,7 +536,7 @@ class VGSpy extends BaseModule {
 			const shouldActivate =
 				(userScrollsDown && isEntryBelow) || (!userScrollsDown && !isEntryBelow);
 
-			if (shouldActivate) {
+			if (shouldActivate || !this._activeTarget) {
 				this._previousScrollData.visibleEntryTop = entryTop;
 				this._process(getTargetLink(entry));
 			}
@@ -595,7 +615,7 @@ class VGSpy extends BaseModule {
 		parent.classList.remove(CLASS_NAME_ACTIVE);
 
 		const activeLinks = Selectors.findAll(
-			`[href].${CLASS_NAME_ACTIVE}, [data-vg-target].${CLASS_NAME_ACTIVE}`,
+			`[href].${CLASS_NAME_ACTIVE}, [data-vg-target].${CLASS_NAME_ACTIVE}, ${SELECTOR_DROPDOWN_TOGGLE}.${CLASS_NAME_ACTIVE}`,
 			parent
 		);
 		for (const link of activeLinks) {
@@ -605,6 +625,7 @@ class VGSpy extends BaseModule {
 
 	_getTargetIdFromTrigger(trigger) {
 		if (!trigger || typeof trigger.getAttribute !== 'function') return null;
+		if (isDisabled(trigger) || trigger.matches(SELECTOR_DROPDOWN_TOGGLE)) return null;
 
 		const dataTarget = (trigger.getAttribute('data-vg-target') || '').trim();
 		const href = (trigger.getAttribute('href') || '').trim();

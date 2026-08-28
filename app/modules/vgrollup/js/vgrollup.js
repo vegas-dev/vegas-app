@@ -1,3 +1,7 @@
+/**
+ * Описание: сворачивание текста и списков VGRollup.
+ * Возможности: ограничение высоты, строк и количества элементов, локализация кнопок, Data API, callbacks и события.
+ */
 import BaseModule from "../../base-module";
 import { execute, isDisabled, mergeDeepObject } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
@@ -98,7 +102,7 @@ class VGRollup extends BaseModule {
 			}
 		};
 
-		let lang = Manipulator.get(element, 'data-lang') || ('lang' in params) ? params.lang : defaultParams.lang;
+		const lang = Manipulator.get(element, 'data-lang') || params.lang || defaultParams.lang;
 
 		// Локализация текстов кнопок
 		defaultParams.button.more = lang_buttons(lang, NAME)['show'];
@@ -289,6 +293,7 @@ class VGRollup extends BaseModule {
 		if (isEllipsis && line) {
 			Classes.add(element, this.classes.ellipsis);
 			element.style.lineClamp  = Number(line);
+			element.style.setProperty('-webkit-line-clamp', String(Number(line)));
 		} else if (isEllipsis) {
 			console.error("Переменная [data-line] или параметр[line] не должны быть пустыми");
 		}
@@ -378,12 +383,13 @@ class VGRollup extends BaseModule {
 				if (this._params.ellipsis.line) {
 					Classes.add(el, this.classes.ellipsis);
 					el.style.lineClamp = this._params.ellipsis.line;
+					el.style.setProperty('-webkit-line-clamp', String(this._params.ellipsis.line));
 				}
 
 				if (this._params.fade) Classes.add(el, this.classes.fade);
 				if (this._params.transition) Classes.add(el, this.classes.transition);
 
-				execute(this._params.callbacks.expand, [el, this])
+				execute(this._params.callbacks.collapse, [el, this])
 			} else if (content === 'elements') {
 				const items = Selectors.findAll('.' + this._params.elements, el);
 				items.forEach((item, index) => {
@@ -399,7 +405,9 @@ class VGRollup extends BaseModule {
 		} else {
 			const { hidden, ellipsis, fade } = this.classes;
 			Classes.remove(el, [hidden, ellipsis, fade]);
-			Manipulator.remove(el, 'style');
+			el.style.removeProperty('height');
+			el.style.removeProperty('line-clamp');
+			el.style.removeProperty('-webkit-line-clamp');
 
 			if (this._params.content === 'elements') {
 				const items = Selectors.findAll('.' + this._params.elements, el);

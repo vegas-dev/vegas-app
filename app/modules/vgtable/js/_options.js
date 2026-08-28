@@ -1,6 +1,6 @@
 /**
  * Описание: константы и параметры по умолчанию базовой таблицы VGTable.
- * Возможности: единая настройка Data API, i18n, wrapper, remote-запросов, фильтров, sticky-заголовка, колонок, строк, сортировки, выбора и пагинации.
+ * Возможности: единая настройка Data API, i18n, wrapper, remote, фильтров, sticky, колонок, строк, выбора и адаптивной пагинации.
  */
 
 /**
@@ -22,6 +22,15 @@ const TABLE_CONTAINER_SELECTOR = '.vg-table-container';
 const GENERATED_TABLE_CONTAINER_ATTRIBUTE = 'data-vg-table-generated-container';
 
 const DEFAULT_OPTIONS = {
+	/** Профили представления: базовые параметры + все достигнутые границы xs–xxl. */
+	responsive: {
+		// Включается явно; Data API: data-responsive-enabled.
+		enabled: false,
+		// Локальные переопределения границ общего Responsive; пустой объект сохраняет глобальные значения.
+		breakpoints: {},
+		// Профили принимают pagination: maxButtons, align, position, size.enabled/label, quick.enabled.
+		xs: {}, sm: {}, md: {}, lg: {}, xl: {}, xxl: {},
+	},
 	// Активная локаль встроенного интерфейса. Data API: data-locale. Варианты: 'ru' | 'en' | региональный BCP 47 код.
 	locale: 'ru',
 	// Пользовательские словари, объединяемые со встроенными ru/en. Data API отсутствует; варианты: объект {locale: {group: {key: value}}}.
@@ -360,6 +369,8 @@ const DEFAULT_OPTIONS = {
 		threshold: 5,
 		// Задаёт максимальное число соседних страниц между первой и последней. Варианты: целое число >= 1.
 		visible: 5,
+		// Лимит номеров и многоточий без prev/next; null сохраняет visible/threshold. Data API: data-pagination-max-buttons.
+		maxButtons: null,
 
 		/** Поле и VGDropdown для выбора количества строк. */
 		size: {

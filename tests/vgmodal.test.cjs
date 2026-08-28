@@ -75,6 +75,21 @@ test.beforeEach(() => {
 	window.localStorage.clear();
 });
 
+test('opening and closing synchronize initially hidden modal accessibility', async () => {
+	const {element, instance} = createModal({animation: {enable: false, delay: 0}});
+	element.setAttribute('aria-hidden', 'true');
+	instance.show();
+	await waitForTimers();
+	assert.equal(element.hasAttribute('aria-hidden'), false);
+	instance.hide();
+	await waitForTimers();
+	assert.equal(element.getAttribute('aria-hidden'), 'true');
+	instance.show();
+	await waitForTimers();
+	assert.equal(element.hasAttribute('aria-hidden'), false);
+	instance.dispose();
+});
+
 test('generated minimize control collapses and restores an open modal', async () => {
 	const {element, instance} = createModal({
 		minimize: {

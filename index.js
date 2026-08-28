@@ -1,4 +1,10 @@
+/**
+ * Описание: публичная JavaScript-точка входа VGApp.
+ * Возможности: экспорт модулей, реестра VGApp и общего сервиса Responsive с базовыми брейкпоинтами.
+ */
 import vgapp, { VGApp } from './app/vgapp';
+
+export { Responsive, DEFAULT_BREAKPOINTS } from './app/utils/js/components/responsive';
 
 export { default as VGAlert }        from './app/modules/vgalert';
 export { default as VGCollapse }     from './app/modules/vgcollapse';

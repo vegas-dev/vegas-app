@@ -1,3 +1,7 @@
+/**
+ * Описание: адаптивная навигация VGNav с выпадающими пунктами и гамбургером.
+ * Возможности: click/hover, вложенные меню, позиционирование, события и интеграция с VGSidebar.
+ */
 import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
 import {
@@ -29,7 +33,7 @@ const CLASS_NAME_ACTIVE    = 'active';
 /**
  * Constants toggle
  */
-const SELECTOR_DATA_TOGGLE = '.' + CLASS_NAME + ' a';
+const SELECTOR_DATA_TOGGLE = '.' + CLASS_NAME + ' .dropdown > a';
 
 /**
  * Constants Events
@@ -219,30 +223,39 @@ class VGNav extends BaseModule {
 		let target = relatedTarget.relatedTarget;
 
 		if (!target || isDisabled(target)) return;
+		const drop = Selectors.find(':scope > .dropdown-content', target);
+		if (!drop) return;
+
+		const showEvent = EventHandler.trigger(target, EVENT_KEY_SHOW, { relatedTarget });
+		if (showEvent.defaultPrevented) return;
 
 		if (!target.closest('.dropdown-content')) {
 			target.classList.add('first');
 		}
 
-		const showEvent = EventHandler.trigger(target, EVENT_KEY_SHOW, { relatedTarget });
-		if (showEvent.defaultPrevented) return;
-
-		let drop = Selectors.find('.dropdown-content', target),
-			link = target.firstElementChild;
+		const link = target.firstElementChild;
 
 		if (link) link.setAttribute('aria-expanded', 'true');
 		drop.classList.add(CLASS_NAME_SHOW);
 		target.classList.add(CLASS_NAME_ACTIVE);
+		// Координаты Placement имеют приоритет над старой CSS-схемой top/bottom/right.
+		drop.style.bottom = 'auto';
+		drop.style.right = 'auto';
+		const openToSide = !!target.closest('.dropdown-content') || this._params.placement === 'vertical';
 
 		const $placement = new Placement({
 			reference: target,
 			drop: drop,
-			placement: 'bottom-start',
-			fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
-			offset: [0, 6],
+			placement: openToSide ? 'right-start' : 'bottom-start',
+			fallbackPlacements: openToSide
+				? ['left-start', 'right-end', 'left-end', 'bottom-start', 'top-start']
+				: ['top-start', 'bottom-end', 'top-end'],
+			offset: openToSide ? [6, 0] : [0, 6],
 			boundary: 'clippingParents',
 			autoFlip: true,
-			overflowProtection: true
+			overflowProtection: true,
+			clamp: true,
+			isMerge: false
 		});
 
 		$placement._setPlacement();
@@ -266,11 +279,6 @@ class VGNav extends BaseModule {
 
 	hide(relatedTarget) {
 		const _this = this;
-		if ('ontouchstart' in document.documentElement) {
-			for (const element of [].concat(...document.body.children)) {
-				EventHandler.off(element, 'mouseover', noop);
-			}
-		}
 
 		let element = relatedTarget.relatedTarget;
 
@@ -288,7 +296,7 @@ class VGNav extends BaseModule {
 				element.classList.remove('first');
 			}
 
-			[...Selectors.findAll('.' + CLASS_NAME_SHOW, element)].forEach(function (el, index) {
+			[...Selectors.findAll('.dropdown-content.' + CLASS_NAME_SHOW, element)].forEach(function (el) {
 				el.classList.remove(CLASS_NAME_FADE);
 
 				let parent = el.closest('.dropdown');
@@ -299,21 +307,14 @@ class VGNav extends BaseModule {
 				let link = el.previousElementSibling;
 				if (link) link.setAttribute('aria-expanded', 'false');
 
-				if (index === 0) {
-					const completeCallback = () => {
-						el.classList.remove(CLASS_NAME_SHOW);
-						EventHandler.trigger(el, EVENT_KEY_HIDDEN, relatedTarget);
-					};
+				const completeCallback = () => {
+					if (parent.classList.contains(CLASS_NAME_ACTIVE)) return;
+					el.classList.remove(CLASS_NAME_SHOW);
+					EventHandler.trigger(el, EVENT_KEY_HIDDEN, relatedTarget);
+				};
 
-					_this._queueCallback(completeCallback, el, true, 500);
-				}
-
-				const dropData = _this._openDrops.get(el);
-				if (dropData) {
-					window.removeEventListener('scroll', dropData.scrollHandler, { capture: true });
-					window.removeEventListener('resize', dropData.resizeHandler);
-					_this._openDrops.delete(el);
-				}
+				_this._queueCallback(completeCallback, el, true, 500);
+				_this._cleanupDrop(el);
 			});
 		}
 	}
@@ -344,9 +345,12 @@ class VGNav extends BaseModule {
 	_cleanupDrop(drop) {
 		const dropData = this._openDrops.get(drop);
 		if (dropData) {
-			window.removeEventListener('scroll', dropData.scrollHandler, { capture: true });
-			window.removeEventListener('resize', dropData.resizeHandler);
 			this._openDrops.delete(drop);
+			// Обработчики общие для экземпляра: другие открытые уровни ещё нуждаются в них.
+			if (!this._openDrops.size) {
+				window.removeEventListener('scroll', dropData.scrollHandler, { capture: true });
+				window.removeEventListener('resize', dropData.resizeHandler);
+			}
 		}
 	}
 

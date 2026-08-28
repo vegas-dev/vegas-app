@@ -1,6 +1,6 @@
 /**
  * Описание: основной модуль базовых таблиц VGTable.
- * Возможности: i18n, wrapper/container, состояния и URL state, local/remote, sticky, управление колонками и строками, сортировка, дерево, пагинация, выбор и panning.
+ * Возможности: i18n, wrapper/container, состояния и URL state, local/remote, sticky, колонки и строки, сортировка, дерево, responsive-пагинация, выбор и panning.
  */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
@@ -10,6 +10,7 @@ import _sorting from "./_sorting.js";
 import _panning from "./_panning.js";
 import _selection from "./_selection.js";
 import _pagination from "./_pagination.js";
+import _responsive from "./_responsive.js";
 import _expandable from "./_expandable.js";
 import _stickyHeader from "./_sticky-header.js";
 import _fixedColumns from "./_fixed-columns.js";
@@ -64,6 +65,7 @@ class VGTable extends BaseModule {
 		this._selection = null;
 		this._expandable = null;
 		this._pagination = null;
+		this._responsive = null;
 		this._filters = null;
 		this._search = null;
 		this._skeleton = null;
@@ -187,9 +189,17 @@ class VGTable extends BaseModule {
 			this._expandable.init();
 		}
 
+		if (!this._responsive && this._params.responsive?.enabled === true) {
+			this._responsive = new _responsive(this._element, this._params.responsive, () => {
+				this._pagination?.updatePresentation(this._paginationOptions());
+			});
+			this._responsive.init();
+		}
+
 		// Включаем локальную или серверную пагинацию
 		if (!this._pagination && this._params.pagination.enabled === true) {
-			this._pagination = new _pagination(this._element, Object.assign({}, this._params.pagination, {
+			this._pagination = new _pagination(this._element, Object.assign({}, this._paginationOptions(), {
+				responsive: this._responsive?.getState().reason === null,
 				remote: this._isRemote,
 				onChange: (state) => this._handlePaginationChange(state),
 			}));
@@ -300,7 +310,7 @@ class VGTable extends BaseModule {
 		this._normalizeColumnsDataOptions();
 		this._normalizeRowReorderDataOptions();
 		if (this._remote) this._remote._options.labels = this._dictionary.remote || {};
-		this._pagination?.refresh?.();
+		this._pagination?.updatePresentation(this._paginationOptions());
 		this._expandable?.refresh?.();
 		this._columns?.refresh?.();
 		this._rowReorder?.refresh?.();
@@ -308,6 +318,18 @@ class VGTable extends BaseModule {
 		if (state) this._states.render(state.type);
 		EventHandler.trigger(this._element, 'localechange.vg.table', {locale: normalized});
 		return normalized;
+	}
+
+	/** Текущий брейкпоинт и накопленные переопределения; null при выключенном responsive. */
+	getResponsiveState() { return this._responsive?.getState() || null; }
+
+	/** Принудительно обновляет только адаптивное представление, без загрузки данных. */
+	refreshResponsive() { return this._responsive?.refresh(true) || null; }
+
+	_paginationOptions() {
+		const base = this._params.pagination;
+		const profile = this._responsive?.getState().pagination || {};
+		return {...base, ...profile, size: {...base.size, ...profile.size}, quick: {...base.quick, ...profile.quick}};
 	}
 
 	_mergeLocale(target, source) {
@@ -525,6 +547,10 @@ class VGTable extends BaseModule {
 		assign('ellipsis-hover', (value) => { pagination.ellipsisHover = boolean(value); });
 		assign('ellipsis-after', (value) => { pagination.threshold = number(value, pagination.threshold); });
 		assign('max-visible-pages', (value) => { pagination.visible = number(value, pagination.visible); });
+		assign('max-buttons', (value) => {
+			const parsed = Number(value);
+			pagination.maxButtons = Number.isInteger(parsed) && parsed >= 3 ? parsed : null;
+		});
 		assign('show-per-page', (value) => { pagination.size.enabled = boolean(value); });
 		assign('show-per-page-label', (value) => { pagination.size.label = boolean(value) ? 'Строк на странице' : false; });
 		assign('per-page-label', (value) => { pagination.size.label = value; });
@@ -1437,6 +1463,7 @@ class VGTable extends BaseModule {
 	 * Очистка ресурсов
 	 */
 	dispose() {
+		this._responsive?.dispose();
 		if (this._remote) this._remote.dispose();
 		if (this._skeleton) this._skeleton.dispose();
 		if (this._urlState) this._urlState.dispose();

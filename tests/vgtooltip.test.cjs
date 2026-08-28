@@ -170,3 +170,44 @@ test('keeps ordinary show and hide lifecycle working', async () => {
 
 	instance.dispose();
 });
+
+test('popover Data API renders data-vg-content as text by default', async () => {
+	const trigger = document.createElement('button');
+	trigger.setAttribute('data-vg-toggle', 'popover');
+	trigger.setAttribute('data-vg-title', 'Заголовок');
+	trigger.setAttribute('data-vg-content', '<strong>Подробности</strong>');
+	trigger.setAttribute('data-delay-show', '0');
+	trigger.setAttribute('data-animation-delay', '0');
+	document.body.append(trigger);
+	trigger.click();
+	await waitForTimers();
+	const tooltip = document.querySelector('.vg-tooltip-popover');
+	assert.equal(tooltip.getAttribute('role'), 'dialog');
+	assert.equal(tooltip.querySelector('.vg-tooltip-inner--title').textContent, 'Заголовок');
+	assert.equal(tooltip.querySelector('.vg-tooltip-inner--content').textContent, '<strong>Подробности</strong>');
+	assert.equal(tooltip.querySelector('strong'), null);
+	VGTooltip.getInstance(trigger).dispose();
+});
+
+test('content option takes priority over alias and HTML requires opt-in', async () => {
+	const { instance, trigger } = createTooltip({ content: '<em>JS content</em>', html: true, popover: true });
+	trigger.dataset.vgContent = 'Alias';
+	instance.show();
+	await waitForTimers();
+	assert.equal(document.querySelector('.vg-tooltip-inner--content em').textContent, 'JS content');
+	instance.dispose();
+});
+
+test('placement arrays replace defaults and Data API overrides JavaScript arrays', () => {
+	const { instance } = createTooltip({ offset: [0, 16], fallbackPlacements: ['left'] });
+	assert.deepEqual(instance._params.offset, [0, 16]);
+	assert.deepEqual(instance._params.fallbackPlacements, ['left']);
+	instance.dispose();
+	const trigger = document.createElement('button');
+	trigger.dataset.params = JSON.stringify({ offset: [2, 20], fallbackPlacements: ['right'] });
+	document.body.append(trigger);
+	const dataInstance = new VGTooltip(trigger, { offset: [1, 10], fallbackPlacements: ['left'] });
+	assert.deepEqual(dataInstance._params.offset, [2, 20]);
+	assert.deepEqual(dataInstance._params.fallbackPlacements, ['right']);
+	dataInstance.dispose();
+});

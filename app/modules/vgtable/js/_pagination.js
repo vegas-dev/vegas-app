@@ -1,6 +1,6 @@
 /**
  * Описание: локальная и remote-пагинация строк базовой таблицы VGTable.
- * Возможности: выбор страницы и размера, серверная meta, многоточия, быстрый переход, сохранение, Fixed Header container и публичные события.
+ * Возможности: выбор страницы и размера, серверная meta, лимит кнопок, responsive-представление без запросов, многоточия, быстрый переход и сохранение.
  */
 import EventHandler from "../../../utils/js/dom/event";
 import VGDropdown from "../../vgdropdown";
@@ -17,6 +17,9 @@ class _pagination {
 		this._host = table.closest('.vg-table-wrapper') || table.parentElement;
 		this._containers = [];
 		this._dropdowns = [];
+		this._externalVisibility = new Map();
+		this._manageExternalVisibility = options.responsive === true;
+		this._updatingPresentation = false;
 		this._page = this._positiveInt(options.page, 1);
 		this._perPage = this._clampPerPage(options.per);
 		this._remote = options.remote === true;
@@ -32,6 +35,11 @@ class _pagination {
 	init() {
 		this._restoreState();
 		this._containers = this._resolveContainers();
+		this._bindContainers();
+		this.refresh();
+	}
+
+	_bindContainers() {
 		this._containers.forEach((container) => {
 			container.addEventListener('click', this._boundClick);
 			container.addEventListener('change', this._boundChange);
@@ -39,10 +47,9 @@ class _pagination {
 			container.addEventListener('focusin', this._boundFocusIn);
 			container.addEventListener('focusout', this._boundFocusOut);
 		});
-		this.refresh();
 	}
 
-	dispose() {
+	_releaseContainers() {
 		this._disposeDropdowns();
 		this._containers.forEach((container) => {
 			container.removeEventListener('click', this._boundClick);
@@ -52,12 +59,66 @@ class _pagination {
 			container.removeEventListener('focusout', this._boundFocusOut);
 			if (container.hasAttribute(GENERATED_ATTRIBUTE)) container.remove();
 		});
+		this._containers = [];
+	}
+
+	dispose() {
+		this._releaseContainers();
+		this._externalVisibility.forEach((hidden, container) => { container.hidden = hidden; });
+		this._externalVisibility.clear();
 		this._rows().forEach((row) => {
 			row.hidden = row.getAttribute('data-vg-table-expand-hidden') === 'true'
 				|| row.hasAttribute('data-vg-table-filter-hidden');
 			row.removeAttribute('data-vg-table-page-row');
 		});
 		this._containers = [];
+	}
+
+	/** Обновляет только панели: не трогает строки, page/per, storage, scroll или onChange. */
+	updatePresentation(options) {
+		const focus = this._captureFocus();
+		const position = this._position();
+		this._updatingPresentation = true;
+		try {
+			this._options = {...this._options, ...options};
+			if (position !== this._position()) {
+				this._manageExternalVisibility = true;
+				this._releaseContainers();
+				this._containers = this._resolveContainers();
+				this._bindContainers();
+			}
+			this._renderControls();
+		} finally {
+			this._updatingPresentation = false;
+		}
+		this._restoreFocus(focus);
+	}
+
+	_captureFocus() {
+		const active = this._table.ownerDocument.activeElement;
+		const container = this._containers.find((item) => item.contains(active));
+		if (!container) return null;
+		const attribute = ['data-pagination-page', 'data-pagination-per-page', 'data-pagination-quick-input', 'data-pagination-quick-button']
+			.find((name) => active.hasAttribute(name));
+		return {
+			position: this._positionFor(container), attribute, value: attribute ? active.getAttribute(attribute) : null,
+			inputValue: active.tagName === 'INPUT' ? active.value : null,
+			start: active.selectionStart, end: active.selectionEnd,
+		};
+	}
+
+	_restoreFocus(focus) {
+		if (!focus) return;
+		const container = this._containers.find((item) => this._positionFor(item) === focus.position) || this._containers[0];
+		if (!container) return;
+		const matching = focus.attribute ? Array.from(container.querySelectorAll(`[${focus.attribute}]`))
+			.find((item) => !item.disabled && item.getAttribute(focus.attribute) === focus.value) : null;
+		const target = matching || container.querySelector('[aria-current="page"]');
+		target?.focus({preventScroll: true});
+		if (matching && focus.inputValue !== null) {
+			matching.value = focus.inputValue;
+			if (focus.start !== null && focus.start !== undefined) matching.setSelectionRange(focus.start, focus.end);
+		}
 	}
 
 	setPage(page, emit = false, source = 'api') {
@@ -131,6 +192,10 @@ class _pagination {
 			});
 		}
 
+		this._renderControls();
+	}
+
+	_renderControls() {
 		const markup = this._buildMarkup();
 		this._disposeDropdowns();
 		this._containers.forEach((container) => {
@@ -223,6 +288,8 @@ class _pagination {
 
 	_buildPages() {
 		const total = this._totalPages();
+		const maxButtons = this._options.maxButtons;
+		if (Number.isInteger(maxButtons) && maxButtons >= 3) return this._buildLimitedPages(total, maxButtons);
 		const visible = Math.max(1, this._positiveInt(this._options.visible, 5));
 		const threshold = Math.max(1, this._positiveInt(this._options.threshold, 5));
 		if (this._options.ellipsis === false || total <= threshold || total <= visible + 2) {
@@ -238,6 +305,28 @@ class _pagination {
 		if (end < total - 1) pages.push({direction: 'next'});
 		pages.push(total);
 		return pages;
+	}
+
+	_buildLimitedPages(total, maximum) {
+		if (total <= maximum) return this._range(1, total);
+		if (maximum < 5 || this._options.ellipsis === false) {
+			const start = Math.max(1, Math.min(this._page - Math.floor(maximum / 2), total - maximum + 1));
+			return this._range(start, start + maximum - 1);
+		}
+		// Резервируем края и подбираем наибольшее окно, учитывая оба многоточия в лимите.
+		for (let count = maximum - 2; count >= 1; count -= 1) {
+			const start = Math.max(2, Math.min(this._page - Math.floor(count / 2), total - count));
+			const end = start + count - 1;
+			const pages = [1];
+			if (start === 3) pages.push(2);
+			else if (start > 3) pages.push({direction: 'prev'});
+			pages.push(...this._range(start, end));
+			if (end === total - 2) pages.push(total - 1);
+			else if (end < total - 2) pages.push({direction: 'next'});
+			pages.push(total);
+			if (pages.length <= maximum) return pages;
+		}
+		return [this._page];
 	}
 
 	_handleClick(event) {
@@ -298,6 +387,7 @@ class _pagination {
 	}
 
 	_handleFocusOut(event) {
+		if (this._updatingPresentation) return;
 		const input = event.target.closest('[data-pagination-per-page]');
 		if (!input) return;
 		const related = event.relatedTarget instanceof Element ? event.relatedTarget : null;
@@ -325,8 +415,12 @@ class _pagination {
 		const position = this._position();
 		const existing = Array.from(this._host.querySelectorAll('[data-vg-table-pagination]'));
 		if (existing.length) {
-			if (position === 'both') return existing;
-			return [existing.find((item) => item.getAttribute('data-position') === position) || existing[0]];
+			const selected = position === 'both' ? existing : [existing.find((item) => item.getAttribute('data-position') === position) || existing[0]];
+			if (this._manageExternalVisibility) existing.forEach((container) => {
+				if (!this._externalVisibility.has(container)) this._externalVisibility.set(container, container.hidden);
+				container.hidden = !selected.includes(container);
+			});
+			return selected;
 		}
 
 		const positions = position === 'both' ? ['top', 'bottom'] : [position];

@@ -17,6 +17,7 @@ test('connects VGTable and leaves VGDynamicTable outside the main bundle', () =>
 	assert.match(appEntry, /import VGTable from ["']\.\/modules\/vgtable["']/);
 	assert.match(appEntry, /\bVGTable,\s*\n/);
 	assert.match(packageEntry, /export \{ default as VGTable \}/);
+	assert.match(packageEntry, /export \{ Responsive, DEFAULT_BREAKPOINTS \} from ['"]\.\/app\/utils\/js\/components\/responsive['"]/);
 	assert.match(styleEntry, /modules\/vgtable\/scss\/vgtable/);
 	assert.equal(packageJson.exports['./table'].sass, './app/modules/vgtable/scss/vgtable.scss');
 	assert.match(tableModule, /from ["']\.\/_options\.js["']/);

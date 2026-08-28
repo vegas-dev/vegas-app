@@ -66,6 +66,47 @@ test.beforeEach(() => {
 	window.history.replaceState({}, '', '/');
 });
 
+for (const responsemode of ['data', 'view']) {
+	test(`responsive pagination preserves remote ${responsemode} state without requests on resize`, async (t) => {
+		Object.defineProperty(window, 'innerWidth', {configurable: true, value: 1024});
+		const calls = [];
+		global.fetch = async (url) => {
+			calls.push(url);
+			return jsonResponse({
+				data: [{id: 1, name: 'Row'}],
+				view: {tbody: '<tr><td>1</td><td>Row</td></tr>'},
+				meta: {page: 10, per_page: 1, total: 20, pages: 20},
+			});
+		};
+		const table = createRemoteTable('class="vg-table" data-loading-min-delay="0"');
+		const loaded = nextEvent(table, 'dataloaded.vg.table');
+		const instance = new VGTable(table, {
+			request: {route: '/api/responsive', responsemode, cache: {enable: false}},
+			pagination: {enabled: true, page: 10, per: 1},
+			responsive: {enabled: true, xs: {pagination: {maxButtons: 3, page: 1, per: 10}}, lg: {pagination: {maxButtons: 7}}},
+		}).init();
+		t.after(() => { instance.dispose(); Object.defineProperty(window, 'innerWidth', {configurable: true, value: 1024}); });
+		await loaded;
+		const state = instance.getPagination();
+		const row = table.tBodies[0].rows[0];
+		const storage = JSON.stringify(window.localStorage);
+		const url = window.location.href;
+		Object.defineProperty(window, 'innerWidth', {configurable: true, value: 375});
+		window.dispatchEvent(new Event('resize'));
+		await new Promise(resolve => setTimeout(resolve, 0));
+		assert.equal(calls.length, 1);
+		assert.deepEqual(instance.getPagination(), state);
+		assert.equal(table.tBodies[0].rows[0], row);
+		assert.equal(JSON.stringify(window.localStorage), storage);
+		assert.equal(window.location.href, url);
+		assert.equal(table.closest('.vg-table-wrapper').querySelectorAll('.vg-table-pagination__pages button').length, 5);
+		await instance.reload();
+		assert.equal(calls.length, 2);
+		assert.equal(instance.getResponsiveState().breakpoint, 'xs');
+		assert.equal(table.closest('.vg-table-wrapper').querySelectorAll('.vg-table-pagination__pages button').length, 5);
+	});
+}
+
 test('remote skeleton keeps the current table geometry and uses configured rows when empty', async () => {
 	const responses = [];
 	global.fetch = () => new Promise(resolve => responses.push(resolve));

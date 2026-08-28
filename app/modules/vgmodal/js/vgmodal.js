@@ -1,3 +1,7 @@
+/**
+ * Описание: модальные окна VGModal с декларативным и программным управлением.
+ * Возможности: AJAX, backdrop, геометрия окна, сворачивание и синхронизация доступности.
+ */
 import BaseModule from "../../base-module";
 import ScrollBarHelper from "../../../utils/js/components/scrollbar";
 import Backdrop from "../../../utils/js/components/backdrop";
@@ -347,6 +351,7 @@ class VGModal extends BaseModule {
 			this._disableInteractionHandlers();
 			this._minimized.reset();
 			this._element.style.display = 'none';
+			this._element.setAttribute('aria-hidden', 'true');
 			this._element.removeAttribute('aria-modal');
 			this._element.removeAttribute('role');
 			this._isTransitioning = false;
@@ -396,6 +401,7 @@ class VGModal extends BaseModule {
 		}
 
 		this._element.style.display = 'block';
+		this._element.removeAttribute('aria-hidden');
 		this._element.setAttribute('aria-modal', true);
 		this._element.setAttribute('role', 'dialog');
 		this._element.scrollTop = 0;

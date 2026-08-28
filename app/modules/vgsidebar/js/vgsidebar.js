@@ -1,3 +1,7 @@
+/**
+ * Описание: боковые панели VGSidebar с декларативным и программным управлением.
+ * Возможности: четыре стороны экрана, backdrop, прокрутка, URL-хэш, AJAX, события и доступность.
+ */
 import BaseModule from "../../base-module";
 import { isDisabled, isVisible, mergeDeepObject } from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
@@ -212,6 +216,7 @@ class VGSidebar extends BaseModule {
 		}
 
 		this._element.classList.add(CLASS_NAME_SHOW);
+		this._element.removeAttribute('aria-hidden');
 		document.body.classList.add(CLASS_NAME_OPEN);
 
 		const completeCallback = () => {
@@ -238,6 +243,7 @@ class VGSidebar extends BaseModule {
 		if (hideEvent.defaultPrevented) return;
 
 		this._element.classList.remove(CLASS_NAME_SHOW);
+		this._element.setAttribute('aria-hidden', 'true');
 		const remainingOpenSidebars = VGSidebar.getOpenSidebars(this._element);
 		if (!remainingOpenSidebars.length) {
 			document.body.classList.remove(CLASS_NAME_OPEN);
@@ -289,12 +295,16 @@ class VGSidebar extends BaseModule {
 	 * @override
 	 */
 	dispose() {
-		super.dispose();
+		if (!this._element) return;
+		EventHandler.off(document, EVENT_KEYS.KEYDOWN_DISMISS, this._keydownHandler);
 		EventHandler.off(this._element, EVENT_KEYS.HIDE);
 		if (this._showPopstateHandler) {
 			EventHandler.off(window, EVENT_KEYS.POPSTATE_DATA_API, this._showPopstateHandler);
 		}
-		this._scrollBar.reset();
+		if (!VGSidebar.getOpenSidebars(this._element).length && !Backdrop.isActive()) {
+			this._scrollBar.reset();
+		}
+		super.dispose();
 	}
 
 	/**
@@ -311,15 +321,16 @@ class VGSidebar extends BaseModule {
 	 * @private
 	 */
 	_addEventListeners() {
-		EventHandler.on(document, EVENT_KEYS.KEYDOWN_DISMISS, (event) => {
-			if (event.key !== 'Escape') return;
+		this._keydownHandler = (event) => {
+			if (event.key !== 'Escape' || !this._isShown()) return;
 
 			if (this._params.keyboard) {
 				this.hide();
 			} else {
 				EventHandler.trigger(this._element, EVENT_KEYS.HIDE_PREVENTED);
 			}
-		});
+		};
+		EventHandler.on(document, EVENT_KEYS.KEYDOWN_DISMISS, this._keydownHandler);
 	}
 }
 

@@ -1,3 +1,7 @@
+/**
+ * Описание: всплывающие подсказки и информационные popover VGApp.
+ * Возможности: Data API, позиционирование, события и очистка при удалении триггера.
+ */
 import BaseModule from "../../base-module";
 import {isDisabled, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
 import EventHandler from "../../../utils/js/dom/event";
@@ -81,6 +85,11 @@ class VGTooltip extends BaseModule {
 		super(element, params);
 
 		this._params = this._getParams(element, mergeDeepObject(defaultParams, params));
+		// Геометрические массивы заменяются целиком, а не дополняют defaults.
+		const dataParams = this._getParams(element, {});
+		['offset', 'fallbackPlacements'].forEach(key => {
+			this._params[key] = [...(dataParams[key] ?? params[key] ?? defaultParams[key])];
+		});
 		this._tooltip = null;
 		this._isHiding = false;
 		this._showTimeout = null;
@@ -251,8 +260,9 @@ class VGTooltip extends BaseModule {
 
 		const inner = document.createElement('div');
 		inner.classList.add('vg-tooltip-inner');
+		const content = this._params.content || this._element.dataset.vgContent || '';
 
-		if (this._params.content) {
+		if (content) {
 			const titleBlock = document.createElement('div');
 			titleBlock.classList.add('vg-tooltip-inner--title');
 
@@ -261,10 +271,10 @@ class VGTooltip extends BaseModule {
 
 			if (this._params.html) {
 				titleBlock.innerHTML = title;
-				contentBlock.innerHTML = this._params.content;
+				contentBlock.innerHTML = content;
 			} else {
 				titleBlock.textContent = title;
-				contentBlock.textContent = this._params.content;
+				contentBlock.textContent = content;
 			}
 
 			inner.append(titleBlock);

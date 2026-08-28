@@ -1,3 +1,7 @@
+/**
+ * Описание: визуальные режимы VGRangeSlider — default, ruler и status.
+ * Возможности: шкала с адаптивными координатами, активные отметки и пороговые цвета с текстовыми статусами.
+ */
 const SKIN_CLASS_DEFAULT = 'is-skin-default';
 const SKIN_CLASS_RULER = 'is-skin-ruler';
 const SKIN_CLASS_STATUS = 'is-skin-status';
@@ -208,6 +212,7 @@ const syncRangeSliderSkin = (skin, state, helpers) => {
 
 	skin.ticks.forEach((tick, index) => {
 		const value = skin.values[index];
+		tick.style.left = `${helpers.toPositionPx(value)}px`;
 		const isActive = isRange
 			? value >= state.from && value <= state.to
 			: value <= state.from;

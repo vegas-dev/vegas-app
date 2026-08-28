@@ -58,6 +58,33 @@ test('compact size adds the public modifier to content and dropdown container', 
 	assert.equal(dropdown.element.querySelector('.vg-alert-wrapper').classList.contains('vg-alert-compact'), true);
 });
 
+test('sidebar overlay keeps its real parent renderer for dismiss', async (t) => {
+	t.mock.method(window, 'getComputedStyle', element => global.getComputedStyle(element));
+	const sidebar = document.createElement('aside');
+	sidebar.className = 'vg-sidebar right';
+	sidebar.setAttribute('data-backdrop', 'false');
+	sidebar.setAttribute('data-overflow', 'false');
+	const trigger = document.createElement('button');
+	sidebar.append(trigger);
+	document.body.append(sidebar);
+	const alert = new VGAlert({relatedTarget: trigger, render: {type: 'overlay', dismiss: true}});
+	const {element, render} = alert._buildOverlay();
+	assert.equal(render.constructor.NAME, 'sidebar');
+	assert.equal(element.parentElement, sidebar);
+	element.remove();
+	await new Promise(resolve => {
+		sidebar.addEventListener('vg.sidebar.shown', resolve, {once: true});
+		render.show();
+	});
+	const hidden = new Promise(resolve => sidebar.addEventListener('vg.sidebar.hidden', resolve, {once: true}));
+	const result = VGAlert.call({relatedTarget: trigger, render: {type: 'overlay', dismiss: true}});
+	sidebar.querySelector('[data-vg-alert-agree]').click();
+	assert.equal((await result).accepted, true);
+	await hidden;
+	assert.equal(sidebar.classList.contains('show'), false);
+	render.dispose();
+});
+
 test('unknown size falls back to the default alert markup', () => {
 	const alert = new VGAlert({size: 'large'});
 	const content = alert._buildContent();

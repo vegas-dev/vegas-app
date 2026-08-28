@@ -4,6 +4,7 @@
  */
 import BaseModule from "../../base-module";
 import VGModal from "../../vgmodal";
+import VGSidebar from "../../vgsidebar";
 import VGDropdown from "../../vgdropdown";
 
 import { execute, isElement, isVisible, makeRandomString, mergeDeepObject, reflow } from "../../../utils/js/functions";
@@ -450,8 +451,10 @@ class VGAlert {
 			};
 		}
 
-		const modal = VGModal.getOrCreateInstance(containerWrap);
-		const container = Selectors.find('.vg-modal-content', modal._element) || containerWrap;
+		const parent = containerWrap.classList.contains('vg-sidebar')
+			? VGSidebar.getOrCreateInstance(containerWrap)
+			: VGModal.getOrCreateInstance(containerWrap);
+		const container = Selectors.find('.vg-modal-content', containerWrap) || containerWrap;
 
 		const overlay = document.createElement('div');
 
@@ -463,7 +466,7 @@ class VGAlert {
 
 		return {
 			element: overlay,
-			render: modal,
+			render: parent,
 		};
 	}
 

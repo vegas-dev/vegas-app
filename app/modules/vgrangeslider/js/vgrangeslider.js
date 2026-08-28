@@ -1,3 +1,7 @@
+/**
+ * Описание: одиночные и диапазонные слайдеры VGRangeSlider на нативных range-input.
+ * Возможности: Data API, шкала и статусы, форматирование, синхронизация формы, события и управление значениями.
+ */
 import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -259,9 +263,10 @@ class VGRangeSlider extends BaseModule {
 		this._dom.labelFrom = Selectors.find('.vg-range-slider__label--from', root);
 		this._dom.labelTo = Selectors.find('.vg-range-slider__label--to', root);
 		this._dom.labelSeparator = Selectors.find('.vg-range-slider__separator', root);
-		this._dom.hiddenMin = root.querySelector('input[data-vgrangeslider-hidden="min"]');
-		this._dom.hiddenMax = root.querySelector('input[data-vgrangeslider-hidden="max"]');
+		this._dom.hiddenMin ||= root.querySelector('input[data-vgrangeslider-hidden="min"]');
+		this._dom.hiddenMax ||= root.querySelector('input[data-vgrangeslider-hidden="max"]');
 		this._dom.skin = applyRangeSliderSkin(root, this._params, this._state, {
+			isRange: this._isRange,
 			formatValue: (value) => this._formatValue(value),
 			toPositionPx: (value) => this._toPositionPx(value),
 		});
@@ -339,10 +344,10 @@ class VGRangeSlider extends BaseModule {
 		}
 
 		if (this._isRange) {
-			this._ensureHiddenInput(root, 'min', this._params.input?.min, this._params.name?.min);
-			this._ensureHiddenInput(root, 'max', this._params.input?.max, this._params.name?.max);
+			this._dom.hiddenMin = this._ensureHiddenInput(root, 'min', this._params.input?.min, this._params.name?.min);
+			this._dom.hiddenMax = this._ensureHiddenInput(root, 'max', this._params.input?.max, this._params.name?.max);
 		} else if (this._params.name?.min) {
-			this._ensureHiddenInput(root, 'min', this._params.input?.min, this._params.name.min);
+			this._dom.hiddenMin = this._ensureHiddenInput(root, 'min', this._params.input?.min, this._params.name.min);
 		}
 
 		return root;
@@ -400,6 +405,7 @@ class VGRangeSlider extends BaseModule {
 			root.appendChild(input);
 		}
 		input.setAttribute('data-vgrangeslider-hidden', role);
+		return input;
 	}
 
 	_bindEvents() {
@@ -443,6 +449,7 @@ class VGRangeSlider extends BaseModule {
 	}
 
 	_syncUI() {
+		if (!this._isRange) this._state.to = this._state.from;
 		const fromPercent = this._toPercent(this._state.from);
 		const toPercent = this._toPercent(this._isRange ? this._state.to : this._state.from);
 		const fromPosition = this._toPositionPx(this._state.from);
@@ -471,6 +478,7 @@ class VGRangeSlider extends BaseModule {
 			isRange: this._isRange,
 			params: this._params,
 			dom: this._dom,
+			toPositionPx: (value) => this._toPositionPx(value),
 		});
 	}
 
@@ -565,8 +573,12 @@ class VGRangeSlider extends BaseModule {
 		const numeric = Number(normalizeData(value));
 		const safeValue = Number.isFinite(numeric) ? numeric : fallback;
 		const clamped = Math.min(Math.max(safeValue, min), max);
-		const step = this._state?.step || this._params.step || 1;
-		const stepped = Math.round((clamped - min) / step) * step + min;
+		const configuredStep = Number(this._state?.step ?? this._params.step);
+		const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 1;
+		// Округление не должно выводить значение за max или с нативной сетки шага.
+		const maxSteps = Math.floor((max - min) / step + 1e-9);
+		const steps = Math.min(Math.round((clamped - min) / step), maxSteps);
+		const stepped = steps * step + min;
 		return Number(stepped.toFixed(5));
 	}
 

@@ -11,7 +11,7 @@
 @use "variables" as vars;
 
 select {
-	&.vg-select {
+	&.vg-select[data-inited="true"] {
 		position: absolute;
 		left: 0;
 		top: 0;

@@ -1,4 +1,8 @@
-﻿import BaseModule from "../../base-module";
+/**
+ * Описание: уведомления VGToast через Data API и JavaScript.
+ * Возможности: стек, AJAX, анимации, автоскрытие, перетаскивание и изменение размера.
+ */
+import BaseModule from "../../base-module";
 import EventHandler from "../../../utils/js/dom/event";
 import {dismissTrigger, getSVG} from "../../module-fn";
 import Sanitize from "../../../utils/js/components/sanitize";
@@ -331,6 +335,7 @@ class VGToast extends BaseModule {
 	 */
 	show(relatedTarget) {
 		if (isDisabled(this._element)) return;
+		if (this._isShown() && !this._isHiding) return;
 
 		const element = this._element;
 		this._clearTimeout();
@@ -466,7 +471,7 @@ class VGToast extends BaseModule {
 		const elmsShown = Selectors.findAll(`.vg-toast.show.${stackClass}`)
 			.filter(el => {
 				const instance = VGToast.getInstance(el);
-				return instance?._params.stack.enable;
+				return instance && !instance._isHiding;
 			});
 
 		if (!this._params.stack.enable) {
@@ -478,8 +483,9 @@ class VGToast extends BaseModule {
 		}
 
 		// Ограничиваем по max
-		if (elmsShown.length >= this._params.stack.max) {
-			const excess = elmsShown.slice(0, elmsShown.length - this._params.stack.max + 1);
+		const max = Math.max(1, Number(this._params.stack.max) || 5);
+		if (elmsShown.length > max) {
+			const excess = elmsShown.slice(0, elmsShown.length - max);
 			excess.forEach(el => VGToast.getInstance(el).hide());
 		}
 
@@ -507,7 +513,7 @@ class VGToast extends BaseModule {
 		const visibleStack = Selectors.findAll(`.vg-toast.show.${stackClass}`)
 			.filter(el => {
 				const instance = VGToast.getInstance(el);
-				return instance?._params.stack.enable;
+				return instance && !instance._isHiding;
 			});
 		const elms = visibleStack.length ? visibleStack : stackItems.map(item => item.el);
 		let offset = 0;

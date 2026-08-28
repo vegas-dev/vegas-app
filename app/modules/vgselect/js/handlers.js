@@ -1,8 +1,11 @@
+/**
+ * Описание: делегированные обработчики интерфейса VGSelect.
+ * Возможности: открытие списка, выбор опций, теги, клавиатура и сброс формы.
+ */
 import VGSelect from "./vgselect";
 import EventHandler from "../../../utils/js/dom/event";
 import Selectors from "../../../utils/js/dom/selectors";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
-import {transliterate} from "../../../utils/js/functions";
 
 const NAME_KEY = 'vg.select';
 
@@ -97,56 +100,6 @@ const _handlersVGSelect = () => {
 
 			const closeOnSelect = instance?._params?.close !== false;
 			if (closeOnSelect) instance?.hide();
-		}
-	});
-
-	EventHandler.on(document, EVENT_KEY_UP_DATA_API, SELECTOR_SEARCH_TOGGLE, function(e) {
-		const input = e.target;
-		const dropdown = input.closest(SELECTOR_DROPDOWN);
-		const list = dropdown?.querySelector(`.${CLASS_NAME_LIST}`);
-		if (!list) return;
-
-		const container = input.closest(`.${CLASS_NAME_CONTAINER}`);
-		const instance = VGSelect.getInstance(container);
-
-		const options = list.querySelectorAll(`.${CLASS_NAME_OPTION}`);
-		const groups = list.querySelectorAll(`.${CLASS_NAME_OPTGROUP}`);
-		const value = input.value.trim().toLowerCase();
-		const search = [value, transliterate(value), transliterate(value, true)];
-
-		options.forEach(el => { el.hidden = false; el.style.display = ''; });
-		groups.forEach(el => { el.hidden = false; el.style.display = ''; });
-
-		if (value) {
-			let visibleCount = 0;
-			groups.length ? groups.forEach(group => {
-				const items = group.querySelectorAll(`.${CLASS_NAME_OPTION}`);
-				const visible = Array.from(items).some(item => {
-					const t = item.textContent.toLowerCase();
-					return search.some(s => t.includes(s));
-				});
-				group.hidden = !visible;
-				group.style.display = visible ? '' : 'none';
-				items.forEach(item => {
-					const t = item.textContent.toLowerCase();
-					const match = search.some(s => t.includes(s));
-					item.hidden = !match;
-					item.style.display = match ? '' : 'none';
-					if (match) visibleCount++;
-				});
-			}) : options.forEach(option => {
-				const t = option.textContent.toLowerCase();
-				const match = search.some(s => t.includes(s));
-				option.hidden = !match;
-				option.style.display = match ? '' : 'none';
-				if (match) visibleCount++;
-			});
-
-			instance?._triggerEvent(EVENT_KEY_SEARCH, { query: value, results: visibleCount });
-			instance?._callCallback('onSearch', { query: value, results: visibleCount });
-		} else {
-			instance?._triggerEvent(EVENT_KEY_SEARCH, { query: '', results: options.length });
-			instance?._callCallback('onSearch', { query: '', results: options.length });
 		}
 	});
 

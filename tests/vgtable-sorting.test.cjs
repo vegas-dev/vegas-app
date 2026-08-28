@@ -37,6 +37,7 @@ Module._extensions['.js'] = (module, filename) => {
 };
 
 const VGTable = require('../app/modules/vgtable/js/vgtable').default;
+const {Responsive} = require('../app/utils/js/components/responsive');
 Module._extensions['.js'] = originalJavaScriptLoader;
 
 const createTable = (attributes = '') => {
@@ -1309,6 +1310,214 @@ test('pagination supports ellipsis, quick jump and refresh after sorting', () =>
 	assert.equal(Array.from(body.rows).filter(row => !row.hidden).length, 1);
 
 	instance.dispose();
+});
+
+const createResponsiveTable = (attributes = '') => {
+	const table = createTable(`class="vg-table" data-pagination-enabled="true" data-pagination-per="1" ${attributes}`);
+	for (let index = 4; index <= 20; index += 1) {
+		table.tBodies[0].insertAdjacentHTML('beforeend', `<tr><td>Row ${index}</td><td>${index}</td></tr>`);
+	}
+	return table;
+};
+
+const resizeViewport = (width) => {
+	Object.defineProperty(window, 'innerWidth', {configurable: true, value: width});
+	window.dispatchEvent(new Event('resize'));
+};
+
+const paginationItems = (table) => Array.from(table.closest('.vg-table-wrapper')
+	.querySelector('.vg-table-pagination__pages').querySelectorAll('[data-pagination-page]'))
+	.map((item) => item.getAttribute('data-pagination-page')).filter((value) => !['prev', 'next'].includes(value));
+
+test('maxButtons bounds numbers and ellipses, preserving the active page and legacy pagination', (t) => {
+	const table = createResponsiveTable('data-pagination-max-buttons="7" data-pagination-threshold="100"');
+	const instance = new VGTable(table).init();
+	t.after(() => instance.dispose());
+	instance.setPage(10);
+	assert.deepEqual(paginationItems(table), ['1', 'ellipsis-prev', '9', '10', '11', 'ellipsis-next', '20']);
+	const pagination = instance._pagination;
+	for (const maximum of [3, 4, 5, 6, 7, 8]) {
+		pagination._options.maxButtons = maximum;
+		for (let page = 1; page <= 20; page += 1) {
+			pagination._page = page;
+			const items = pagination._buildPages();
+			const numbers = items.filter(Number.isInteger);
+			assert.ok(items.length <= maximum, `limit ${maximum}, page ${page}`);
+			assert.ok(numbers.includes(page));
+			assert.deepEqual(numbers, [...new Set(numbers)].sort((a, b) => a - b));
+			assert.ok(numbers.every((number) => number >= 1 && number <= 20));
+		}
+	}
+	pagination._page = 10;
+	pagination._options.maxButtons = 3;
+	assert.deepEqual(pagination._buildPages(), [9, 10, 11]);
+	pagination._options.maxButtons = 7;
+	pagination._options.ellipsis = false;
+	assert.deepEqual(pagination._buildPages(), [7, 8, 9, 10, 11, 12, 13]);
+	for (const invalid of [null, 0, 2, 3.5, '7']) {
+		pagination._options.maxButtons = invalid;
+		assert.equal(pagination._buildPages().length, 20);
+	}
+	table.tBodies[0].replaceChildren(...Array.from(table.tBodies[0].rows).slice(0, 2));
+	pagination._options.maxButtons = 3;
+	instance.refreshPagination();
+	assert.deepEqual(paginationItems(table), ['1', '2']);
+});
+
+test('responsive inherits xs–xxl, skips redraw inside a range and preserves rows and storage', (t) => {
+	resizeViewport(375);
+	const table = createResponsiveTable('id="responsive-state"');
+	const instance = new VGTable(table, {
+		pagination: {size: {enabled: true}, quick: {enabled: true}},
+		responsive: {
+			enabled: true,
+			xs: {pagination: {maxButtons: 3, size: {enabled: false}, quick: {enabled: false}, page: 1, per: 10}},
+			md: {pagination: {maxButtons: 5, size: {enabled: true}}},
+			lg: {pagination: {maxButtons: 7}},
+		},
+	}).init();
+	t.after(() => { instance.dispose(); resizeViewport(1024); });
+	instance.setPage(10);
+	const initialRows = table.tBodies[0].innerHTML;
+	const saved = window.localStorage.getItem('vg:table:pagination:responsive-state');
+	const changes = [];
+	table.addEventListener('responsivechange.vg.table', (event) => changes.push(event.detail));
+	const firstButton = table.closest('.vg-table-wrapper').querySelector('[aria-current="page"]');
+	resizeViewport(500);
+	assert.equal(instance.getResponsiveState().width, 500);
+	assert.equal(table.closest('.vg-table-wrapper').querySelector('[aria-current="page"]'), firstButton);
+	for (const [width, breakpoint, count] of [[575.5, 'xs', 3], [576, 'sm', 3], [767.5, 'sm', 3], [768, 'md', 5], [991.5, 'md', 5], [992, 'lg', 7], [1200, 'xl', 7], [1400, 'xxl', 7], [375, 'xs', 3]]) {
+		resizeViewport(width);
+		assert.equal(instance.getResponsiveState().breakpoint, breakpoint);
+		assert.equal(paginationItems(table).length, count);
+		assert.equal(instance.getPagination().page, 10);
+		assert.equal(instance.getPagination().perPage, 1);
+		assert.equal(table.tBodies[0].innerHTML, initialRows);
+		assert.equal(window.localStorage.getItem('vg:table:pagination:responsive-state'), saved);
+		assert.equal(table.closest('.vg-table-wrapper').querySelector('[data-pagination-quick-input]'), null);
+	}
+	assert.equal(changes.length, 6);
+	assert.equal(instance._params.pagination.maxButtons, null);
+	assert.equal(instance._params.pagination.size.enabled, true);
+});
+
+test('responsive custom breakpoints, params groups and state snapshots are independent', (t) => {
+	resizeViewport(800);
+	const profiles = {enabled: true, breakpoints: {md: 850}, xs: {pagination: {maxButtons: 3, size: {label: false}}}, md: {pagination: {maxButtons: 5}}};
+	const snapshot = JSON.stringify(profiles);
+	VGTable.registerParamsGroup('responsive-test', {responsive: profiles});
+	const first = new VGTable(createResponsiveTable('data-group-params="responsive-test"')).init();
+	const second = new VGTable(createResponsiveTable(), {responsive: {...profiles, md: {pagination: {maxButtons: 7}}}}).init();
+	const plain = new VGTable(createResponsiveTable()).init();
+	t.after(() => { first.dispose(); second.dispose(); plain.dispose(); VGTable.unregisterParamsGroup('responsive-test'); resizeViewport(1024); });
+	assert.equal(first.getResponsiveState().breakpoint, 'sm');
+	resizeViewport(850);
+	assert.equal(first.getResponsiveState().pagination.maxButtons, 5);
+	assert.equal(second.getResponsiveState().pagination.maxButtons, 7);
+	assert.equal(plain.getResponsiveState(), null);
+	const state = first.getResponsiveState();
+	state.pagination.size.label = 'Changed';
+	assert.equal(first.getResponsiveState().pagination.size.label, false);
+	assert.equal(JSON.stringify(profiles), snapshot);
+	first.setLocale('en');
+	assert.equal(first.getResponsiveState().pagination.size.label, false);
+	assert.equal(paginationItems(first._element).length, 5);
+});
+
+test('VGTable uses shared Responsive global breakpoints with per-table overrides', (t) => {
+	resizeViewport(800);
+	const originalGlobal = window.Breakpoints;
+	window.Breakpoints = {md: 900};
+	const profiles = {enabled: true, xs: {pagination: {maxButtons: 3}}, md: {pagination: {maxButtons: 5}}};
+	const globalTable = new VGTable(createResponsiveTable(), {responsive: profiles}).init();
+	const localTable = new VGTable(createResponsiveTable(), {responsive: {...profiles, breakpoints: {md: 850}}}).init();
+	t.after(() => {
+		globalTable.dispose(); localTable.dispose();
+		if (originalGlobal === undefined) delete window.Breakpoints;
+		else window.Breakpoints = originalGlobal;
+		resizeViewport(1024);
+	});
+	assert.ok(globalTable._responsive._responsive instanceof Responsive);
+	assert.equal(globalTable.getResponsiveState().breakpoint, 'sm');
+	resizeViewport(850);
+	assert.equal(globalTable.getResponsiveState().breakpoint, 'sm');
+	assert.equal(localTable.getResponsiveState().breakpoint, 'md');
+	assert.equal(paginationItems(globalTable._element).length, 3);
+	assert.equal(paginationItems(localTable._element).length, 5);
+	resizeViewport(900);
+	assert.equal(globalTable.getResponsiveState().breakpoint, 'md');
+	assert.deepEqual(window.Breakpoints, {md: 900});
+});
+
+test('responsive replaces panels safely, preserving focus and uncommitted input without page changes', (t) => {
+	resizeViewport(1024);
+	const table = createResponsiveTable();
+	const instance = new VGTable(table, {
+		pagination: {position: 'both', size: {enabled: true}, quick: {enabled: true}},
+		responsive: {enabled: true, xs: {pagination: {maxButtons: 3, position: 'bottom', size: {enabled: false}, quick: {enabled: false}}}, lg: {pagination: {maxButtons: 7, position: 'both', size: {enabled: true}, quick: {enabled: true}}}},
+	}).init();
+	t.after(() => { instance.dispose(); resizeViewport(1024); });
+	instance.setPage(10);
+	const wrapper = table.closest('.vg-table-wrapper');
+	const input = wrapper.querySelector('[data-pagination-per-page]');
+	input.focus();
+	input.value = '17';
+	resizeViewport(375);
+	assert.equal(wrapper.querySelectorAll('.vg-table-pagination').length, 1);
+	assert.equal(document.activeElement.getAttribute('data-pagination-page'), '10');
+	assert.equal(instance.getPagination().perPage, 1);
+	resizeViewport(1024);
+	assert.equal(wrapper.querySelectorAll('.vg-table-pagination').length, 2);
+	assert.equal(document.activeElement.closest('.vg-table-pagination').getAttribute('data-position'), 'bottom');
+	const quick = wrapper.querySelector('[data-pagination-quick-input]');
+	quick.focus();
+	quick.value = '12';
+	instance.refreshResponsive();
+	assert.equal(document.activeElement.value, '12');
+	assert.equal(instance.getPagination().page, 10);
+	const outsider = document.createElement('button');
+	document.body.append(outsider);
+	outsider.focus();
+	resizeViewport(375);
+	assert.equal(document.activeElement, outsider);
+	wrapper.querySelector('[data-pagination-page="next"]').click();
+	assert.equal(instance.getPagination().page, 11);
+});
+
+test('responsive updates external panels and releases viewport listeners on dispose', (t) => {
+	resizeViewport(1024);
+	const table = createResponsiveTable();
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	table.before(wrapper);
+	wrapper.append(table);
+	wrapper.insertAdjacentHTML('afterbegin', '<div data-vg-table-pagination data-position="top" hidden></div>');
+	wrapper.insertAdjacentHTML('beforeend', '<div data-vg-table-pagination data-position="bottom"></div>');
+	const instance = new VGTable(table, {responsive: {enabled: true, xs: {pagination: {position: 'bottom', maxButtons: 3}}, lg: {pagination: {position: 'both', maxButtons: 7}}}}).init();
+	t.after(() => resizeViewport(1024));
+	resizeViewport(375);
+	assert.equal(wrapper.querySelector('[data-position="top"]').hidden, true);
+	assert.equal(wrapper.querySelector('[data-position="bottom"]').hidden, false);
+	const responsive = instance._responsive;
+	const state = responsive.getState();
+	instance.dispose();
+	resizeViewport(1024);
+	assert.deepEqual(responsive.getState(), state);
+	assert.equal(wrapper.querySelector('[data-position="top"]').hidden, true);
+	assert.equal(wrapper.querySelector('[data-position="bottom"]').hidden, false);
+});
+
+test('responsive handles invalid breakpoints and tables without pagination', (t) => {
+	const warn = console.warn;
+	const warnings = [];
+	console.warn = (message) => warnings.push(message);
+	const invalid = new VGTable(createResponsiveTable(), {responsive: {enabled: true, breakpoints: {md: 300}}}).init();
+	const noPagination = new VGTable(createTable(), {responsive: {enabled: true, xs: {pagination: {maxButtons: 3, enabled: true}}}}).init();
+	t.after(() => { console.warn = warn; invalid.dispose(); noPagination.dispose(); });
+	assert.equal(invalid.getResponsiveState().reason, 'invalid-breakpoints');
+	assert.equal(warnings.length, 1);
+	assert.equal(noPagination.getPagination(), null);
+	assert.equal(noPagination._element.closest('.vg-table-wrapper').querySelector('.vg-table-pagination'), null);
 });
 
 test('local filters support operators, pagination reset and form reset', () => {
