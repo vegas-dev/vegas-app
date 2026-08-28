@@ -1,3 +1,7 @@
+/**
+ * Описание: определение категории файла и соответствующей SVG-иконки.
+ * Возможности: распознаёт MIME-тип и расширение, поддерживает явные имена иконок и общий fallback.
+ */
 const FILE_ICON_BY_EXT = {
 	pdf: 'file-pdf',
 	doc: 'file-word',
@@ -35,6 +39,7 @@ const FILE_ICON_BY_EXT = {
 	heic: 'file-image',
 	heif: 'file-image',
 	avif: 'file-image',
+	ico: 'file-image',
 	mp3: 'file-audio',
 	wav: 'file-audio',
 	ogg: 'file-audio',

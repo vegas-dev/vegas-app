@@ -1,6 +1,6 @@
 /**
  * Описание: базовая логика выбора, валидации и отображения файлов VGFiles.
- * Возможности: управляет набором файлов, ошибками, списками, кастомными действиями, статистикой и скрытыми полями формы.
+ * Возможности: управляет файлами, валидацией, списками, миниатюрами и иконками, действиями, статистикой и скрытыми полями.
  */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
@@ -9,6 +9,7 @@ import {lang_messages} from "../../../utils/js/components/lang";
 import {Classes, Manipulator} from "../../../utils/js/dom/manipulator";
 import Selectors from "../../../utils/js/dom/selectors";
 import {getSVG} from "../../module-fn";
+import {resolveFileIconName} from "../../../utils/js/components/file-icon";
 import VGFilePreview from "../../vgfilepreview";
 import {extractAudioMetadata} from "../../../utils/js/components/audio-metadata";
 
@@ -815,31 +816,25 @@ class VGFilesBase extends BaseModule {
 
 	_renderUIImage(file) {
 		const $container = this._tpl.div({ class: 'file-image' });
-
-		const src = file?.src || file?.image;
-		if (src) {
-			$container.appendChild(this._tpl.img(src, file.name || '', { class: 'file-preview' }));
-			return $container;
-		}
-
+		const renderIcon = () => {
+			const icon = this._getIconByFileType(file);
+			$container.replaceChildren(this._tpl.i({}, icon, { isHTML: true }));
+		};
 		const customData = this._getFileCustomData(file);
-		const audioCover = String(customData.audioCover || '').trim();
-		if (audioCover) {
-			$container.appendChild(this._tpl.img(audioCover, this._resolveDisplayName(file), { class: 'file-preview' }));
-			return $container;
+		let imageSrc = String(file?.image || '').trim() || String(customData.audioCover || '').trim();
+
+		if (!imageSrc && resolveFileIconName({ type: file?.type, name: file?.name || file?.src }) === 'file-image') {
+			imageSrc = String(file?.src || '').trim() || this._getFileObjectUrl(file);
 		}
 
-		if (file?.type && file.type.startsWith('image/')) {
-			const objectUrl = this._getFileObjectUrl(file);
-			if (!objectUrl) {
-				return $container;
-			}
-			$container.appendChild(this._tpl.img(objectUrl, file.name, { class: 'file-preview' }));
-			return $container;
+		if (imageSrc) {
+			const image = this._tpl.img(imageSrc, this._resolveDisplayName(file), { class: 'file-preview' });
+			image.addEventListener('error', renderIcon, { once: true });
+			$container.appendChild(image);
+		} else {
+			renderIcon();
 		}
 
-		const icon = this._getIconByFileType(file);
-		$container.appendChild(this._tpl.i({}, icon, { isHTML: true }));
 		return $container;
 	}
 

@@ -54,6 +54,87 @@ test.beforeEach(() => {
 	document.body.replaceChildren();
 });
 
+function createPreviewFixture(files = [], drop = false) {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	const area = drop ? 'drop' : 'info';
+	container.innerHTML = `
+		<div class="vg-files-${area}"><ul class="vg-files-${area}--list"></ul></div>
+		<input type="file" multiple>
+	`;
+	const list = container.querySelector('ul');
+	files.forEach((file, index) => {
+		const item = document.createElement('li');
+		item.className = 'file';
+		item.setAttribute('data-file', JSON.stringify({ id: index + 1, size: 1024, ...file }));
+		item.innerHTML = '<div class="file-image"></div><div class="file-info"></div><div class="file-remove"></div>';
+		list.append(item);
+	});
+	document.body.append(container);
+	const instance = new VGFiles(container, { image: true, info: !drop });
+	return { container, instance };
+}
+
+test('external documents render icons instead of their source URLs in lists and dropzones', () => {
+	const files = [
+		{ name: '02_Поручение_на_обработку_ПД.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', src: '/files/document.docx' },
+		{ name: 'document.pdf', type: 'application/pdf', src: '/files/document.pdf' },
+		{ name: 'archive.zip', type: 'application/zip', src: '/files/archive.zip' },
+		{ name: 'document.docx', type: 'application/octet-stream', src: '/files/download?id=1' }
+	];
+	for (const drop of [false, true]) {
+		const { container, instance } = createPreviewFixture(files, drop);
+		const images = container.querySelectorAll('.file-image');
+		assert.equal(images.length, files.length);
+		images.forEach((node, index) => {
+			assert.equal(node.querySelector('img'), null, files[index].name);
+			assert.ok(node.querySelector('svg'), files[index].name);
+		});
+		if (!drop) {
+			assert.deepEqual(Array.from(container.querySelectorAll('[data-vg-filepreview]'), node => node.dataset.vgFilepreview), files.map(file => file.src));
+		}
+		instance.dispose();
+	}
+});
+
+test('image previews use remote sources, explicit covers and local object URLs', () => {
+	const { instance } = createPreviewFixture();
+	const cases = [
+		{ file: { name: 'photo.jpg', type: 'image/jpeg', src: '/files/photo.jpg' }, expected: '/files/photo.jpg' },
+		{ file: { name: 'PHOTO.WEBP', type: 'application/octet-stream', src: '/files/PHOTO.WEBP?download=1#photo' }, expected: '/files/PHOTO.WEBP?download=1#photo' },
+		{ file: { src: '/files/photo.png?token=1' }, expected: '/files/photo.png?token=1' },
+		{ file: { name: 'favicon.ico', src: '/files/favicon.ico' }, expected: '/files/favicon.ico' },
+		{ file: { name: 'document.docx', src: '/files/document.docx', image: '/covers/document.png' }, expected: '/covers/document.png' },
+		{ file: { name: 'photo.jpg', src: '/files/photo.jpg', image: '/covers/photo.webp' }, expected: '/covers/photo.webp' },
+		{ file: { name: 'track.mp3', src: '/files/track.mp3', customData: { audioCover: '/covers/track.jpg' } }, expected: '/covers/track.jpg' },
+		{ file: new File(['image'], 'local.png', { type: 'image/png' }), expected: 'blob:test/local.png' }
+	];
+	for (const { file, expected } of cases) {
+		const node = instance._renderUIImage(file);
+		assert.equal(node.querySelector('img.file-preview')?.getAttribute('src'), expected);
+	}
+	instance.dispose();
+});
+
+test('failed remote images, explicit covers, audio covers and local previews fall back to icons', () => {
+	const { instance } = createPreviewFixture();
+	const files = [
+		{ name: 'photo.jpg', src: '/files/photo.jpg' },
+		{ name: 'document.docx', src: '/files/document.docx', image: '/covers/missing.png' },
+		{ name: 'track.mp3', src: '/files/track.mp3', customData: { audioCover: '/covers/missing.jpg' } },
+		new File(['image'], 'local.png', { type: 'image/png' })
+	];
+	for (const file of files) {
+		const node = instance._renderUIImage(file);
+		node.querySelector('img').dispatchEvent(new Event('error'));
+		assert.equal(node.querySelector('img'), null);
+		const expected = document.createElement('div');
+		expected.innerHTML = instance._getIconByFileType(file);
+		assert.ok(node.querySelector('svg')?.isEqualNode(expected.firstElementChild));
+	}
+	instance.dispose();
+});
+
 test('keeps an invalid file visible with its error in single replace mode', () => {
 	const container = document.createElement('div');
 	container.className = 'vg-files';
