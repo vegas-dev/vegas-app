@@ -25,7 +25,9 @@
 	@include vg.mix-vars('table', table.$table-prop);
 	@include vg.mix-vars('table-wrapper', table.$table-wrapper);
 	@include vg.mix-vars('table-container', table.$table-container);
-	@include vg.mix-vars('table-sort', table.$table-sort);
+	// Размерные padding-переменные сортировки объявляются ниже на .vg-table:
+	// wrapper не может ссылаться на --vg-table-cell-padding-inline дочерней таблицы.
+	@include vg.mix-vars('table-sort', map.remove(table.$table-sort, 'padding-inline-end', 'multiple-padding-inline-end'));
 	@include vg.mix-vars('table-columns', table.$table-columns);
 	@include vg.mix-vars('table-row-reorder', table.$table-row-reorder);
 	@include vg.mix-vars('table-pan', table.$table-pan);
@@ -64,6 +66,8 @@
 	.vg-table {
 		@include vg.mix-vars('table', map.get(table.$table-sizing, md));
 		@include vg.mix-vars('table-skeleton', table.$table-skeleton);
+		--vg-table-sort-padding-inline-end: #{map.get(table.$table-sort, 'padding-inline-end')};
+		--vg-table-sort-multiple-padding-inline-end: #{map.get(table.$table-sort, 'multiple-padding-inline-end')};
 		border: 0;
 		border-radius: 0;
 		background: var(--vg-table-bg);

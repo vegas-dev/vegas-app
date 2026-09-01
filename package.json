@@ -1,6 +1,6 @@
 {
 	"name": "vgapp",
-	"version": "1.5.7",
+	"version": "1.5.8",
 	"main": "./build/vgapp.js",
 	"module": "./index.js",
 	"style": "./build/vgapp.css",

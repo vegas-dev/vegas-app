@@ -80,8 +80,10 @@ $table-sizing: (
 // Локальная сортировка: зона заголовка, шевроны, focus-состояние и подсветка колонки.
 // Формирует переменные --vg-table-sort-*.
 $table-sort: (
-		padding-inline-end: calc(var(--vg-table-cell-padding-inline) + 1.25rem),
-		multiple-padding-inline-end: calc(var(--vg-table-cell-padding-inline) + 2.5rem),
+		padding-inline-end: var(--vg-table-cell-padding-inline),
+		multiple-padding-inline-end: var(--vg-table-sort-padding-inline-end),
+		controls-space: 1.25rem,
+		multiple-controls-space: 2.5rem,
 		cursor: pointer,
 		user-select: none,
 		controls-position: absolute,

@@ -175,3 +175,35 @@ test('explicit position none keeps CSS-only placement', () => {
 	assert.equal(container.classList.contains('drop-up'), false);
 	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), '');
 });
+
+test('height limits the list by default and supports a numeric Data API override', () => {
+	const defaultSelect = create();
+	assert.equal(defaultSelect.instance._params.height, true);
+	assert.equal(defaultSelect.container.style.getPropertyValue('--vg-select-list-max-height'), '');
+
+	VGSelect.destroy(defaultSelect.select);
+	defaultSelect.select.remove();
+	document.body.innerHTML = '<select class="vg-select" data-height="420"><option value="a">Alpha</option></select>';
+	const select = document.querySelector('select');
+	VGSelect.init(select);
+	const container = select.nextElementSibling;
+	assert.equal(VGSelect.getInstance(container)._params.height, 420);
+	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), '420px');
+});
+
+test('height false removes the list limit', () => {
+	const {container, instance} = create({height: false});
+	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), 'none');
+	container.getBoundingClientRect = () => ({top: 50, bottom: 100, left: 0, right: 300});
+	instance.show();
+	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), 'none');
+});
+
+test('automatic placement only reduces the configured height to available space', () => {
+	const {container, instance} = create({height: 500});
+	container.getBoundingClientRect = () => ({top: 300, bottom: 400, left: 0, right: 300});
+	instance.show();
+	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), '356px');
+	instance.hide();
+	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), '500px');
+});

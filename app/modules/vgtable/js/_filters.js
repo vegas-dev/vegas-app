@@ -3,6 +3,7 @@
  * Возможности: auto/manual применение, debounce, операторы, reset и публичное состояние.
  */
 import EventHandler from "../../../utils/js/dom/event";
+import VGSelect from "../../vgselect/js/vgselect";
 
 const EVENT_CHANGE = 'filterschange.vg.table';
 
@@ -113,7 +114,10 @@ class _filters {
 	}
 
 	reset(options = {}) {
-		this._controls.forEach((control) => this._resetControl(control));
+		this._controls.forEach((control) => {
+			this._resetControl(control);
+			if (control.tagName === 'SELECT') VGSelect.updateUI(control);
+		});
 		if (options.emit !== false) this._emit(String(options.source || 'reset'));
 		return this.getState();
 	}

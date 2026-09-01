@@ -1081,7 +1081,7 @@ class VGTable extends BaseModule {
 	}
 
 	refreshStickyHeader() {
-		return this._stickyHeader ? this._stickyHeader.refresh() : null;
+		return this._stickyHeader ? this._stickyHeader.refreshIntrinsicMinimums() : null;
 	}
 
 	refreshFixedColumns() {

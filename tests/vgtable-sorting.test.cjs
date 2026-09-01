@@ -19,6 +19,7 @@ global.HTMLElement = dom.window.HTMLElement;
 global.CustomEvent = dom.window.CustomEvent;
 global.Event = dom.window.Event;
 global.KeyboardEvent = dom.window.KeyboardEvent;
+global.MutationObserver = dom.window.MutationObserver;
 
 const originalJavaScriptLoader = Module._extensions['.js'];
 Module._extensions['.js'] = (module, filename) => {
@@ -37,6 +38,7 @@ Module._extensions['.js'] = (module, filename) => {
 };
 
 const VGTable = require('../app/modules/vgtable/js/vgtable').default;
+const VGSelect = require('../app/modules/vgselect/js/vgselect').default;
 const {Responsive} = require('../app/utils/js/components/responsive');
 Module._extensions['.js'] = originalJavaScriptLoader;
 
@@ -336,6 +338,7 @@ test('keeps the body-derived minimum width of an empty flexible header column', 
 	const body = wrapper.querySelector('.vg-table-body');
 	let clientWidth = 200;
 	Object.defineProperty(body, 'clientWidth', {configurable: true, get: () => clientWidth});
+	instance._stickyHeader._measureIntrinsicColumnMinimums = () => [104, 48];
 
 	instance.refreshStickyHeader();
 	let widths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
@@ -346,6 +349,7 @@ test('keeps the body-derived minimum width of an empty flexible header column', 
 	assert.equal(wrapper.querySelector('th[data-field="actions"]').style.width, '');
 
 	clientWidth = 672;
+	instance._stickyHeader._measureIntrinsicColumnMinimums = () => [240, 96];
 	instance.refreshStickyHeader();
 	widths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
 
@@ -552,6 +556,105 @@ test('refreshes sticky header geometry when its layout container changes width',
 		global.requestAnimationFrame = originalRequestAnimationFrame;
 		global.cancelAnimationFrame = originalCancelAnimationFrame;
 	}
+});
+
+test('recalculates sticky intrinsic widths after manual AJAX DOM replacement', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th data-field="name">Название</th><th data-field="status">Статус</th></tr></thead>
+			<tbody><tr><td>Очень длинное название</td><td>На согласовании</td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	Array.from(table.tBodies[0].rows[0].cells).forEach((cell, index) => {
+		cell.getBoundingClientRect = () => ({width: [240, 160][index]});
+	});
+	const instance = new VGTable(table).init();
+	const sticky = instance._stickyHeader;
+	const body = wrapper.querySelector('.vg-table-body');
+	Object.defineProperty(body, 'clientWidth', {configurable: true, value: 200});
+	sticky._measureIntrinsicColumnMinimums = () => [240, 160];
+
+	instance.refreshStickyHeader();
+	assert.equal(wrapper.querySelector('.vg-table-container').style.getPropertyValue('--vg-table-sticky-content-min-width'), '400px');
+
+	table.tBodies[0].innerHTML = '<tr><td>Коротко</td><td>Готово</td></tr>';
+	sticky._measureIntrinsicColumnMinimums = () => [120, 80];
+	instance.refreshStickyHeader();
+	const widths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+
+	assert.deepEqual(widths, [120, 80]);
+	assert.equal(wrapper.querySelector('.vg-table-container').style.getPropertyValue('--vg-table-sticky-content-min-width'), '');
+
+	instance.dispose();
+});
+
+test('adds and measures a sticky column after a dynamic DOM update', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th data-field="name">Название</th><th data-field="status">Статус</th></tr></thead>
+			<tbody><tr><td>Запись</td><td>Готово</td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	Array.from(table.tBodies[0].rows[0].cells).forEach((cell) => {
+		cell.getBoundingClientRect = () => ({width: 100});
+	});
+	const instance = new VGTable(table).init();
+	const headerRow = wrapper.querySelector('.vg-table-header thead tr');
+	const header = document.createElement('th');
+	header.setAttribute('data-field', 'owner');
+	header.textContent = 'Ответственный';
+	headerRow.append(header);
+	const cell = document.createElement('td');
+	cell.textContent = 'Команда продукта';
+	cell.getBoundingClientRect = () => ({width: 140});
+	table.tBodies[0].rows[0].append(cell);
+	instance._stickyHeader._measureIntrinsicColumnMinimums = () => [100, 100, 140];
+
+	instance.refreshColumns();
+
+	assert.equal(wrapper.querySelectorAll('.vg-table-header col').length, 3);
+	assert.equal(wrapper.querySelectorAll('.vg-table-body col').length, 3);
+	assert.equal(wrapper.querySelectorAll('.vg-table-header th').length, 3);
+	instance.dispose();
+});
+
+test('copies native auto-layout column widths into both sticky colgroups', () => {
+	const wrapper = document.createElement('div');
+	wrapper.className = 'vg-table-wrapper';
+	wrapper.innerHTML = `
+		<table class="vg-table" data-vg-table data-sticky-header-enable="true" data-sticky-header-mode="page">
+			<thead><tr><th>№</th><th>Запись</th><th>Категория</th><th>Статус</th></tr></thead>
+			<tbody><tr><td>1</td><td>Запись длинной таблицы 001</td><td>Раздел 1</td><td>Активен</td></tr></tbody>
+		</table>
+	`;
+	document.body.append(wrapper);
+	const table = wrapper.querySelector('table');
+	Array.from(table.tBodies[0].rows[0].cells).forEach((cell) => {
+		cell.getBoundingClientRect = () => ({width: 200});
+	});
+	const instance = new VGTable(table).init();
+	const sticky = instance._stickyHeader;
+	const body = wrapper.querySelector('.vg-table-body');
+	Object.defineProperty(body, 'clientWidth', {configurable: true, value: 800});
+	sticky._measureAutoLayoutColumns = () => [54, 482, 132, 132];
+	sticky._measureIntrinsicColumnMinimums = () => [40, 180, 100, 100];
+
+	instance.refreshStickyHeader();
+	const headerWidths = Array.from(wrapper.querySelectorAll('.vg-table-header col'), (col) => Number.parseFloat(col.style.width));
+	const bodyWidths = Array.from(wrapper.querySelectorAll('.vg-table-body col'), (col) => Number.parseFloat(col.style.width));
+
+	assert.deepEqual(headerWidths, [54, 482, 132, 132]);
+	assert.deepEqual(bodyWidths, headerWidths);
+	assert.equal(headerWidths.reduce((total, width) => total + width, 0), 800);
+	instance.dispose();
 });
 
 test('preserves declared hard columns and distributes layout growth across flexible columns', () => {
@@ -1551,6 +1654,38 @@ test('local filters support operators, pagination reset and form reset', () => {
 	assert.equal(instance.getFilters().meta.count, 0);
 	assert.equal(instance.getPagination().totalRows, 3);
 	instance.dispose();
+});
+
+test('filter reset synchronizes VGSelect UI without duplicate filtering', () => {
+	const form = document.createElement('form');
+	form.id = 'vgselect-table-filters';
+	form.innerHTML = `
+		<select data-vg-toggle="select" data-filter-field="count" data-filter-operator="gte">
+			<option value="" selected>Любое</option><option value="5">От 5</option>
+		</select>
+		<button type="button" data-filter-reset>Сбросить</button>
+	`;
+	document.body.append(form);
+	const table = createTable('data-filters-enable="true" data-filters-form="#vgselect-table-filters"');
+	const instance = new VGTable(table).init();
+	const select = form.querySelector('select');
+	VGSelect.init(select);
+	select.value = '5';
+	VGSelect.updateUI(select);
+	select.dispatchEvent(new Event('change', {bubbles: true}));
+
+	let changes = 0;
+	table.addEventListener('filterschange.vg.table', () => { changes += 1; });
+	form.querySelector('[data-filter-reset]').click();
+
+	assert.equal(select.value, '');
+	assert.equal(form.querySelector('.vg-select-current').textContent, 'Любое');
+	assert.equal(form.querySelector('.vg-select-list--option[data-value="5"]').classList.contains('selected'), false);
+	assert.equal(changes, 1);
+
+	VGSelect.destroy(select);
+	instance.dispose();
+	form.remove();
 });
 
 test('local search combines with filters, resets pagination and can be cleared independently', () => {

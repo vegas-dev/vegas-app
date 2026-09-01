@@ -1,7 +1,7 @@
 @mixin styles {
 	tr {
 		> th.vg-table-sortable {
-			padding-inline-end: var(--vg-table-sort-padding-inline-end);
+			padding-inline-end: calc(var(--vg-table-sort-padding-inline-end) + var(--vg-table-sort-controls-space));
 			cursor: var(--vg-table-sort-cursor);
 			user-select: var(--vg-table-sort-user-select);
 
@@ -69,7 +69,7 @@
 	}
 
 	&.vg-table-sort-multiple tr > th.vg-table-sortable {
-		padding-inline-end: var(--vg-table-sort-multiple-padding-inline-end);
+		padding-inline-end: calc(var(--vg-table-sort-multiple-padding-inline-end) + var(--vg-table-sort-multiple-controls-space));
 	}
 
 	&.vg-table-sort-hover {

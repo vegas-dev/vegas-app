@@ -25,6 +25,7 @@ class _stickyHeader {
 		this._columnWeights = new Map();
 		this._hardColumnWidths = new Map();
 		this._columnMinimumWidths = new Map();
+		this._autoLayoutWidths = null;
 		this._hasSourceColgroup = false;
 		this._resizeObserver = null;
 		this._resizeFrame = null;
@@ -73,13 +74,42 @@ class _stickyHeader {
 	}
 
 	refreshIntrinsicMinimums() {
+		const declaredMinimum = this._previousStyles.get(CONTENT_MIN_WIDTH_PROPERTY);
+		if (declaredMinimum) this._container.style.setProperty(CONTENT_MIN_WIDTH_PROPERTY, declaredMinimum);
+		else this._container.style.removeProperty(CONTENT_MIN_WIDTH_PROPERTY);
+
+		const autoWidths = this._measureAutoLayoutColumns();
 		const widths = this._measureIntrinsicColumnMinimums();
+		const activeKeys = new Set();
 		this._getHeaders().forEach((header, index) => {
 			const key = this._columnKey(header, index);
+			activeKeys.add(key);
 			if (this._hasDeclaredWidth(header) || this._hardColumnWidths.has(key) || !(widths[index] > 0)) return;
-			this._columnMinimumWidths.set(key, Math.max(this._columnMinimumWidths.get(key) || 0, widths[index]));
+			// AJAX может как расширить, так и сузить обычное содержимое. Пустой th
+			// является служебным заголовком (checkbox/actions) и должен сохранять
+			// уже измеренную по body ширину, иначе колонка схлопнется.
+			const previousMinimum = this._columnMinimumWidths.get(key) || 0;
+			const minimum = this._isEmptyHeader(header)
+				? Math.max(previousMinimum, widths[index])
+				: widths[index];
+			this._columnMinimumWidths.set(key, minimum);
+			this._columnWeights.set(key, this._isEmptyHeader(header)
+				? Math.max(this._columnWeights.get(key) || 0, minimum)
+				: widths[index]);
 		});
-		return this.refresh();
+		[this._columnWeights, this._hardColumnWidths, this._columnMinimumWidths].forEach((geometry) => {
+			Array.from(geometry.keys()).forEach((key) => {
+				if (!activeKeys.has(key)) geometry.delete(key);
+			});
+		});
+		this._autoLayoutWidths = autoWidths.length === this._getHeaders().length && autoWidths.every((width) => width > 0)
+			? autoWidths
+			: null;
+		try {
+			return this.refresh();
+		} finally {
+			this._autoLayoutWidths = null;
+		}
 	}
 
 	syncScroll() {
@@ -146,12 +176,12 @@ class _stickyHeader {
 	_scheduleRefresh() {
 		if (this._resizeFrame !== null) return;
 		if (typeof requestAnimationFrame !== 'function') {
-			this.refresh();
+			this.refreshIntrinsicMinimums();
 			return;
 		}
 		this._resizeFrame = requestAnimationFrame(() => {
 			this._resizeFrame = null;
-			this.refresh();
+			this.refreshIntrinsicMinimums();
 		});
 	}
 
@@ -255,6 +285,44 @@ class _stickyHeader {
 		}
 	}
 
+	_measureAutoLayoutColumns() {
+		if (!this._wrapper || !this._head) return [];
+		const viewport = this._body?.clientWidth || this._container?.clientWidth || 0;
+		if (!(viewport > 0)) return [];
+
+		const probe = this._element.cloneNode(true);
+		probe.removeAttribute('data-vg-table');
+		probe.removeAttribute('data-vg-table-sticky-header');
+		probe.setAttribute('aria-hidden', 'true');
+		probe.querySelector(':scope > colgroup[data-vg-table-sticky-colgroup]')?.remove();
+		probe.insertBefore(this._head.cloneNode(true), probe.tBodies[0] || null);
+		[
+			['position', 'absolute'],
+			['inset', '0 auto auto 0'],
+			['visibility', 'hidden'],
+			['pointer-events', 'none'],
+			['width', `${viewport}px`],
+			['min-width', '0'],
+			['max-width', 'none'],
+			['table-layout', 'auto'],
+		].forEach(([property, value]) => probe.style.setProperty(property, value, 'important'));
+
+		this._wrapper.append(probe);
+		try {
+			const headerRow = Array.from(probe.tHead?.rows || []).at(-1);
+			const headerWidths = this._measureRow(headerRow);
+			const row = Array.from(probe.tBodies || [])
+				.flatMap((body) => Array.from(body.rows || []))
+				.find((item) => !item.hidden && !item.hasAttribute('data-vg-table-state-row') && !item.hasAttribute('data-vg-table-skeleton'));
+			const bodyWidths = this._measureRow(row);
+			return bodyWidths.length === headerWidths.length && bodyWidths.some((width) => width > 0)
+				? bodyWidths
+				: headerWidths;
+		} finally {
+			probe.remove();
+		}
+	}
+
 	_rememberColumnGeometry(widths) {
 		const headers = this._getHeaders();
 		const sourceCols = Array.from(this._element.querySelector(':scope > colgroup:not([data-vg-table-sticky-colgroup])')?.children || []);
@@ -272,6 +340,7 @@ class _stickyHeader {
 
 	_resolveLayoutWidths() {
 		const headers = this._getHeaders();
+		if (this._autoLayoutWidths?.length === headers.length) return this._autoLayoutWidths.slice();
 		const measured = this._measureBodyColumns();
 		if (this._hasSourceColgroup || !headers.length) return measured;
 

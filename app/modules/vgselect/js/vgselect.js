@@ -1,6 +1,6 @@
 /**
  * Описание: кастомный select с синхронизацией исходного поля и выпадающего списка.
- * Возможности: поиск, группы, дерево, теги, AJAX-пагинация, события и освобождение ресурсов.
+ * Возможности: поиск, группы, дерево, теги, ограничение высоты, AJAX-пагинация, события и освобождение ресурсов.
  */
 import BaseModule from "../../base-module";
 import {
@@ -36,6 +36,8 @@ const CLASS_NAME_TAG_REMOVE     = 'vg-select-tag-remove';
 const CLASS_NAME_LOAD_MORE      = 'vg-select-load-more';
 const CLASS_NAME_LOADING        = 'vg-select-loading';
 const CLASS_NAME_DROP_UP        = 'drop-up';
+
+const DEFAULT_LIST_MAX_HEIGHT   = 300;
 
 const EVENT_KEY_CHANGE          = `${NAME_KEY}.change`;
 const EVENT_KEY_HIDE            = `${NAME_KEY}.hide`;
@@ -82,6 +84,7 @@ class VGSelect extends BaseModule {
 			// - top: force open upwards
 			// - bottom: force open downwards
 			position: 'auto',
+			height: true,
 			search: {
 				enabled: false,
 				route: '',
@@ -114,6 +117,7 @@ class VGSelect extends BaseModule {
 		this._disposed = false;
 		this._visibilityTransitionId = 0;
 		this._drop = Selectors.find(SELECTOR_DROPDOWN, this._element);
+		this._applyListMaxHeight();
 		this._searchTerm = '';
 		this._currentPage = 1;
 		this._totalPages = null;
@@ -237,9 +241,6 @@ class VGSelect extends BaseModule {
 				li.style.paddingLeft = `${16 + (level * 16)}px`;
 			}
 
-			// Раньше подсветка зависела от "явно выбранных" option (атрибут selected),
-			// из-за этого UI мог показывать placeholder, но DOM считал, что выбрана 1-я опция.
-			// Подсвечиваем по фактическому состоянию option.selected.
 			if (option.selected) {
 				li.classList.add('selected');
 			}
@@ -697,9 +698,56 @@ class VGSelect extends BaseModule {
 		}
 		this._positioningScrollParent = null;
 
-		// Reset to stylesheet defaults.
+		// Restore the configured limit after a temporary viewport clamp.
 		this._element.classList.remove(CLASS_NAME_DROP_UP);
-		this._element.style.removeProperty('--vg-select-list-max-height');
+		this._applyListMaxHeight();
+	}
+
+	/**
+	 * Возвращает пользовательское ограничение списка в пикселях.
+	 * true использует стандартные 300px, false снимает ограничение.
+	 * @returns {number|null}
+	 * @private
+	 */
+	_getListMaxHeight() {
+		const raw = this._params?.height;
+		if (raw === false || raw === null) return null;
+		if (raw === true || typeof raw === 'undefined' || raw === '') {
+			const cssHeight = parseFloat(window.getComputedStyle(this._element)
+				.getPropertyValue('--vg-select-list-max-height'));
+			return Number.isFinite(cssHeight) && cssHeight > 0 ? cssHeight : DEFAULT_LIST_MAX_HEIGHT;
+		}
+
+		const height = Number(raw);
+		return Number.isFinite(height) && height > 0 ? height : DEFAULT_LIST_MAX_HEIGHT;
+	}
+
+	/**
+	 * Применяет базовое либо уменьшенное под доступное пространство ограничение.
+	 * @param {number|null} [available=null] - Доступная высота дропа
+	 * @private
+	 */
+	_applyListMaxHeight(available = null) {
+		if (!this._element) return;
+
+		const raw = this._params?.height;
+		const usesStylesheetDefault = raw === true || typeof raw === 'undefined' || raw === '';
+		if (usesStylesheetDefault) {
+			this._element.style.removeProperty('--vg-select-list-max-height');
+			if (!Number.isFinite(available)) return;
+		}
+
+		const configured = this._getListMaxHeight();
+		if (configured === null) {
+			this._element.style.setProperty('--vg-select-list-max-height', 'none');
+			return;
+		}
+
+		const availableHeight = Number.isFinite(available)
+			? Math.max(80, Math.floor(available - 12))
+			: configured;
+		const maxHeight = Math.min(configured, availableHeight);
+		this._element.style.setProperty('--vg-select-list-max-height', `${maxHeight}px`);
 	}
 
 	_getPositionMode() {
@@ -764,11 +812,7 @@ class VGSelect extends BaseModule {
 
 		const available = openUp ? spaceAbove : spaceBelow;
 
-		// Give the dropdown some breathing room (borders/margins) and clamp.
-		const listMax = Math.max(80, Math.floor(available - 12));
-		if (Number.isFinite(listMax) && listMax > 0) {
-			this._element.style.setProperty('--vg-select-list-max-height', `${listMax}px`);
-		}
+		this._applyListMaxHeight(available);
 	}
 
 	/**
