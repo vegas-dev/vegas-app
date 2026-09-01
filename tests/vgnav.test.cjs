@@ -99,6 +99,57 @@ test('an old hide transition cannot close a reopened dropdown', () => {
 	flush();
 });
 
+test('smooth first-level hover opens the adjacent dropdown before closing the current one', () => {
+	const root = document.createElement('nav');
+	root.className = 'vg-nav';
+	root.innerHTML = `<ul class="vg-nav-wrapper">
+		<li class="dropdown" id="first"><a href="#">First</a><div class="dropdown-content">First content</div></li>
+		<li class="dropdown" id="second"><a href="#">Second</a><div class="dropdown-content">Second content</div></li>
+	</ul>`;
+	document.body.append(root);
+	VGNav.init(root, {
+		hover: true,
+		breakpoint: false,
+		hamburger: {enable: false},
+		hoversmoothfirstlevel: {enable: true, horizontalOnly: true},
+	});
+	const instance = VGNav.getInstance(root);
+	const callbacks = [];
+	instance._queueCallback = callback => callbacks.push(callback);
+	const flush = () => { while (callbacks.length) callbacks.shift()(); };
+	const smoothCallbacks = [];
+	instance._scheduleSmoothSwitchCompletion = (dropContent, callback) => smoothCallbacks.push(callback);
+	const first = root.querySelector('#first');
+	const second = root.querySelector('#second');
+	const lifecycle = [];
+	let adjacentVisibleBeforeHide = false;
+	root.addEventListener('vg.nav.show', event => lifecycle.push(`show:${event.target.id}`));
+	root.addEventListener('vg.nav.hide', event => {
+		lifecycle.push(`hide:${event.target.id}`);
+		if (event.target === first) {
+			adjacentVisibleBeforeHide = second.querySelector('.dropdown-content').classList.contains('fade');
+		}
+	});
+
+	first.dispatchEvent(new dom.window.MouseEvent('mousemove', {bubbles: true, clientX: 10, clientY: 10}));
+	first.dispatchEvent(new dom.window.MouseEvent('mouseover', {bubbles: true, relatedTarget: document.body, clientX: 10, clientY: 10}));
+	flush();
+	first.dispatchEvent(new dom.window.MouseEvent('mouseout', {bubbles: true, relatedTarget: second, clientX: 80, clientY: 10}));
+	second.dispatchEvent(new dom.window.MouseEvent('mouseover', {bubbles: true, relatedTarget: first, clientX: 80, clientY: 10}));
+
+	assert.deepEqual(lifecycle, ['show:first', 'show:second']);
+	assert.equal(first.classList.contains('active'), true);
+	assert.equal(second.classList.contains('active'), true);
+	assert.equal(second.querySelector('.dropdown-content').classList.contains('fade'), true);
+	assert.equal(second.firstElementChild.getAttribute('aria-expanded'), 'true');
+	assert.equal(smoothCallbacks.length, 1);
+	smoothCallbacks.shift()();
+	assert.deepEqual(lifecycle, ['show:first', 'show:second', 'hide:first']);
+	assert.equal(adjacentVisibleBeforeHide, true);
+	assert.equal(first.classList.contains('active'), false);
+	flush();
+});
+
 test('nested dropdown positioning writes coordinates and stays within a narrow viewport', () => {
 	const {instance, parent, child, flush} = createNav();
 	const rect = (left, top, width, height) => ({left, top, width, height, right: left + width, bottom: top + height});

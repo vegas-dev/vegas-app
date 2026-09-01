@@ -27,6 +27,7 @@ test('connects VGTable and leaves VGDynamicTable outside the main bundle', () =>
 	const tableVariables = read('app/modules/vgtable/scss/_variables.scss');
 	const tableStyles = read('app/modules/vgtable/scss/vgtable.scss');
 	const stickyHeaderStyles = read('app/modules/vgtable/scss/_sticky-header.scss');
+	const fixedColumnStyles = read('app/modules/vgtable/scss/_fixed-columns.scss');
 	assert.match(tableVariables, /\$table-wrapper:\s*\(/);
 	assert.match(tableVariables, /\$table-container:\s*\(/);
 	assert.match(tableStyles, /mix-vars\('table-wrapper', table\.\$table-wrapper\)/);
@@ -44,6 +45,9 @@ test('connects VGTable and leaves VGDynamicTable outside the main bundle', () =>
 	assert.doesNotMatch(stickyHeaderStyles, /&--sticky-page\s*\{[\s\S]*?\.vg-table-body\s*\{\s*overflow: auto;/);
 	assert.match(stickyHeaderStyles, /\.vg-table-header\s*\{[\s\S]*?position: relative;[\s\S]*?z-index: var\(--vg-table-sticky-z-index\);/);
 	assert.match(stickyHeaderStyles, /\.vg-table-body\s*\{\s*position: relative;\s*z-index: 0;/);
+	assert.match(fixedColumnStyles, /tbody tr > \[data-vg-table-fixed-side\],[\s\S]*?box-shadow: inset 0 0 0 100vmax transparent;[\s\S]*?transition: box-shadow var\(--vg-table-transition\);/);
+	assert.match(fixedColumnStyles, /tbody tr\.vg-table-row-selected > \[data-vg-table-fixed-side\]\s*\{\s*box-shadow: inset 0 0 0 100vmax var\(--vg-table-selection-row-background\);/);
+	assert.match(fixedColumnStyles, /tbody tr\.vg-table-row-selected:hover > \[data-vg-table-fixed-side\]\s*\{\s*box-shadow: inset 0 0 0 100vmax var\(--vg-table-selection-row-background-hovered\);/);
 
 	assert.doesNotMatch(appEntry, /modules\/vgdynamictable|VGDynamicTable|\bEditable\b/);
 	assert.doesNotMatch(packageEntry, /modules\/vgdynamictable|VGDynamicTable|\bEditable\b/);

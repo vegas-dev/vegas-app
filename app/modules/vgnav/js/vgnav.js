@@ -6,6 +6,7 @@ import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
 import {
 	execute,
+	getTransitionDurationFromElement,
 	isDisabled,
 	isMobileDevice,
 	isVisible,
@@ -129,6 +130,7 @@ class VGNav extends BaseModule {
 
 		this._openDrops = new Map();
 		this._pointerPosition = null;
+		this._smoothSwitch = null;
 		this._handleScroll = this._handleScroll.bind(this);
 		this._handleResize = this._handleResize.bind(this);
 	}
@@ -409,6 +411,50 @@ class VGNav extends BaseModule {
 		return true;
 	}
 
+	_scheduleSmoothSwitchCompletion(dropContent, callback) {
+		const duration = getTransitionDurationFromElement(dropContent);
+		if (!duration) {
+			callback();
+			return;
+		}
+
+		window.setTimeout(callback, duration);
+	}
+
+	_startSmoothSwitch(currentDrop, previousDrop, dropContent) {
+		const staleSwitch = this._smoothSwitch;
+		const transfer = { currentDrop, previousDrop };
+		this._smoothSwitch = transfer;
+
+		if (
+			staleSwitch?.previousDrop
+			&& staleSwitch.previousDrop !== currentDrop
+			&& staleSwitch.previousDrop !== previousDrop
+			&& staleSwitch.previousDrop.classList.contains(CLASS_NAME_ACTIVE)
+		) {
+			this.hide({ relatedTarget: staleSwitch.previousDrop });
+		}
+
+		this._scheduleSmoothSwitchCompletion(dropContent, () => {
+			if (this._smoothSwitch !== transfer) return;
+			this._smoothSwitch = null;
+			if (!currentDrop.isConnected || !previousDrop.isConnected) return;
+			if (!currentDrop.classList.contains(CLASS_NAME_ACTIVE)) return;
+			if (previousDrop.classList.contains(CLASS_NAME_ACTIVE)) {
+				this.hide({ relatedTarget: previousDrop });
+			}
+		});
+	}
+
+	_cancelSmoothSwitch(exceptDrop = null) {
+		const transfer = this._smoothSwitch;
+		this._smoothSwitch = null;
+		if (!transfer?.previousDrop || transfer.previousDrop === exceptDrop) return;
+		if (transfer.previousDrop.classList.contains(CLASS_NAME_ACTIVE)) {
+			this.hide({ relatedTarget: transfer.previousDrop });
+		}
+	}
+
 	static init(element, params = {}) {
 		const instance = VGNav.getOrCreateInstance(element, params);
 		instance.build();
@@ -436,6 +482,7 @@ class VGNav extends BaseModule {
 					const useSmoothSwitch = instance._canSmoothSwitchFirstLevel(event, target, previousDrop);
 
 					if (!useSmoothSwitch) {
+						instance._cancelSmoothSwitch(target);
 						VGNav.hideOpenDrops(event);
 					}
 
@@ -446,7 +493,11 @@ class VGNav extends BaseModule {
 					instance.show(relatedTarget);
 
 					if (useSmoothSwitch && previousDrop && previousDrop.classList.contains(CLASS_NAME_ACTIVE)) {
-						instance.hide({ relatedTarget: previousDrop });
+						const nextDropContent = Selectors.find(':scope > .dropdown-content', target);
+						if (nextDropContent) {
+							nextDropContent.classList.add(CLASS_NAME_FADE);
+							instance._startSmoothSwitch(target, previousDrop, nextDropContent);
+						}
 					}
 
 					instance._updatePointerPosition(event);
@@ -466,11 +517,13 @@ class VGNav extends BaseModule {
 
 					if (instance._canSmoothSwitchFirstLevel(event, elm, nextDrop)) {
 						currentElem = null;
-						instance._updatePointerPosition(event);
+						// Сохраняем предыдущую точку до mouseover соседнего пункта:
+						// она нужна повторной проверке направления и передаче открытого состояния.
 						return;
 					}
 
 					currentElem = null;
+					instance._cancelSmoothSwitch(elm);
 					instance.hide({ relatedTarget: relatedTarget, elm: elm });
 					instance._updatePointerPosition(event);
 				});

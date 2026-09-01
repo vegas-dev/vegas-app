@@ -459,6 +459,9 @@ class VGAlert {
 		const overlay = document.createElement('div');
 
 		overlay.className = `${CLASS_NAME_ALERT}-overlay`;
+		if (containerWrap.classList.contains('vg-modal')) {
+			overlay.classList.add(`${CLASS_NAME_ALERT}-overlay--modal`);
+		}
 		this._applySizeClass(overlay);
 		overlay.append(this._buildContent());
 

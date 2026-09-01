@@ -85,6 +85,24 @@ test('sidebar overlay keeps its real parent renderer for dismiss', async (t) => 
 	render.dispose();
 });
 
+test('modal overlay keeps its alert wrapper in the visible modal scroll area', () => {
+	const modal = document.createElement('div');
+	modal.className = 'vg-modal show';
+	modal.innerHTML = '<div class="vg-modal-dialog"><div class="vg-modal-content"><div class="vg-modal-body"><button type="button">Open</button></div></div></div>';
+	document.body.append(modal);
+	const trigger = modal.querySelector('button');
+	const alert = new VGAlert({relatedTarget: trigger, render: {type: 'overlay'}});
+	const {element, render} = alert._buildOverlay();
+
+	assert.equal(render.constructor.NAME, 'modal');
+	assert.equal(element.classList.contains('vg-alert-overlay--modal'), true);
+	assert.equal(element.parentElement, modal.querySelector('.vg-modal-content'));
+
+	const styles = fs.readFileSync(path.join(__dirname, '../app/modules/vgalert/scss/vgalert.scss'), 'utf8');
+	assert.match(styles, /&--modal\s*\{[\s\S]*?\.vg-alert-wrapper\s*\{\s*position: sticky;\s*top: calc\(var\(--vg-alert-overlay-wrapper-top\) \+ 1rem\);/);
+	render.dispose();
+});
+
 test('unknown size falls back to the default alert markup', () => {
 	const alert = new VGAlert({size: 'large'});
 	const content = alert._buildContent();

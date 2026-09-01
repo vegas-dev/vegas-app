@@ -65,6 +65,13 @@
 			top: var(--vg-alert-overlay-wrapper-top);
 			transition: var(--vg-alert-overlay-wrapper-transition);
 		}
+
+		&--modal {
+			.vg-alert-wrapper {
+				position: sticky;
+				top: calc(var(--vg-alert-overlay-wrapper-top) + 1rem);
+			}
+		}
 	}
 
 	&-dropdown {
