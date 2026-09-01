@@ -59,7 +59,7 @@
 		background-color: var(--vg-table-fixed-cell-bg);
 		background-image: none;
 		box-shadow: inset 0 0 0 100vmax transparent;
-		transition: box-shadow var(--vg-table-transition);
+		transition: var(--vg-table-transition);
 	}
 
 	.vg-table-striped tbody tr:nth-child(even) > [data-vg-table-fixed-side] {
