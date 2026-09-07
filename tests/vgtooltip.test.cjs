@@ -39,6 +39,7 @@ Module._extensions['.js'] = (module, filename) => {
 };
 
 const VGTooltip = require('../app/modules/vgtooltip/js/vgtooltip').default;
+const EventHandler = require('../app/utils/js/dom/event').default;
 Module._extensions['.js'] = originalJavaScriptLoader;
 
 const waitForTimers = () => new Promise(resolve => setTimeout(resolve, 15));
@@ -210,4 +211,105 @@ test('placement arrays replace defaults and Data API overrides JavaScript arrays
 	assert.deepEqual(dataInstance._params.offset, [2, 20]);
 	assert.deepEqual(dataInstance._params.fallbackPlacements, ['right']);
 	dataInstance.dispose();
+});
+
+test('keeps a link tooltip open across SVG, gap and label and hides only outside', async () => {
+	const trigger = document.createElement('a');
+	trigger.href = '#';
+	trigger.dataset.vgToggle = 'tooltip';
+	trigger.title = 'Ссылка';
+	trigger.style.cssText = 'display: inline-flex; gap: 8px';
+	trigger.innerHTML = '<svg><path d="M0 0h8v8z" /></svg><span>Название</span>';
+	document.body.append(trigger);
+	const instance = new VGTooltip(trigger, {
+		delay: { show: 0, hide: 0 }, animation: { enable: false, delay: 0 }
+	});
+	const icon = trigger.querySelector('path');
+	const label = trigger.querySelector('span');
+	const move = (from, to) => {
+		from.dispatchEvent(new dom.window.MouseEvent('mouseout', { bubbles: true, relatedTarget: to }));
+		to.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true, relatedTarget: from }));
+	};
+	move(document.body, icon);
+	await waitForTimers();
+	const tooltip = document.querySelector('.vg-tooltip');
+	assert.ok(tooltip);
+	for (const [from, to] of [[icon, trigger], [trigger, label], [label, icon]]) {
+		move(from, to);
+		await waitForTimers();
+		assert.equal(document.querySelector('.vg-tooltip'), tooltip);
+	}
+	move(icon, document.body);
+	await waitForTimers();
+	assert.equal(document.querySelector('.vg-tooltip'), null);
+	instance.dispose();
+});
+
+test('reentering the trigger cancels a pending hide', async () => {
+	const { instance, trigger } = createTooltip({ delay: { show: 0, hide: 40 } });
+	instance.show();
+	await waitForTimers();
+	trigger.dispatchEvent(new dom.window.MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+	trigger.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true, relatedTarget: document.body }));
+	await new Promise(resolve => setTimeout(resolve, 60));
+	assert.ok(document.querySelector('.vg-tooltip.show'));
+	assert.ok(instance._triggerObserver);
+	instance.dispose();
+});
+
+test('suppresses native and inherited titles and restores the original attribute on disposal', async () => {
+	for (const originalTitle of [null, '', 'Нативный текст']) {
+		const parent = document.createElement('div');
+		parent.title = 'Родитель';
+		const trigger = document.createElement('a');
+		trigger.dataset.vgToggle = 'tooltip';
+		trigger.dataset.vgTitle = 'Подсказка';
+		if (originalTitle !== null) trigger.title = originalTitle;
+		parent.append(trigger);
+		document.body.append(parent);
+		// Инициализация Data API до клика, в том числе для click-триггера.
+		trigger.dataset.trigger = 'click';
+		trigger.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+		const instance = VGTooltip.getInstance(trigger);
+		assert.equal(trigger.getAttribute('title'), '');
+		instance.show();
+		instance.show();
+		assert.equal(trigger.getAttribute('title'), '');
+		instance.dispose();
+		assert.equal(trigger.getAttribute('title'), originalTitle);
+		parent.remove();
+	}
+	const { instance, trigger } = createTooltip();
+	trigger.title = 'Обновлённый текст';
+	instance.show();
+	await waitForTimers();
+	assert.equal(trigger.title, '');
+	assert.equal(document.querySelector('.vg-tooltip-inner').textContent, 'Обновлённый текст');
+	instance.dispose();
+	assert.equal(trigger.title, 'Обновлённый текст');
+});
+
+test('mouseenter boundary filtering preserves one-off subscriptions and handler removal', () => {
+	for (const delegated of [false, true]) {
+		const trigger = document.createElement('div');
+		trigger.className = 'event-test';
+		const child = document.createElement('span');
+		trigger.append(child);
+		document.body.append(trigger);
+		const target = delegated ? document : trigger;
+		let calls = 0;
+		const handler = () => calls++;
+		const args = delegated ? ['.event-test', handler] : [handler];
+		EventHandler.one(target, 'mouseenter.test', ...args);
+		child.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true, relatedTarget: trigger }));
+		assert.equal(calls, 0);
+		trigger.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true, relatedTarget: window }));
+		trigger.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+		assert.equal(calls, 1);
+		EventHandler.on(target, 'mouseenter.test', ...args);
+		EventHandler.off(target, 'mouseenter.test', ...args);
+		trigger.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+		assert.equal(calls, 1);
+		trigger.remove();
+	}
 });

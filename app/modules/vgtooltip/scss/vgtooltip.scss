@@ -13,6 +13,8 @@
 .vg-tooltip {
 	@include vg.mix-vars('tooltip', vars.$tooltip-map);
 	position: absolute;
+	// Координатами управляет Placement; общие data-vg-placement правила не должны задавать противоположный край.
+	inset: auto;
 	z-index: var(--vg-tooltip-zindex);
 	pointer-events: none;
 	opacity: 0;
@@ -43,7 +45,26 @@
 		width: var(--vg-tooltip-arrow-width);
 		height: var(--vg-tooltip-arrow-height);
 		background: var(--vg-tooltip-background, #222);
-		transform: rotate(45deg);
+	}
+
+	&[data-vg-placement^="top"] &-arrow {
+		height: calc(var(--vg-tooltip-arrow-height) / 2);
+		clip-path: polygon(0 0, 100% 0, 50% 100%);
+	}
+
+	&[data-vg-placement^="bottom"] &-arrow {
+		height: calc(var(--vg-tooltip-arrow-height) / 2);
+		clip-path: polygon(50% 0, 100% 100%, 0 100%);
+	}
+
+	&[data-vg-placement^="left"] &-arrow {
+		width: calc(var(--vg-tooltip-arrow-width) / 2);
+		clip-path: polygon(0 0, 100% 50%, 0 100%);
+	}
+
+	&[data-vg-placement^="right"] &-arrow {
+		width: calc(var(--vg-tooltip-arrow-width) / 2);
+		clip-path: polygon(100% 0, 100% 100%, 0 50%);
 	}
 
 	&-popover {

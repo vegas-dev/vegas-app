@@ -1,4 +1,6 @@
 /**
+ * Описание: управление DOM-событиями VGApp.
+ * Возможности: делегирование, пространства имён, одноразовые подписки и границы mouseenter/mouseleave.
  * --------------------------------------------------------------------------
  * Bootstrap event.js (рефакторинг)
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
@@ -79,9 +81,10 @@ const getElementEvents = (element) => {
  * @param {boolean} isOneOff
  * @returns {Function}
  */
-const createHandler = (element, fn, isOneOff) => {
+const createHandler = (element, fn, isOneOff, checkRelatedTarget) => {
 	const handler = function (event) {
 		hydrateObj(event, { delegateTarget: element });
+		if (checkRelatedTarget && isRelatedTargetInside(event)) return;
 
 		if (isOneOff) {
 			EventHandler.off(element, event.type, fn);
@@ -106,13 +109,14 @@ const createHandler = (element, fn, isOneOff) => {
  * @param {boolean} isOneOff
  * @returns {Function}
  */
-const createDelegatedHandler = (element, selector, fn, isOneOff) => {
+const createDelegatedHandler = (element, selector, fn, isOneOff, checkRelatedTarget) => {
 	const handler = function (event) {
 		const candidates = Array.from(element.querySelectorAll(selector));
 		for (let target = event.target; target && target !== element; target = target.parentNode) {
 			if (!candidates.includes(target)) continue;
 
 			hydrateObj(event, { delegateTarget: target });
+			if (checkRelatedTarget && isRelatedTargetInside(event)) return;
 
 			if (isOneOff) {
 				EventHandler.off(element, event.type, selector, fn);
@@ -131,19 +135,16 @@ const createDelegatedHandler = (element, selector, fn, isOneOff) => {
 };
 
 /**
- * Обёртка для mouseenter/mouseleave.
- * @param {Function} fn
- * @returns {Function}
+ * Проверяет переход внутри одного триггера mouseenter/mouseleave.
+ * @param {Event} event
+ * @returns {boolean}
  */
-const withRelatedTargetCheck = (fn) => {
-	return function (event) {
-		if (
-			!event.relatedTarget ||
-			(event.relatedTarget !== event.delegateTarget && !event.delegateTarget.contains(event.relatedTarget))
-		) {
-			return fn.call(this, event);
-		}
-	};
+const isRelatedTargetInside = (event) => {
+	const relatedTarget = event.relatedTarget;
+	return !!relatedTarget && (
+		relatedTarget === event.delegateTarget ||
+		(relatedTarget.nodeType && event.delegateTarget.contains(relatedTarget))
+	);
 };
 
 /**
@@ -193,9 +194,10 @@ const addHandler = (element, originalTypeEvent, handler, delegationFunction, one
 		return;
 	}
 
+	const checkRelatedTarget = Boolean(customEvents[originalTypeEvent.replace(STRIP_NAME_REGEX, '')]);
 	let fn = isDelegated
-		? createDelegatedHandler(element, handler, callable, oneOff)
-		: createHandler(element, callable, oneOff);
+		? createDelegatedHandler(element, handler, callable, oneOff, checkRelatedTarget)
+		: createHandler(element, callable, oneOff, checkRelatedTarget);
 
 	const uid = makeEventUid(fn, originalTypeEvent.replace(NAMESPACE_REGEX, ''));
 	fn.uidEvent = uid;

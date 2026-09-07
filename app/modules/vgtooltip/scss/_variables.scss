@@ -11,7 +11,7 @@ $tooltip-map: (
 		border-radius: 6px,
 		box-shadow: 0 6px 20px var(--vg-shadow-soft-color, rgba(0, 0, 0, .18)),
 		word-break: break-word,
-		arrow-width: 8px,
-		arrow-height: 8px,
+		arrow-width: 10px,
+		arrow-height: 10px,
 		border-color: var(--vg-border-color, #{vg.$border-color}),
 ) !default;

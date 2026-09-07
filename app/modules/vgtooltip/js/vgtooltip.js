@@ -1,6 +1,6 @@
 /**
  * Описание: всплывающие подсказки и информационные popover VGApp.
- * Возможности: Data API, позиционирование, события и очистка при удалении триггера.
+ * Возможности: Data API, подавление нативного title, позиционирование со стрелкой без зазоров и очистка при удалении триггера.
  */
 import BaseModule from "../../base-module";
 import {isDisabled, makeRandomString, mergeDeepObject} from "../../../utils/js/functions";
@@ -95,6 +95,7 @@ class VGTooltip extends BaseModule {
 		this._showTimeout = null;
 		this._hideTimeout = null;
 		this._triggerObserver = null;
+		this._titleSuppressed = false;
 
 		this._fixTitle();
 
@@ -123,9 +124,14 @@ class VGTooltip extends BaseModule {
 	}
 
 	show(relatedTarget) {
-		if (isDisabled(this._element) || this._isShown()) return;
+		if (!this._element || isDisabled(this._element)) return;
 
+		this._fixTitle();
 		this._clearTimeouts();
+		if (this._isShown()) {
+			if (!this._isHiding) this._observeTrigger();
+			return;
+		}
 
 		this._showTimeout = setTimeout(() => {
 			this._showTimeout = null;
@@ -227,6 +233,8 @@ class VGTooltip extends BaseModule {
 			if (Object.prototype.hasOwnProperty.call(this._element.dataset, 'vgOriginalTitle')) {
 				this._element.setAttribute('title', this._element.dataset.vgOriginalTitle);
 				this._element.removeAttribute('data-vg-original-title');
+			} else {
+				this._element.removeAttribute('title');
 			}
 		}
 
@@ -319,10 +327,12 @@ class VGTooltip extends BaseModule {
 	_fixTitle() {
 		const title = this._element.getAttribute('title');
 
-		if (title === null) return;
-
-		this._element.setAttribute('data-vg-original-title', title);
-		this._element.removeAttribute('title');
+		if (title !== null && (title !== '' || !this._titleSuppressed)) {
+			this._element.setAttribute('data-vg-original-title', title);
+		}
+		// Пустой title также блокирует нативную подсказку, унаследованную от предка.
+		this._element.setAttribute('title', '');
+		this._titleSuppressed = true;
 	}
 
 	_setPlacement() {
@@ -378,12 +388,12 @@ class VGTooltip extends BaseModule {
 			);
 
 			arrow.style.left = `${arrowLeft}px`;
-			arrow.style.transform = 'translateX(-50%) rotate(45deg)';
+			arrow.style.transform = 'translateX(-50%)';
 
 			if (placement.startsWith('top')) {
-				arrow.style.bottom = '-4px';
+				arrow.style.bottom = 'calc(var(--vg-tooltip-arrow-height) / -2 + 1px)';
 			} else {
-				arrow.style.top = '-4px';
+				arrow.style.top = 'calc(var(--vg-tooltip-arrow-height) / -2 + 1px)';
 			}
 		}
 
@@ -396,12 +406,12 @@ class VGTooltip extends BaseModule {
 			);
 
 			arrow.style.top = `${arrowTop}px`;
-			arrow.style.transform = 'translateY(-50%) rotate(45deg)';
+			arrow.style.transform = 'translateY(-50%)';
 
 			if (placement.startsWith('left')) {
-				arrow.style.right = '-4px';
+				arrow.style.right = 'calc(var(--vg-tooltip-arrow-width) / -2 + 1px)';
 			} else {
-				arrow.style.left = '-4px';
+				arrow.style.left = 'calc(var(--vg-tooltip-arrow-width) / -2 + 1px)';
 			}
 		}
 	}
