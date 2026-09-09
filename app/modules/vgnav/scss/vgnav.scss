@@ -150,6 +150,41 @@
 		}
 	}
 
+	&.vg-nav-overflow-enabled.vg-nav-horizontal {
+		> .vg-nav-wrapper {
+			width: 100%;
+			min-width: 0;
+			flex-wrap: nowrap;
+
+			> li {
+				flex: 0 0 auto;
+			}
+		}
+
+		.vg-nav-overflow {
+			> a {
+				align-items: center;
+				justify-content: center;
+			}
+
+			&-icon {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				line-height: 1;
+			}
+
+			&-label:not(:first-child) {
+				margin-left: .375rem;
+			}
+
+			> .dropdown-content > .vg-nav-overflow-list {
+				max-height: none;
+				overflow: visible;
+			}
+		}
+	}
+
 	/** set placement **/
 	@include placement.placement();
 

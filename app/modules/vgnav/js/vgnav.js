@@ -1,6 +1,6 @@
 /**
  * Описание: адаптивная навигация VGNav с выпадающими пунктами и гамбургером.
- * Возможности: click/hover, вложенные меню, позиционирование, события и интеграция с VGSidebar.
+ * Возможности: click/hover, overflow первого уровня, вложенные меню, позиционирование, события и интеграция с VGSidebar.
  */
 import BaseModule from "../../base-module";
 import Selectors from "../../../utils/js/dom/selectors";
@@ -16,6 +16,7 @@ import {
 import EventHandler from "../../../utils/js/dom/event";
 import {Manipulator} from "../../../utils/js/dom/manipulator";
 import Placement from "../../../utils/js/components/placement";
+import {getSVG} from "../../module-fn";
 
 /**
  * Constants
@@ -62,6 +63,20 @@ class VGNav extends BaseModule {
 			hover: true,
 			// Включает ограничение высоты и overflow для списка внутри выпадающего меню.
 			dropListScroll: true,
+			// Переносит лишние пункты первого уровня горизонтального меню в dropdown.
+			overflow: {
+				enable: false,
+				// Максимум видимых исходных пунктов; 0 оставляет только ограничение по ширине.
+				count: 0,
+				// Элементы, которые нельзя переносить (megamenu сохраняет геометрию первого уровня).
+				keep: '.dropdown-mega, [data-vg-nav-overflow="keep"]',
+				trigger: {
+					icon: 'dots',
+					body: null,
+					label: '',
+					ariaLabel: 'Другие разделы'
+				}
+			},
 			// Настройки плавного переключения между соседними пунктами первого уровня.
 			hoversmoothfirstlevel: {
 				// Включает режим плавного перехода без мгновенного закрытия соседнего дропа.
@@ -107,6 +122,9 @@ class VGNav extends BaseModule {
 			container: 'vg-nav-container',
 			wrapper: 'vg-nav-wrapper',
 			dropListScroll: 'vg-nav-drop-list-scroll',
+			overflowEnabled: 'vg-nav-overflow-enabled',
+			overflow: 'vg-nav-overflow',
+			overflowList: 'vg-nav-overflow-list',
 			active: 'vg-nav-active',
 			expand: 'vg-nav-expand',
 			cloned: 'vg-nav-cloned',
@@ -133,6 +151,14 @@ class VGNav extends BaseModule {
 		this._smoothSwitch = null;
 		this._handleScroll = this._handleScroll.bind(this);
 		this._handleResize = this._handleResize.bind(this);
+		this._handleOverflowResize = this._handleOverflowResize.bind(this);
+		this._overflowTrigger = null;
+		this._overflowList = null;
+		this._overflowItems = [];
+		this._overflowAnchors = new Map();
+		this._overflowObserver = null;
+		this._overflowFrame = null;
+		this._overflowWindowFallback = false;
 	}
 
 	static get NAME() {
@@ -163,6 +189,7 @@ class VGNav extends BaseModule {
 		this._element.classList.add(classes.container);
 		this._element.classList.add('vg-nav-' + params.placement);
 		this._element.classList.toggle(classes.dropListScroll, !!params.dropListScroll);
+		this._setupOverflow();
 
 		if (!params.hamburger.always) {
 			if (!params.breakpoint) {
@@ -215,6 +242,8 @@ class VGNav extends BaseModule {
 				});
 			}
 		}
+
+		this.refresh();
 
 		if ('afterInit' in this._params.callbacks) {
 			execute(this._params.callbacks.afterInit, [this]);
@@ -419,6 +448,205 @@ class VGNav extends BaseModule {
 		}
 
 		window.setTimeout(callback, duration);
+	}
+
+	/**
+	 * Пересчитывает пункты первого уровня, перенесённые в overflow-dropdown.
+	 * Полезно вызывать после динамического изменения состава или текста меню.
+	 */
+	refresh() {
+		if (!this._isOverflowEnabled()) return;
+		this._collectOverflowItems();
+		this._redistributeOverflowItems();
+	}
+
+	_isOverflowEnabled() {
+		return !!this._params.overflow?.enable && this._params.placement === 'horizontal';
+	}
+
+	_setupOverflow() {
+		if (!this._isOverflowEnabled() || this._overflowTrigger) return;
+
+		this._element.classList.add(this._classes.overflowEnabled);
+		const triggerParams = this._params.overflow.trigger || {};
+		const item = document.createElement('li');
+		item.classList.add('dropdown', 'dots', this._classes.overflow);
+		item.hidden = true;
+
+		const link = document.createElement('a');
+		link.href = '#';
+		link.setAttribute('aria-expanded', 'false');
+		link.setAttribute('aria-label', triggerParams.ariaLabel || 'Другие разделы');
+
+		const icon = document.createElement('span');
+		icon.classList.add(this._classes.overflow + '-icon');
+		icon.setAttribute('aria-hidden', 'true');
+		icon.innerHTML = triggerParams.body !== null
+			? triggerParams.body
+			: (getSVG(triggerParams.icon || 'dots') || '');
+		link.append(icon);
+
+		if (triggerParams.label) {
+			const label = document.createElement('span');
+			label.classList.add(this._classes.overflow + '-label');
+			label.textContent = triggerParams.label;
+			link.append(label);
+		}
+
+		const content = document.createElement('div');
+		content.classList.add('dropdown-content');
+		const list = document.createElement('ul');
+		list.classList.add('vg-nav-drop-list', this._classes.overflowList);
+		content.append(list);
+		item.append(link, content);
+		this.navigation.append(item);
+
+		this._overflowTrigger = item;
+		this._overflowList = list;
+		this._collectOverflowItems();
+		this._startOverflowObserver();
+	}
+
+	_collectOverflowItems() {
+		if (!this.navigation || !this._overflowTrigger) return;
+
+		[...this.navigation.children].forEach((item) => {
+			if (item === this._overflowTrigger || this._overflowAnchors.has(item)) return;
+			const anchor = document.createComment('vg-nav-overflow-item');
+			this.navigation.insertBefore(anchor, item);
+			this._overflowAnchors.set(item, anchor);
+			this._overflowItems.push(item);
+		});
+	}
+
+	_restoreOverflowItems(removeAnchors = false) {
+		this._overflowItems.forEach((item) => {
+			const anchor = this._overflowAnchors.get(item);
+			if (!anchor?.parentNode) return;
+			if (removeAnchors) {
+				anchor.replaceWith(item);
+			} else {
+				anchor.after(item);
+			}
+		});
+
+		if (removeAnchors) this._overflowAnchors.clear();
+	}
+
+	_redistributeOverflowItems() {
+		if (!this.navigation || !this._overflowTrigger || !this._overflowList) return;
+
+		this._closeOverflowDrops();
+		this._restoreOverflowItems();
+		this._overflowTrigger.hidden = true;
+
+		if (!this._isOverflowMeasurable()) return;
+
+		const moved = new Set();
+		const movable = this._overflowItems.filter((item) => !this._isOverflowKept(item));
+		const count = Math.max(0, Number.parseInt(this._params.overflow.count, 10) || 0);
+		let visibleCount = this._overflowItems.length;
+
+		if (count > 0) {
+			for (let index = movable.length - 1; index >= 0 && visibleCount > count; index--) {
+				moved.add(movable[index]);
+				this._overflowList.prepend(movable[index]);
+				visibleCount--;
+			}
+		}
+
+		if (moved.size || !this._overflowFits()) {
+			this._overflowTrigger.hidden = false;
+		}
+
+		for (let index = movable.length - 1; index >= 0 && !this._overflowFits(); index--) {
+			const item = movable[index];
+			if (moved.has(item)) continue;
+			moved.add(item);
+			this._overflowList.prepend(item);
+		}
+
+		this._overflowItems.forEach((item) => {
+			if (moved.has(item)) this._overflowList.append(item);
+		});
+
+		this._overflowTrigger.hidden = moved.size === 0;
+		this._element.classList.toggle(this._classes.overflow + '-active', moved.size > 0);
+	}
+
+	_isOverflowKept(item) {
+		const selector = String(this._params.overflow.keep || '').trim();
+		return !!selector && item.matches(selector);
+	}
+
+	_isOverflowMeasurable() {
+		if (!this._element.isConnected) return false;
+		if (this.navigation.getClientRects().length === 0) return false;
+		return this.navigation.clientWidth > 0 || this.navigation.getBoundingClientRect().width > 0;
+	}
+
+	_overflowFits() {
+		const width = this.navigation.clientWidth || this.navigation.getBoundingClientRect().width;
+		if (!width) return true;
+
+		const style = window.getComputedStyle(this.navigation);
+		const gap = Number.parseFloat(style.columnGap) || 0;
+		const children = [...this.navigation.children].filter((item) => !item.hidden);
+		const used = children.reduce((sum, item) => {
+			const itemStyle = window.getComputedStyle(item);
+			return sum + item.getBoundingClientRect().width
+				+ (Number.parseFloat(itemStyle.marginLeft) || 0)
+				+ (Number.parseFloat(itemStyle.marginRight) || 0);
+		}, 0) + Math.max(0, children.length - 1) * gap;
+
+		return used <= width + 0.5;
+	}
+
+	_closeOverflowDrops() {
+		[...this.navigation.querySelectorAll('.dropdown.active')].forEach((item) => {
+			this.hide({relatedTarget: item});
+		});
+	}
+
+	_startOverflowObserver() {
+		if (typeof ResizeObserver !== 'undefined') {
+			this._overflowObserver = new ResizeObserver(this._handleOverflowResize);
+			this._overflowObserver.observe(this.navigation);
+			this._overflowObserver.observe(this._element);
+		} else {
+			window.addEventListener('resize', this._handleOverflowResize);
+			this._overflowWindowFallback = true;
+		}
+
+		if (document.fonts?.ready) {
+			document.fonts.ready.then(() => {
+				if (this._element) this._handleOverflowResize();
+			});
+		}
+	}
+
+	_handleOverflowResize() {
+		if (this._overflowFrame !== null) return;
+		const schedule = typeof window.requestAnimationFrame === 'function'
+			? window.requestAnimationFrame.bind(window)
+			: (callback) => window.setTimeout(callback, 0);
+
+		this._overflowFrame = schedule(() => {
+			this._overflowFrame = null;
+			this.refresh();
+		});
+	}
+
+	dispose() {
+		if (this._overflowObserver) this._overflowObserver.disconnect();
+		if (this._overflowWindowFallback) window.removeEventListener('resize', this._handleOverflowResize);
+		if (this._overflowFrame !== null && typeof window.cancelAnimationFrame === 'function') {
+			window.cancelAnimationFrame(this._overflowFrame);
+		}
+		this._restoreOverflowItems(true);
+		this._overflowTrigger?.remove();
+		this._element.classList.remove(this._classes.overflowEnabled, this._classes.overflow + '-active');
+		super.dispose();
 	}
 
 	_startSmoothSwitch(currentDrop, previousDrop, dropContent) {

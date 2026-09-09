@@ -41,6 +41,40 @@ const createNav = () => {
 	return {root, instance, flush, parent: root.querySelector('#parent'), child: root.querySelector('#child')};
 };
 
+const createOverflowNav = ({count = 0, placement = 'horizontal', keepLast = false} = {}) => {
+	const root = document.createElement('nav');
+	root.className = 'vg-nav';
+	root.innerHTML = `<ul class="vg-nav-wrapper">
+		<li id="overflow-one"><a href="#one">One</a></li>
+		<li id="overflow-two"><a href="#two">Two</a></li>
+		<li id="overflow-three" class="dropdown"><a href="#three">Three</a><div class="dropdown-content">Three child</div></li>
+		<li id="overflow-four"${keepLast ? ' data-vg-nav-overflow="keep"' : ''}><a href="#four">Four</a></li>
+	</ul>`;
+	document.body.append(root);
+	const wrapper = root.querySelector('.vg-nav-wrapper');
+	let width = 500;
+	Object.defineProperty(wrapper, 'clientWidth', {configurable: true, get: () => width});
+	wrapper.getClientRects = () => [wrapper.getBoundingClientRect()];
+	wrapper.getBoundingClientRect = () => ({width, left: 0, right: width, top: 0, bottom: 40, height: 40});
+	[...wrapper.children].forEach((item) => {
+		item.getBoundingClientRect = () => ({width: 60, left: 0, right: 60, top: 0, bottom: 40, height: 40});
+	});
+	VGNav.init(root, {
+		hover: false,
+		breakpoint: false,
+		placement,
+		hamburger: {enable: false},
+		overflow: {enable: true, count},
+	});
+	const instance = VGNav.getInstance(root);
+	const trigger = root.querySelector('.vg-nav-overflow');
+	if (trigger) {
+		trigger.getBoundingClientRect = () => ({width: 30, left: 0, right: 30, top: 0, bottom: 40, height: 40});
+	}
+	instance.refresh();
+	return {root, wrapper, instance, trigger, setWidth: (value) => { width = value; }};
+};
+
 test.afterEach(() => document.body.replaceChildren());
 
 test('programmatic parent hide clears every nested dropdown and emits hidden for each', () => {
@@ -189,4 +223,63 @@ test('hamburger aria-expanded is not treated as a dropdown click', () => {
 	hamburger.dispatchEvent(new dom.window.MouseEvent('click', {bubbles: true, cancelable: true}));
 	assert.equal(dropdownClicks, 0);
 	assert.doesNotThrow(() => instance.show({relatedTarget: hamburger}));
+});
+
+test('horizontal overflow moves a trailing suffix and restores it when width grows', () => {
+	const {wrapper, instance, trigger, setWidth} = createOverflowNav();
+	setWidth(150);
+	instance.refresh();
+	assert.deepEqual([...wrapper.children].filter(item => item !== trigger).map(item => item.id), ['overflow-one', 'overflow-two']);
+	assert.deepEqual([...trigger.querySelector('.vg-nav-overflow-list').children].map(item => item.id), ['overflow-three', 'overflow-four']);
+	assert.equal(trigger.hidden, false);
+
+	setWidth(300);
+	instance.refresh();
+	assert.deepEqual([...wrapper.children].filter(item => item !== trigger).map(item => item.id), [
+		'overflow-one', 'overflow-two', 'overflow-three', 'overflow-four'
+	]);
+	assert.equal(trigger.hidden, true);
+});
+
+test('overflow count limits visible first-level items without depending on width', () => {
+	const {wrapper, trigger} = createOverflowNav({count: 2});
+	assert.deepEqual([...wrapper.children].filter(item => item !== trigger).map(item => item.id), ['overflow-one', 'overflow-two']);
+	assert.deepEqual([...trigger.querySelector('.vg-nav-overflow-list').children].map(item => item.id), ['overflow-three', 'overflow-four']);
+	assert.equal(trigger.querySelector('svg path').getAttribute('fill'), 'currentColor');
+	assert.equal(trigger.firstElementChild.getAttribute('aria-label'), 'Другие разделы');
+});
+
+test('overflow keep selector takes priority over count', () => {
+	const {wrapper, trigger} = createOverflowNav({count: 2, keepLast: true});
+	assert.deepEqual([...wrapper.children].filter(item => item !== trigger).map(item => item.id), ['overflow-one', 'overflow-four']);
+	assert.deepEqual([...trigger.querySelector('.vg-nav-overflow-list').children].map(item => item.id), ['overflow-two', 'overflow-three']);
+});
+
+test('moved first-level dropdown keeps its nested content and can be opened', () => {
+	const {instance, trigger} = createOverflowNav({count: 2});
+	const movedDropdown = trigger.querySelector('#overflow-three');
+	const callbacks = [];
+	instance._queueCallback = callback => callbacks.push(callback);
+	instance.show({relatedTarget: movedDropdown});
+	while (callbacks.length) callbacks.shift()();
+	assert.equal(movedDropdown.classList.contains('active'), true);
+	assert.equal(movedDropdown.querySelector('.dropdown-content').classList.contains('show'), true);
+	instance.hide({relatedTarget: movedDropdown});
+	while (callbacks.length) callbacks.shift()();
+});
+
+test('overflow is ignored for vertical navigation', () => {
+	const {wrapper, trigger} = createOverflowNav({count: 1, placement: 'vertical'});
+	assert.equal(trigger, null);
+	assert.equal(wrapper.querySelectorAll(':scope > li').length, 4);
+});
+
+test('dispose restores original items and removes generated overflow markup', () => {
+	const {root, wrapper, instance} = createOverflowNav({count: 2});
+	instance.dispose();
+	assert.deepEqual([...wrapper.children].map(item => item.id), [
+		'overflow-one', 'overflow-two', 'overflow-three', 'overflow-four'
+	]);
+	assert.equal(root.querySelector('.vg-nav-overflow'), null);
+	assert.equal(root.classList.contains('vg-nav-overflow-enabled'), false);
 });
