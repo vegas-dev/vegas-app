@@ -1,3 +1,7 @@
+/**
+ * Описание: регрессионные проверки поведения VGFiles на изолированных файлах.
+ * Возможности: проверяет выбор, статусы, идентификацию, удаление, загрузку и сортировку.
+ */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -512,4 +516,96 @@ test('sortable reorders uploaded drop tiles without handing them to smartdrop', 
 	assert.equal(drop.classList.contains('drop-active'), false);
 	sortable.destroy();
 	droppable.dispose();
+});
+
+function createDuplicateFileFixture(drop = true) {
+    const container = document.createElement('div');
+    container.className = 'vg-files';
+    const area = drop ? 'drop' : 'info';
+    container.innerHTML = '<div class="vg-files-stat"><span class="vg-files-stat-count"></span><div class="vg-files-stat-progress"></div></div>' +
+        '<div class="vg-files-' + area + '"><ul class="vg-files-' + area + '--list"></ul></div><input type="file" multiple>';
+    for (const id of [11, 12]) {
+        const item = document.createElement('li');
+        item.className = 'file';
+        item.dataset.file = JSON.stringify({id, name: 'same.jpg', size: 0, type: 'image/jpeg', src: '/images/' + id + '.jpg'});
+        item.innerHTML = '<div class="file-image"></div><div class="file-info"></div><div class="file-remove"></div>';
+        container.querySelector('ul').append(item);
+    }
+    document.body.append(container);
+    const instance = new VGFiles(container, {ajax: true, removes: {single: {route: '/remove', alert: false, toast: false}}});
+    return {container, instance};
+}
+
+test('counts and marks both saved files with identical metadata in both views', () => {
+    for (const drop of [true, false]) {
+        const {container, instance} = createDuplicateFileFixture(drop);
+        assert.equal(container.querySelector('.stat-item.completed .stat-value').textContent, '2');
+        assert.equal(container.querySelectorAll('li.loaded').length, 2);
+        assert.deepEqual(instance._getUploadedIds(), ['11', '12']);
+        instance.dispose();
+    }
+});
+
+test('removing either duplicate saved file retains the other ID and its completed status', () => {
+    for (const drop of [true, false]) {
+        for (const removedId of ['11', '12']) {
+            const {container, instance} = createDuplicateFileFixture(drop);
+            let request = null;
+            instance._runAjaxRequest = (params, callback) => {request = params; callback(true, {response: {}});};
+            const button = container.querySelector('li[data-id="' + removedId + '"] [data-vg-dismiss="file"]');
+            instance.removeFile(button);
+            const remainingId = removedId === '11' ? '12' : '11';
+            assert.equal(request.route, '/remove?id=' + removedId);
+            assert.deepEqual(instance._getUploadedIds(), [remainingId]);
+            assert.deepEqual(instance._files.map(file => file.id), [remainingId]);
+            assert.equal(container.querySelector('.stat-item.completed .stat-value').textContent, '1');
+            assert.equal(container.querySelectorAll('li.loaded').length, 1);
+            instance.dispose();
+        }
+    }
+});
+
+test('a new upload remains completed after its server ID changes and is not uploaded twice', async () => {
+    const {instance} = createDuplicateFileFixture();
+    const file = new File(['data'], 'new.jpg', {type: 'image/jpeg'});
+    instance.change({files: [file]});
+    const callbacks = {};
+    instance._params.uploads.route = '/upload';
+    let sent = null;
+    instance._uploader = {
+        isIdle: () => false, offAll: () => {},
+        onProgress: callback => {callbacks.progress = callback;},
+        onComplete: callback => {callbacks.complete = callback;},
+        onError: callback => {callbacks.error = callback;},
+        onAllComplete: callback => {callbacks.allComplete = callback;},
+        uploadFiles: async files => {sent = files;}
+    };
+    instance._setupUploadEventHandlers();
+    callbacks.complete({file, result: {response: {id: 21}}});
+    file.id = 22;
+    instance.build();
+    assert.equal(instance._getItemElement(file).classList.contains('loaded'), true);
+    await instance.uploadAll(instance._files);
+    assert.equal(sent, null);
+    assert.deepEqual(instance._getUploadedIds(), ['11', '12', 22]);
+    await new Promise(resolve => setTimeout(resolve, 1100));
+    instance.dispose();
+});
+
+test('retry targets only the failed saved file when metadata matches another file', () => {
+    const {instance} = createDuplicateFileFixture();
+    const file = instance._files[1];
+    const key = instance._getFileKey(file);
+    instance._uploadedKeys.delete(key);
+    instance._failingUploadedKeys.add(key);
+    instance._unUploadedFiles = [file];
+    instance._renderUI(instance._files);
+    instance._getItemElement(file).querySelector('.file-remove').replaceChildren(instance._setButtonElement(file, true, 'failing'));
+    instance._params.uploads.route = '/upload';
+    let retried = null;
+    instance.upload = value => {retried = value;};
+    instance.reload(instance._getButtonElement(file));
+    assert.equal(retried, file);
+    assert.equal(instance._pendingUploadedKeys.size, 1);
+    instance.dispose();
 });

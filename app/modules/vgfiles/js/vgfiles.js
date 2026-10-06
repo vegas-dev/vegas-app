@@ -1,6 +1,6 @@
 /**
  * Описание: основной класс выбора, отображения и AJAX-загрузки файлов VGFiles.
- * Возможности: управляет списками и dropzone, прогрессом, кастомными действиями, удалением, повторной загрузкой и сортировкой.
+ * Возможности: управляет списками и dropzone, прогрессом, кастомными действиями, удалением и повторной загрузкой по стабильному ключу файла, сортировкой.
  */
 import VGFilesBase from "./base";
 import FileUploader from "./loader";
@@ -539,19 +539,10 @@ class VGFiles extends VGFilesBase {
     reload(button) {
         if (!this._params.ajax || !this._params.uploads.route) return;
 
-        const dataButton = Manipulator.get(button, 'data');
-        const fileData = {
-            name: dataButton.name,
-            size: dataButton.size,
-            type: dataButton.type,
-            lastModified: dataButton['last-modified']
-        };
-
-        const fileKey = this._getFileKey(fileData);
-        if (!this._failingUploadedKeys.has(fileKey)) return;
-
-        const fileToRetry = this._unUploadedFiles.find(f => this._getFileKey(f) === fileKey);
+        const fileToRetry = this._findFileForButton(button);
         if (!fileToRetry) return;
+        const fileKey = this._getFileKey(fileToRetry);
+        if (!this._failingUploadedKeys.has(fileKey)) return;
 
         this._failingUploadedKeys.delete(fileKey);
         this._pendingUploadedKeys.add(fileKey);
@@ -695,36 +686,20 @@ class VGFiles extends VGFilesBase {
             this._triggerEvent('remove', payload);
         };
 
-        const fileToRemove = this._files.find(f => f.name === name && f.size === size);
-        if (fileToRemove) {
+        const fileToRemove = this._findFileForButton(button);
+        if (!fileToRemove) return;
+        const forgetRemovedFile = () => {
             const key = this._getFileKey(fileToRemove);
             this._uploadedKeys.delete(key);
             this._pendingUploadedKeys.delete(key);
             this._failingUploadedKeys.delete(key);
             this._forgetFileValidation(fileToRemove);
-        }
-
-        this._getItemElement().forEach(el => {
-            const btn = Selectors.find('button', el);
-            if (!btn) return;
-            const btnId = normalizeData(Manipulator.get(btn, 'data-id'));
-            const btnName = normalizeData(Manipulator.get(btn, 'data-name'));
-            const btnSize = normalizeData(Manipulator.get(btn, 'data-size'));
-
-            this._files.forEach(file => {
-                if (file.name === btnName && file.size === btnSize) {
-                    file.id = btnId;
-                }
-            });
-
-            if (fileToRemove?.name === btnName && fileToRemove?.size === btnSize) {
-                fileToRemove.id = btnId;
-            }
-        });
+        };
 
         if (this._params.ajax && this._params.removes.single.route) {
             if (!id) {
-                this._files = this._files.filter(f => !(f.name === name && f.size === size));
+                forgetRemovedFile();
+                this._files = this._files.filter(f => f !== fileToRemove);
                 this._updateStatsAfterRemove();
                 this._files.length ? this.build() : this.clear(true);
                 emitRemove();
@@ -741,7 +716,8 @@ class VGFiles extends VGFilesBase {
             };
 
             const _completeRemoveFile = (data) => {
-                this._files = this._files.filter(f => !(f.name === name && f.size === size));
+                forgetRemovedFile();
+                this._files = this._files.filter(f => f !== fileToRemove);
                 this._updateStatsAfterRemove();
 
                 if (this._files.length) {
@@ -783,7 +759,8 @@ class VGFiles extends VGFilesBase {
                 });
             }
         } else {
-            this._files = this._files.filter(f => !(f.name === name && f.size === size));
+            forgetRemovedFile();
+            this._files = this._files.filter(f => f !== fileToRemove);
             this._updateStatsAfterRemove();
             this._files.length ? this.build() : this.clear(true);
             emitRemove();
@@ -799,25 +776,27 @@ class VGFiles extends VGFilesBase {
         this._updateStat();
     }
 
-    _getItemElement(file = null) {
-        let className = `${this._getClass('info-list')}`;
-        if (this._nodes.drop) className = `${this._getClass('drop-list')}`;
+    _findFileForButton(button) {
+        const key = button.getAttribute('data-file-key');
+        if (key) return this._files.find(file => this._getFileKey(file) === key);
+        const id = button.getAttribute('data-id');
+        if (id) return this._files.find(file => String(file.id) === id);
+        const name = button.getAttribute('data-name');
+        const size = Number(button.getAttribute('data-size'));
+        return this._files.find(file => file.name === name && file.size === size);
+    }
 
-        if (!file) {
-            return Selectors.findAll(
-                `.${className} li.loaded`,
-                this._element
-            )
-        } else {
-            return Selectors.find(
-                `.${className} li[data-name="${file.name}"][data-size="${file.size}"]`,
-                this._element
-            );
-        }
+    _getItemElement(file = null) {
+        const className = this._nodes.drop ? this._getClass('drop-list') : this._getClass('info-list');
+        if (!file) return Selectors.findAll(`.${className} li.loaded`, this._element);
+        const key = this._getFileKey(file);
+        return Array.from(Selectors.findAll(`.${className} li`, this._element))
+            .find(item => item.getAttribute('data-file-key') === key) || null;
     }
 
     _getButtonElement(file) {
-        return Selectors.find(`button[data-name="${file.name}"][data-size="${file.size}"]`, this._element);
+        const item = this._getItemElement(file);
+        return item ? Selectors.find('[data-vg-dismiss="file"], [data-vg-reload="file"]', item) : null;
     }
 
     _setButtonElement(file, isAjax = false, status = '') {

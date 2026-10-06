@@ -1,6 +1,6 @@
 /**
  * Описание: базовая логика выбора, валидации и отображения файлов VGFiles.
- * Возможности: управляет файлами, валидацией, списками, миниатюрами и иконками, действиями, статистикой и скрытыми полями.
+ * Возможности: управляет файлами, валидацией, стабильной идентификацией файлов, списками, миниатюрами и иконками, действиями, статистикой и скрытыми полями.
  */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
@@ -230,7 +230,15 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_getFileKey(file) {
-		return `${file.name}-${file.size}-${file.type}`;
+		this._fileKeys ??= new WeakMap();
+		if (!this._fileKeys.has(file)) {
+			const id = file.id;
+			const key = id !== undefined && id !== null && id !== ""
+				? `id:${id}`
+				: `${file.name}-${file.size}-${file.type}`;
+			this._fileKeys.set(file, key);
+		}
+		return this._fileKeys.get(file);
 	}
 
 	_getFileCustomData(file) {
@@ -264,7 +272,7 @@ class VGFilesBase extends BaseModule {
 	}
 
 	_buildFileDataAttributes(file, baseAttrs = {}) {
-		const attrs = { ...baseAttrs };
+		const attrs = { 'data-file-key': this._getFileKey(file), ...baseAttrs };
 		const customData = this._getFileCustomData(file);
 
 		Object.entries(customData).forEach(([key, value]) => {
