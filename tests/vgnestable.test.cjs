@@ -179,3 +179,216 @@ test('locks one item or a nested group while keeping the group parent movable', 
 	assert.equal(childHandle.getAttribute('aria-disabled'), 'true');
 	instance.dispose();
 });
+
+test('hover nesting stays stable over the placeholder until a new horizontal gesture', () => {
+	const element = createTree();
+	const instance = new VGNestable(element);
+	const item = element.querySelector('[data-id="2"]');
+	const parent = element.querySelector('[data-id="1"]');
+	const childList = parent.querySelector(':scope > .vg-nestable-list');
+	item.getBoundingClientRect = () => ({left: 20, top: 80, width: 300, height: 42});
+	parent.querySelector('.vg-nestable-inner').getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 42});
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 30, 100, {preventDefault() {}});
+	instance._getPointerTarget = () => parent.querySelector('.vg-nestable-inner');
+	// The hovered row starts further left than the original grab position.
+	instance._processDragMove(30, 21, {preventDefault() {}});
+	assert.equal(instance._placeholder.parentElement, childList);
+	instance._getPointerTarget = () => instance._placeholder;
+	for (let i = 0; i < 4; i += 1) {
+		instance._processDragMove(30, 21, {preventDefault() {}});
+		assert.equal(instance._placeholder.parentElement, childList);
+	}
+	instance._processDragMove(12, 21, {preventDefault() {}});
+	assert.equal(instance._placeholder.parentElement, instance._rootList);
+	instance._processDragMove(12, 21, {preventDefault() {}});
+	assert.equal(instance._placeholder.parentElement, instance._rootList);
+	instance._finishDrag();
+	assert.deepEqual(instance.serialize().map(entry => entry.id), [1, 2]);
+	instance.dispose();
+});
+
+test('drop hints are opt-in through options and Data API', () => {
+	for (const [attributes, params, enabled] of [
+		['', {}, false],
+		['', {showhints: true}, true],
+		['data-showhints="true"', {}, true],
+		['data-showhints="false"', {showhints: true}, false],
+	]) {
+		const element = createTree(attributes);
+		const instance = new VGNestable(element, params);
+		assert.equal(element.classList.contains('vg-nestable-hints'), enabled);
+		assert.equal(instance._params.showplaceholder, true);
+		instance.dispose();
+		element.parentElement.remove();
+	}
+});
+
+test('measured placeholder and preview use the original border-box geometry', () => {
+	const element = createTree();
+	const instance = new VGNestable(element);
+	const item = element.querySelector('[data-id="1"]');
+	item.style.margin = '8px 4px';
+	item.getBoundingClientRect = () => ({left: 20, top: 40, width: 320, height: 126});
+	instance._draggedItem = item;
+	instance._startDrag();
+	assert.equal(instance._placeholder.style.boxSizing, 'border-box');
+	assert.equal(instance._placeholder.style.minHeight, '0');
+	assert.equal(instance._placeholder.style.marginTop, '8px');
+	assert.equal(instance._placeholder.style.marginRight, '4px');
+	assert.equal(instance._dragElement.style.boxSizing, 'border-box');
+	assert.equal(instance._dragElement.style.transition, 'none');
+	instance._cancelDrag();
+	instance.dispose();
+});
+
+test('horizontal nesting and outdent do not bounce on repeated pointer coordinates', () => {
+	const element = createTree();
+	const instance = new VGNestable(element);
+	const item = element.querySelector('[data-id="2"]');
+	const childList = element.querySelector('[data-id="1"] > .vg-nestable-list');
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 30, 100, {preventDefault() {}});
+	instance._startDrag();
+	instance._getPointerTarget = () => instance._placeholder;
+	for (const x of [48, 48, 49, 48]) {
+		instance._processDragMove(x, 100, {preventDefault() {}});
+		assert.ok(instance._placeholder.parentElement === childList);
+	}
+	for (const x of [30, 30, 29, 30]) {
+		instance._processDragMove(x, 100, {preventDefault() {}});
+		assert.ok(instance._placeholder.parentElement === instance._rootList);
+	}
+	instance._cancelDrag();
+	assert.deepEqual(instance.serialize().map(entry => entry.id), [1, 2]);
+	instance.dispose();
+});
+
+test('hidden placeholder keeps zero margins when the dragged item has custom spacing', () => {
+	const element = createTree();
+	const instance = new VGNestable(element, {showplaceholder: false});
+	const item = element.querySelector('[data-id="1"]');
+	item.style.margin = '8px';
+	instance._draggedItem = item;
+	instance._startDrag();
+	assert.ok(instance._placeholder.classList.contains('vg-nestable-placeholder-hidden'));
+	assert.equal(instance._placeholder.style.margin, '0px');
+	instance._cancelDrag();
+	instance.dispose();
+});
+
+test('outdents from a nested-list gutter even when only horizontal movement is allowed', () => {
+	const element = createTree();
+	const instance = new VGNestable(element, {moveaxis: 'horizontal'});
+	const item = element.querySelector('[data-id="11"]');
+	const childList = item.parentElement;
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 60, 100, {preventDefault() {}});
+	instance._getPointerTarget = () => childList;
+	instance._processDragMove(42, 100, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === instance._rootList);
+	instance._finishDrag();
+	assert.deepEqual(instance.serialize().map(entry => entry.id), [1, 11, 2]);
+	assert.equal(element.querySelector('[data-id="1"] > .vg-nestable-list'), null);
+	instance.dispose();
+});
+
+test('diagonal reordering inside one list preserves accumulated leftward movement', () => {
+	const element = createTree();
+	const childList = element.querySelector('[data-id="1"] > .vg-nestable-list');
+	childList.insertAdjacentHTML('beforeend', '<li class="vg-nestable-item" data-id="12">Сосед</li>');
+	const instance = new VGNestable(element);
+	const item = element.querySelector('[data-id="11"]');
+	const sibling = element.querySelector('[data-id="12"]');
+	sibling.querySelector('.vg-nestable-inner').getBoundingClientRect = () => ({left: 30, top: 100, width: 290, height: 42});
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 60, 80, {preventDefault() {}});
+	instance._getPointerTarget = () => sibling.querySelector('.vg-nestable-inner');
+	instance._processDragMove(50, 140, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === childList);
+	assert.ok(instance._placeholder.previousElementSibling === sibling);
+	instance._getPointerTarget = () => instance._placeholder;
+	instance._processDragMove(42, 140, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === instance._rootList);
+	instance._finishDrag();
+	assert.deepEqual(instance.serialize().map(entry => entry.id), [1, 11, 2]);
+	assert.deepEqual(instance.serialize()[0].children.map(entry => entry.id), [12]);
+	instance.dispose();
+});
+
+test('outdents multiple parents when the pointer exits the tree to the left at the placeholder height', () => {
+	const element = createTree();
+	const child = element.querySelector('[data-id="11"]');
+	child.innerHTML = '<ol class="vg-nestable-list"><li class="vg-nestable-item" data-id="111">Глубже</li></ol>';
+	const instance = new VGNestable(element);
+	const item = element.querySelector('[data-id="111"]');
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 36, 100, {preventDefault() {}});
+	instance._startDrag();
+	instance._placeholder.getBoundingClientRect = () => ({left: 20, top: 80, bottom: 122, height: 42});
+	instance._getPointerTarget = () => null;
+	instance._processDragMove(0, 100, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === instance._rootList);
+	instance._processDragMove(0, 100, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === instance._rootList);
+	instance._finishDrag();
+	assert.deepEqual(instance.serialize().map(entry => entry.id), [1, 111, 2]);
+	instance.dispose();
+});
+
+test('vertical-only dragging does not outdent from a horizontal gesture in a gutter', () => {
+	const element = createTree();
+	const instance = new VGNestable(element, {moveaxis: 'vertical'});
+	const item = element.querySelector('[data-id="11"]');
+	const childList = item.parentElement;
+	const parent = element.querySelector('[data-id="1"]');
+	parent.querySelector('.vg-nestable-inner').getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 42});
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 60, 21, {preventDefault() {}});
+	instance._getPointerTarget = () => childList;
+	instance._processDragMove(42, 21, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === childList);
+	instance._cancelDrag();
+	instance.dispose();
+});
+
+test('leaving the tree away from the placeholder height keeps the existing parent', () => {
+	const element = createTree();
+	const instance = new VGNestable(element);
+	const item = element.querySelector('[data-id="11"]');
+	const childList = item.parentElement;
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 60, 100, {preventDefault() {}});
+	instance._startDrag();
+	instance._placeholder.getBoundingClientRect = () => ({left: 30, top: 80, bottom: 122, height: 42});
+	instance._getPointerTarget = () => null;
+	instance._processDragMove(0, 200, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === childList);
+	instance._cancelDrag();
+	instance.dispose();
+});
+
+test('leftward movement over another connected tree transfers instead of outdenting the source', () => {
+	const source = createTree();
+	const target = createTree();
+	target.querySelector('.vg-nestable-list').replaceChildren();
+	const params = {connect: true, group: 'outdent-transfer'};
+	const sourceInstance = new VGNestable(source, params);
+	const targetInstance = new VGNestable(target, params);
+	const item = source.querySelector('[data-id="11"]');
+	sourceInstance._startInteraction(item.querySelector('.vg-nestable-handle'), 60, 100, {preventDefault() {}});
+	sourceInstance._getPointerTarget = () => targetInstance._rootList;
+	sourceInstance._processDragMove(42, 100, {preventDefault() {}});
+	assert.ok(sourceInstance._placeholder.parentElement === targetInstance._rootList);
+	sourceInstance._finishDrag();
+	assert.deepEqual(targetInstance.serialize(), [{id: 11, enabled: true}]);
+	assert.deepEqual(sourceInstance.serialize().map(entry => entry.id), [1, 2]);
+	sourceInstance.dispose();
+	targetInstance.dispose();
+});
+
+test('outdenting from a gutter respects the tree accept callback', () => {
+	const element = createTree();
+	const instance = new VGNestable(element, {accept: () => false});
+	const item = element.querySelector('[data-id="11"]');
+	const childList = item.parentElement;
+	instance._startInteraction(item.querySelector('.vg-nestable-handle'), 60, 100, {preventDefault() {}});
+	instance._getPointerTarget = () => childList;
+	instance._processDragMove(42, 100, {preventDefault() {}});
+	assert.ok(instance._placeholder.parentElement === childList);
+	instance._cancelDrag();
+	instance.dispose();
+});

@@ -1,20 +1,12 @@
+/**
+ * Описание: собирает плейлист карточек медиафайлов для окна предпросмотра.
+ * Возможности: определяет тип по общим метаданным, включая локальные blob URL и серверные маршруты без расширения.
+ */
+import FilePreviewHelper from "../../../../utils/js/components/file-preview";
+
 const getPathFromElement = (element) => {
 	const value = element?.getAttribute('data-vg-filepreview') || '';
 	return String(value).trim();
-};
-
-const parseExt = (path) => {
-	if (!path) {
-		return '';
-	}
-
-	const clean = String(path).split('#')[0].split('?')[0];
-	const name = clean.split('/').pop() || '';
-	if (!name.includes('.')) {
-		return '';
-	}
-
-	return `.${String(name.split('.').pop() || '').toLowerCase()}`;
 };
 
 const toAbsoluteUrl = (path) => {
@@ -47,7 +39,7 @@ const buildMediaPlaylist = (currentElement, acceptExt = () => true) => {
 		.map((element) => {
 			const path = getPathFromElement(element);
 			const src = toAbsoluteUrl(path);
-			const ext = parseExt(path);
+			const ext = new FilePreviewHelper(element).getFileMeta(path).ext;
 			return {
 				element,
 				path,

@@ -1,6 +1,6 @@
 /**
  * Описание: основной контроллер предпросмотра файлов и синхронизации полей карточки.
- * Возможности: валидирует путь, выбирает рендерер, управляет медиа, скачиванием, состояниями и публичным API.
+ * Возможности: валидирует путь, выбирает рендерер, управляет медиа, скачиванием, состояниями и освобождением ресурсов.
  */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
@@ -283,7 +283,12 @@ class VGFilePreview extends BaseModule {
 		}
 
 		if (this._inlineAudio.paused) {
-			this._inlineAudio.play().then(() => {
+			const audio = this._inlineAudio;
+			audio.play().then(() => {
+				if (!this._element || this._inlineAudio !== audio) {
+					audio.pause();
+					return;
+				}
 				VGFilePreview._activeAudioOwner = this;
 				this._syncInlineAudioIcon(true);
 			}).catch(() => {
@@ -374,6 +379,9 @@ class VGFilePreview extends BaseModule {
 
 		control.classList.add('vg-filepreview-download-trigger');
 		control.setAttribute('data-vg-filepreview-download-control', 'true');
+		if (downloadLabel && !control.hasAttribute('aria-label')) {
+			control.setAttribute('aria-label', downloadLabel);
+		}
 
 		if (fieldTag === 'A' && control === downloadField) {
 			control.setAttribute('href', this._fileUrl?.href || this._filePath || '#');
@@ -466,13 +474,13 @@ class VGFilePreview extends BaseModule {
 
 		this._audioMetaPromise = this._createAudioFileFromSource(src)
 			.then((file) => {
-				if (!file) {
+				if (!file || !this._element) {
 					return null;
 				}
 				return extractAudioMetadata(file);
 			})
 			.then((meta) => {
-				if (!meta) {
+				if (!meta || !this._element) {
 					return false;
 				}
 
@@ -543,13 +551,13 @@ class VGFilePreview extends BaseModule {
 
 		this._videoMetaPromise = this._createMediaFileFromSource(src, this._fileMeta?.originalName || this._fileMeta?.name || 'video.mp4', 'video/mp4')
 			.then((file) => {
-				if (!file) {
+				if (!file || !this._element) {
 					return null;
 				}
 				return extractVideoMetadata(file);
 			})
 			.then((meta) => {
-				if (!meta || !(meta.posterBlob instanceof Blob) || !this._editableFields?.icon) {
+				if (!meta || !this._element || !(meta.posterBlob instanceof Blob) || !this._editableFields?.icon) {
 					return false;
 				}
 
@@ -941,12 +949,13 @@ class VGFilePreview extends BaseModule {
 	}
 
 	_getDataDisplayName() {
-		const dataName = String(this._element?.getAttribute('data-name') || '').trim();
-		if (dataName) {
-			return dataName;
+		const displayName = String(this._element?.getAttribute('data-vg-filepreview-display-name') || '').trim();
+		if (displayName) {
+			return displayName;
 		}
 
-		return String(this._element?.getAttribute('data-vg-filepreview-display-name') || '').trim();
+		const dataName = String(this._element?.getAttribute('data-name') || '').trim();
+		return dataName;
 	}
 
 	_hasDataDrivenDisplayName() {
@@ -970,6 +979,19 @@ class VGFilePreview extends BaseModule {
 		}
 
 		return this._getFileName();
+	}
+
+	dispose() {
+		if (!this._element) return;
+		this._stopInlineAudio();
+		if (this._inlineAudio) {
+			this._inlineAudio.removeAttribute('src');
+			this._inlineAudio.load();
+		}
+		[this._audioCoverObjectUrl, this._videoCoverObjectUrl].forEach((url) => {
+			if (url) URL.revokeObjectURL(url);
+		});
+		super.dispose();
 	}
 }
 

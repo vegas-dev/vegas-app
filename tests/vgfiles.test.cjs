@@ -1,6 +1,6 @@
 /**
  * Описание: регрессионные проверки поведения VGFiles на изолированных файлах.
- * Возможности: проверяет выбор, статусы, идентификацию, удаление, загрузку и сортировку.
+ * Возможности: проверяет выбор, статусы, идентификацию, загрузку, сортировку и жизненный цикл интеграции с предпросмотром.
  */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -48,6 +48,8 @@ Module._extensions['.js'] = (module, filename) => {
 };
 
 const VGFiles = require('../app/modules/vgfiles/js/vgfiles').default;
+const VGFilePreview = require('../app/modules/vgfilepreview/js/vgfilepreview').default;
+const { buildMediaPlaylist } = require('../app/modules/vgfilepreview/js/renderers/playlist');
 const VGFilesDroppable = require('../app/modules/vgfiles/js/droppable').default;
 const sortableModule = require('../app/modules/vgfiles/js/sortable');
 const VGFilesSortable = sortableModule.default;
@@ -608,4 +610,165 @@ test('retry targets only the failed saved file when metadata matches another fil
     assert.equal(retried, file);
     assert.equal(instance._pendingUploadedKeys.size, 1);
     instance.dispose();
+});
+
+test('VGFiles places a single download action next to removal instead of file information', () => {
+	const { container, instance } = createPreviewFixture([
+		{ name: 'report.pdf', type: 'application/pdf', src: '/files/report.pdf' }
+	]);
+	const row = container.querySelector('.file');
+	assert.equal(row.getAttribute('data-fields'), 'name,size,download');
+	assert.equal(row.querySelector('.name').getAttribute('data-vg-filepreview-pdf-bind'), 'true');
+	assert.equal(row.querySelector('.file-info .download'), null);
+	assert.equal(row.querySelectorAll('[data-vg-filepreview-download-control]').length, 1);
+	assert.ok(row.querySelector('.file-custom .download button'));
+	assert.ok(row.querySelector('.file-custom .file-remove button'));
+	assert.equal(row.querySelector('.download button').getAttribute('aria-label'), 'Download');
+	instance.dispose();
+});
+
+test('download joins custom actions and reuses a template download slot without duplication', () => {
+	const container = document.createElement('div');
+	container.className = 'vg-files';
+	container.innerHTML = `
+		<div class="vg-files-info"><ul class="vg-files-info--list">
+			<li class="file" data-file='{"id":1,"name":"report.pdf","size":100,"type":"application/pdf","src":"/files/report.pdf"}'>
+				<div class="file-info"></div>
+				<div class="file-custom">
+					<div class="file-actions"><button type="button" class="edit">Edit</button><span class="download"></span></div>
+					<div class="file-remove"></div>
+				</div>
+			</li>
+		</ul></div><input type="file" multiple>
+	`;
+	document.body.append(container);
+	const instance = new VGFiles(container, { ajax: true });
+	const row = container.querySelector('.file');
+	assert.ok(row.querySelector('.file-custom .file-actions .edit'));
+	assert.ok(row.querySelector('.file-custom .file-actions [data-vg-filepreview-download-control]'));
+	instance._renderUI(instance._files);
+	assert.equal(row.querySelectorAll('[data-vg-filepreview-download-control]').length, 1);
+	assert.equal(row.querySelectorAll('.download').length, 1);
+	assert.equal(row.querySelector('.file-info .download'), null);
+	instance.dispose();
+});
+
+test('download creates an action group even when removal is disabled', () => {
+	const { container, instance } = createPreviewFixture();
+	instance._params.detach = false;
+	instance._addExternalFiles([{ id: 1, name: 'report.pdf', size: 100, type: 'application/pdf', src: '/files/report.pdf' }]);
+	assert.equal(container.querySelector('.file-remove'), null);
+	assert.ok(container.querySelector('.file-custom .download button'));
+	instance.dispose();
+});
+
+test('download in the custom action group saves the source with its original filename', async t => {
+	let requested = null;
+	t.mock.method(global, 'fetch', async src => {
+		requested = src;
+		return { ok: false };
+	});
+	const { container, instance } = createPreviewFixture([
+		{ name: 'report.pdf', type: 'application/pdf', src: '/download/123' }
+	]);
+	const row = container.querySelector('.file');
+	const preview = VGFilePreview.getInstance(row);
+	const saved = await new Promise(resolve => {
+		t.mock.method(preview, '_downloadByLink', (href, name) => resolve({ href, name }));
+		row.querySelector('.file-custom [data-vg-filepreview-download-control]').click();
+	});
+	assert.equal(requested, 'http://localhost/download/123');
+	assert.deepEqual(saved, { href: requested, name: 'report.pdf' });
+	instance.dispose();
+});
+
+test('audio metadata title and cover updates survive preview initialization', t => {
+	t.mock.method(global, 'fetch', async () => ({ ok: false }));
+	const { container, instance } = createPreviewFixture();
+	instance._addExternalFiles([{
+		id: 1, name: 'track.mp3', size: 100, type: 'audio/mpeg', src: '/files/track.mp3',
+		customData: { audioTitle: 'Song title' }
+	}]);
+	const previous = container.querySelector('.file');
+	assert.equal(previous.querySelector('.name').textContent, 'Song title');
+	instance._files[0].customData.audioCover = '/covers/track.jpg';
+	instance._renderUI(instance._files);
+	const current = container.querySelector('.file');
+	assert.notEqual(current, previous);
+	assert.equal(VGFilePreview.getInstance(previous), null);
+	assert.equal(current.querySelector('.name').textContent, 'Song title');
+	assert.equal(current.querySelector('.file-image img').getAttribute('src'), '/covers/track.jpg');
+	instance.dispose();
+});
+
+test('changed image covers refresh the card while unchanged cards retain their preview', () => {
+	const { container, instance } = createPreviewFixture([
+		{ name: 'report.pdf', type: 'application/pdf', src: '/files/report.pdf', image: '/covers/old.jpg' }
+	]);
+	const previous = container.querySelector('.file');
+	const preview = VGFilePreview.getInstance(previous);
+	instance._renderUI(instance._files);
+	assert.equal(container.querySelector('.file'), previous);
+	assert.equal(VGFilePreview.getInstance(previous), preview);
+	instance._files[0].image = '/covers/new.jpg';
+	instance._renderUI(instance._files);
+	assert.equal(VGFilePreview.getInstance(previous), null);
+	assert.equal(container.querySelector('.file-image img').getAttribute('src'), '/covers/new.jpg');
+	instance.dispose();
+});
+
+test('removing, clearing and disposing VGFiles releases registered previews', () => {
+	const { container, instance } = createPreviewFixture([
+		{ name: 'first.png', type: 'image/png', src: '/files/first.png' },
+		{ name: 'second.png', type: 'image/png', src: '/files/second.png' }
+	]);
+	const [first, second] = container.querySelectorAll('.file');
+	instance._params.ajax = true;
+	instance._params.removes.single = { route: '/remove', alert: false, toast: false };
+	instance._runAjaxRequest = (params, callback) => callback('success', { response: {} });
+	instance.removeFile(first.querySelector('[data-vg-dismiss="file"]'));
+	assert.equal(VGFilePreview.getInstance(first), null);
+	assert.ok(VGFilePreview.getInstance(second));
+	instance.clear();
+	assert.equal(VGFilePreview.getInstance(second), null);
+	instance._addExternalFiles([{ id: 3, name: 'third.png', size: 100, type: 'image/png', src: '/files/third.png' }]);
+	const third = container.querySelector('.file');
+	instance.dispose();
+	assert.equal(VGFilePreview.getInstance(third), null);
+});
+
+test('local videos with real blob URLs enter the playlist and switch in the modal', t => {
+	t.mock.method(global, 'fetch', async () => ({ ok: false }));
+	t.mock.method(dom.window.HTMLMediaElement.prototype, 'load', () => {});
+	t.mock.method(dom.window.HTMLMediaElement.prototype, 'pause', () => {});
+	t.mock.method(dom.window.HTMLMediaElement.prototype, 'play', async () => {});
+	let sequence = 0;
+	t.mock.method(URL, 'createObjectURL', () => `blob:http://localhost/00000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`);
+	const { container, instance } = createPreviewFixture();
+	instance._files = ['first.mp4', 'second.mp4'].map(name => new File(['video'], name, { type: 'video/mp4' }));
+	instance._renderUI(instance._files);
+	const rows = container.querySelectorAll('.file');
+	const playlist = buildMediaPlaylist(rows[0], ext => ext === '.mp4');
+	assert.equal(playlist.tracks.length, 2);
+	assert.equal(playlist.currentIndex, 0);
+	rows[0].querySelector('.name').click();
+	const modal = document.querySelector('.vg-filepreview-video-modal');
+	modal.querySelectorAll('.vg-filepreview-video-modal__nav-btn')[1].click();
+	assert.equal(modal.querySelector('video').src, rows[1].getAttribute('data-vg-filepreview'));
+	assert.equal(modal.querySelector('.vg-modal-title').textContent, 'second.mp4');
+	VGFilePreview.getInstance(rows[0])._renderers.find(renderer => renderer.name === 'video')._modal.close();
+	instance.dispose();
+});
+
+test('server routes without an extension use the supplied filename for preview', () => {
+	const { container, instance } = createPreviewFixture([
+		{ name: 'report.pdf', type: 'application/pdf', src: '/download/123' }
+	]);
+	const row = container.querySelector('.file');
+	assert.equal(row.getAttribute('data-vg-filepreview-valid'), 'true');
+	assert.equal(row.getAttribute('data-vg-filepreview-renderer'), 'pdf');
+	assert.equal(VGFilePreview.getInstance(row).fileMeta.ext, '.pdf');
+	assert.equal(row.querySelector('.name').getAttribute('data-vg-filepreview-pdf-bind'), 'true');
+	assert.ok(row.querySelector('.file-custom [data-vg-filepreview-download-control]'));
+	instance.dispose();
 });

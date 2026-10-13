@@ -393,30 +393,35 @@
 						margin-left: auto;
 					}
 
-					.download {
-						margin-left: 8px;
+				}
 
-						.vg-filepreview-download-trigger {
-							padding: 0;
-							background: transparent;
-							color: var(--vg-body-color);
-							border-radius: 0;
-							font-size: var(--vg-files-info-size-font-size);
-							font-weight: 500;
-							gap: 4px;
+				.file-custom {
+					display: flex;
+					align-items: center;
+					gap: var(--vg-files-info-gap);
+					margin-left: auto;
 
-							&:hover {
-								color: var(--vg-body-color);
-							}
+					.file-actions {
+						display: flex;
+						align-items: center;
+						gap: var(--vg-files-info-gap);
+					}
 
-							&__icon svg {
-								width: 14px;
-								height: 14px;
-							}
+					.vg-filepreview-download-trigger {
+						width: var(--vg-files-remove-width);
+						height: var(--vg-files-remove-height);
+						padding: 0;
+						background: transparent;
+						color: var(--vg-button-color);
+						justify-content: center;
 
-							&__text {
-								display: none;
-							}
+						&__icon svg {
+							width: var(--vg-files-info-remove-icon-size);
+							height: var(--vg-files-info-remove-icon-size);
+						}
+
+						&__text {
+							display: none;
 						}
 					}
 				}

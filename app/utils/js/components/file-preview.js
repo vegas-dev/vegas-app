@@ -1,3 +1,7 @@
+/**
+ * Описание: читает атрибуты и метаданные карточки предпросмотра файлов.
+ * Возможности: проверяет URL, учитывает исходное имя для blob и маршрутов скачивания, синхронизирует поля и размер.
+ */
 const DEFAULT_OPTIONS = {
 	pathAttribute: 'data-vg-filepreview',
 	fieldsAttribute: 'data-fields',
@@ -60,7 +64,8 @@ class FilePreviewHelper {
 
 			const pathname = parsed.pathname || '';
 			const fileName = pathname.split('/').filter(Boolean).pop() || '';
-			if (!fileName || !fileName.includes('.')) {
+			const originalName = this._readOriginalName(parsed.searchParams);
+			if (!fileName || (!fileName.includes('.') && !originalName.includes('.'))) {
 				return { isValid: false, fileUrl: null };
 			}
 
@@ -164,10 +169,8 @@ class FilePreviewHelper {
 			const originalName = this._readOriginalName(params);
 			let fileName = decodeURIComponent(pathname.split('/').pop() || '');
 
-			// blob/data urls often do not contain real filename; prefer explicit original name
-			if (!fileName || !fileName.includes('.')) {
-				fileName = originalName || fileName;
-			}
+			// Исходное имя задаёт тип файла даже для blob/data URL и маршрутов скачивания.
+			fileName = originalName || fileName;
 
 			const ext = fileName.includes('.') ? `.${fileName.split('.').pop() || ''}` : '';
 			const sizeBytes = this._readSize(params);
@@ -185,9 +188,7 @@ class FilePreviewHelper {
 			const cleanPath = normalizedPath.split('#')[0].split('?')[0];
 			let fileName = decodeURIComponent(cleanPath.split('/').pop() || '');
 			const originalName = this._readOriginalName(null);
-			if (!fileName || !fileName.includes('.')) {
-				fileName = originalName || fileName;
-			}
+			fileName = originalName || fileName;
 			const ext = fileName.includes('.') ? `.${fileName.split('.').pop() || ''}` : '';
 			const sizeBytes = this._readSize(null);
 
@@ -212,7 +213,7 @@ class FilePreviewHelper {
 
 		const keys = ['original_name', 'originalName', 'filename', 'name'];
 		for (const key of keys) {
-			const value = searchParams.get(key);
+			const value = searchParams?.get(key);
 			if (value) {
 				return String(value).trim();
 			}

@@ -1,6 +1,6 @@
 /**
  * Описание: доступная вложенная сортировка списков в стиле Nestable без зависимости от jQuery.
- * Возможности: drag-and-drop мышью и touch, клавиатурное перемещение, связанные списки, collapse API, сериализация и AJAX-сохранение.
+ * Возможности: стабильное перетаскивание мышью и touch, опциональная подсветка целей, клавиатура, связанные списки, collapse API и AJAX-сохранение.
  */
 import BaseModule from "../../base-module";
 import VGCollapse from "../../vgcollapse/js/vgcollapse";
@@ -36,6 +36,7 @@ const CLASS_DROP_BEFORE = "is-drop-before";
 const CLASS_DROP_ATTACHABLE = "is-drop-attachable";
 const CLASS_DROP_INSIDE = "is-drop-inside";
 const CLASS_DROP_AFTER = "is-drop-after";
+const CLASS_HINTS = "vg-nestable-hints";
 const CLASS_LIVE_REGION = "vg-nestable-live";
 
 const EVENT_KEY_START = `${NAME_KEY}.start`;
@@ -76,6 +77,7 @@ class VGNestable extends BaseModule {
 			hoverthreshold: 0.25, // Half-height of the central child-drop zone (0.05..0.45).
 			neighborchangethreshold: 0, // Percentage (0..49) of entering adjacent item before position changes.
 			showplaceholder: true, // Show placeholder during drag.
+			showhints: false, // Opt in to the default drop-target highlights and insertion lines.
 			group: "",
 			connect: false,
 			accept: null,
@@ -125,6 +127,7 @@ class VGNestable extends BaseModule {
 		this._activeDropList = null;
 		this._activeDropItem = null;
 		this._dragBaseDepth = 1;
+		this._indentAnchor = null;
 
 		this._mouse = {
 			startX: 0,
@@ -296,6 +299,7 @@ class VGNestable extends BaseModule {
 
 	refresh() {
 		const treeDisabled = this._isTreeDisabled();
+		this._element.classList.toggle(CLASS_HINTS, normalizeData(this._params.showhints) === true);
 		this._element.classList.toggle(CLASS_DISABLED, treeDisabled);
 		this._element.setAttribute("aria-disabled", treeDisabled ? "true" : "false");
 
@@ -1157,6 +1161,9 @@ class VGNestable extends BaseModule {
 		this._moveDragElement(this._mouse.x, this._mouse.y);
 
 		const pointerTarget = this._getPointerTarget(this._mouse.x, this._mouse.y);
+		if (this._tryOutdentFromPointer(this._mouse.x, this._mouse.y, pointerTarget)) {
+			return;
+		}
 		if (!pointerTarget) {
 			this._setDropListState(null);
 			this._setDropItemState(null);
@@ -1407,15 +1414,16 @@ class VGNestable extends BaseModule {
 		this._dragBaseDepth = this._getListDepth(this._draggedItem.parentElement);
 		this._currentTargetInstance = this;
 		this._lastDropInstance = this;
+		this._indentAnchor = {x: this._mouse.startX, depth: this._dragBaseDepth};
 
 		this._placeholder = this._createPlaceholder(this._draggedItem);
 		if (!this._params.showplaceholder) {
 			this._placeholder.classList.add(CLASS_PLACEHOLDER_HIDDEN);
+			this._placeholder.style.margin = "0";
 		}
 
-		this._draggedItem.parentElement.insertBefore(this._placeholder, this._draggedItem.nextSibling);
-
 		this._dragElement = this._createDragElement(this._draggedItem);
+		this._draggedItem.parentElement.insertBefore(this._placeholder, this._draggedItem.nextSibling);
 		this._dragLayer = document.createElement("div");
 		this._dragLayer.classList.add(CLASS_DRAG_LAYER);
 		// Keep scoped styles working for the drag preview (e.g. ".vg-nestable .vg-nestable-item ...").
@@ -1458,6 +1466,8 @@ class VGNestable extends BaseModule {
 		dragEl.style.left = `${rect.left}px`;
 		dragEl.style.top = `${rect.top}px`;
 		dragEl.style.width = `${rect.width}px`;
+		dragEl.style.boxSizing = "border-box";
+		dragEl.style.transition = "none";
 		dragEl.style.zIndex = "99999";
 		dragEl.style.pointerEvents = "none";
 		dragEl.style.margin = "0";
@@ -1571,6 +1581,35 @@ class VGNestable extends BaseModule {
 		return (inner || item).getBoundingClientRect();
 	}
 
+	_tryOutdentFromPointer(pointerX, pointerY, pointerTarget) {
+		const currentList = this._placeholder?.parentElement;
+		const targetInstance = this._findOwnerInstanceByElement(currentList);
+		if (!targetInstance || this._getMoveAxis(targetInstance._params) === "vertical") {
+			return false;
+		}
+
+		const indentValue = parseFloat(targetInstance._params.indent);
+		const indent = Number.isFinite(indentValue) ? Math.max(1, indentValue) : 18;
+		if (!this._indentAnchor || this._indentAnchor.x - pointerX < indent || targetInstance._getListDepth(currentList) <= 1) {
+			return false;
+		}
+
+		if (pointerTarget) {
+			if (this._findOwnerInstanceByElement(pointerTarget) !== targetInstance) {
+				return false;
+			}
+		} else {
+			// A leftward gesture may leave the tree's hit area while remaining beside the row.
+			const rect = this._placeholder.getBoundingClientRect();
+			if (pointerX > rect.left || pointerY < rect.top || pointerY > rect.bottom) {
+				return false;
+			}
+		}
+
+		this._tryIndentFromPlaceholder(pointerX, targetInstance);
+		return this._placeholder.parentElement !== currentList;
+	}
+
 	_tryIndentFromPlaceholder(pointerX, targetInstance = this) {
 		if (!this._placeholder || this._getMoveAxis(targetInstance._params) === "vertical") {
 			return false;
@@ -1587,10 +1626,12 @@ class VGNestable extends BaseModule {
 
 		const indentValue = parseFloat(targetInstance._params.indent);
 		const indent = Number.isFinite(indentValue) ? Math.max(1, indentValue) : 18;
-		const horizontalDistance = Math.max(0, pointerX - this._mouse.startX);
-		const requestedDepth = this._dragBaseDepth + Math.floor(horizontalDistance / indent);
 		let currentList = this._placeholder.parentElement;
 		let currentDepth = targetInstance._getListDepth(currentList);
+		// Rebase when changing lists; reordering siblings must preserve the horizontal gesture.
+		const anchor = this._indentAnchor || {x: pointerX, depth: currentDepth};
+		const horizontalDistance = pointerX - anchor.x;
+		const requestedDepth = Math.max(1, anchor.depth + Math.trunc(horizontalDistance / indent));
 		let parentCandidate = null;
 
 		// Moving left promotes the placeholder one level at a time.
@@ -1599,6 +1640,11 @@ class VGNestable extends BaseModule {
 			const parentList = currentParent?.parentElement;
 			if (!currentParent || !parentList) {
 				break;
+			}
+			if (targetInstance._isListDisabled(parentList) || targetInstance._isDepthExceeded(parentList, this._draggedItem)) {
+				this._setDropListState(parentList, true);
+				this._setDropItemState(currentParent, "after", true);
+				return false;
 			}
 			this._placePlaceholder(parentList, currentParent.nextSibling);
 			currentList = parentList;
@@ -1634,7 +1680,7 @@ class VGNestable extends BaseModule {
 
 		const currentParent = currentList.closest(targetInstance._params.itemselector);
 		const nextCandidate = targetInstance._getPreviousItem(this._placeholder);
-		const stepProgress = (horizontalDistance % indent) / indent;
+		const stepProgress = Math.max(0, horizontalDistance % indent) / indent;
 		if (nextCandidate && nextCandidate !== this._draggedItem && stepProgress >= 0.35) {
 			this._setDropItemState(nextCandidate, "attachable");
 			parentCandidate = nextCandidate;
@@ -1803,6 +1849,12 @@ class VGNestable extends BaseModule {
 		const placeholder = document.createElement(tag);
 		placeholder.className = CLASS_PLACEHOLDER;
 		placeholder.style.height = `${Math.max(item.getBoundingClientRect().height, 24)}px`;
+		placeholder.style.boxSizing = "border-box";
+		placeholder.style.minHeight = "0";
+		const itemStyle = getComputedStyle(item);
+		["marginTop", "marginRight", "marginBottom", "marginLeft"].forEach((property) => {
+			placeholder.style[property] = itemStyle[property];
+		});
 		placeholder.setAttribute("aria-hidden", "true");
 		return placeholder;
 	}
@@ -1824,6 +1876,10 @@ class VGNestable extends BaseModule {
 		}
 
 		parent.insertBefore(this._placeholder, beforeNode);
+		const targetInstance = this._findOwnerInstanceByElement(parent) || this;
+		if (currentParent !== parent || !this._indentAnchor) {
+			this._indentAnchor = {x: this._mouse.x, depth: targetInstance._getListDepth(parent)};
+		}
 		this._emit("placeholdermove", {
 			parent,
 			beforeNode,
@@ -1945,6 +2001,7 @@ class VGNestable extends BaseModule {
 		this._activePointerId = null;
 		this._activeTouchId = null;
 		this._dragBaseDepth = 1;
+		this._indentAnchor = null;
 	}
 
 	_ensureLiveRegion() {

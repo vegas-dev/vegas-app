@@ -1,6 +1,6 @@
 /**
  * Описание: базовая логика выбора, валидации и отображения файлов VGFiles.
- * Возможности: управляет файлами, валидацией, стабильной идентификацией файлов, списками, миниатюрами и иконками, действиями, статистикой и скрытыми полями.
+ * Возможности: управляет файлами, валидацией, списками, метаданными, предпросмотром, группой действий и освобождением ресурсов.
  */
 import BaseModule from "../../base-module";
 import {mergeDeepObject} from "../../../utils/js/functions";
@@ -640,7 +640,7 @@ class VGFilesBase extends BaseModule {
 			}
 
 			if (existingNode) {
-				VGFilePreview.stopActiveInlineAudioIfDetached([existingNode]);
+				this._disposeFilePreviews([existingNode]);
 				existingNode.remove();
 			}
 
@@ -651,7 +651,7 @@ class VGFilesBase extends BaseModule {
 
 		if (existingByKey.size) {
 			const removedNodes = Array.from(existingByKey.values());
-			VGFilePreview.stopActiveInlineAudioIfDetached(removedNodes);
+			this._disposeFilePreviews(removedNodes);
 			removedNodes.forEach((node) => node.remove());
 		}
 
@@ -675,8 +675,10 @@ class VGFilesBase extends BaseModule {
 		const name = file?.name || '';
 		const size = file?.size ?? 0;
 		const type = file?.type || '';
+		const image = String(file?.image || '').trim();
+		const audioCover = String(this._getFileCustomData(file).audioCover || '').trim();
 
-		return `${id}|${name}|${size}|${type}|${displayName}|${previewPath}`;
+		return JSON.stringify([id, name, size, type, displayName, previewPath, image, audioCover]);
 	}
 
 	_getInfoNodeKey(node) {
@@ -754,8 +756,22 @@ class VGFilesBase extends BaseModule {
 			this._buildFileDataAttributes(file, liAttrs),
 			parts
 		);
+		if (previewPath) this._placeDownloadAction(item);
 
 		return this._decorateValidationItem(item, file);
+	}
+
+	_placeDownloadAction(item) {
+		let custom = item.querySelector('.file-custom');
+		if (!custom) {
+			custom = this._tpl.div({ class: 'file-custom' });
+			item.appendChild(custom);
+		}
+		const actions = custom.querySelector('.file-actions') || custom;
+		const download = item.querySelector('.download') || this._tpl.div({ class: 'file-download download' });
+		if (!actions.contains(download)) {
+			actions.insertBefore(download, actions.querySelector(':scope > .file-remove'));
+		}
 	}
 
 	_renderTemplatePart(element, file, index = null, options = {}) {
@@ -816,8 +832,7 @@ class VGFilesBase extends BaseModule {
 			return  this._tpl.div({ class: 'file-info' }, [
 				this._tpl.span({ class: 'iteration' }, `${i + 1}.`),
 				this._tpl.span({ class: 'name' }, displayName),
-				this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`),
-				this._tpl.span({ class: 'download' }, '')
+				this._tpl.span({ class: 'size' }, `[${this._getSizes(file.size)}]`)
 			]);
 		}
 	}
@@ -938,7 +953,7 @@ class VGFilesBase extends BaseModule {
 
 			const task = extractAudioMetadata(file)
 				.then((meta) => {
-					if (!meta) {
+					if (!meta || this._audioMetaPromises?.get(fileKey) !== task) {
 						return false;
 					}
 
@@ -964,7 +979,9 @@ class VGFilesBase extends BaseModule {
 				})
 				.catch(() => false)
 				.then((result) => {
-					this._audioMetaPromises.delete(fileKey);
+					if (this._audioMetaPromises?.get(fileKey) === task) {
+						this._audioMetaPromises.delete(fileKey);
+					}
 					return result;
 				});
 
@@ -978,7 +995,7 @@ class VGFilesBase extends BaseModule {
 
 		Promise.allSettled(pending).then((results) => {
 			const hasChanges = results.some((item) => item.status === 'fulfilled' && item.value === true);
-			if (!hasChanges || !this._files.length) {
+			if (!hasChanges || !this._files?.length) {
 				return;
 			}
 
@@ -1000,6 +1017,15 @@ class VGFilesBase extends BaseModule {
 				ui: {
 					nameOnly: true
 				}
+			});
+		});
+	}
+
+	_disposeFilePreviews(nodes = []) {
+		nodes.forEach((node) => {
+			VGFilePreview.getInstance(node)?.dispose();
+			node.querySelectorAll('[data-vg-filepreview]').forEach((child) => {
+				VGFilePreview.getInstance(child)?.dispose();
 			});
 		});
 	}
@@ -1066,7 +1092,7 @@ class VGFilesBase extends BaseModule {
 			}
 		}
 		if (detachedNodes.length) {
-			VGFilePreview.stopActiveInlineAudioIfDetached(detachedNodes);
+			this._disposeFilePreviews(detachedNodes);
 		}
 
 		this._revokeUrls();

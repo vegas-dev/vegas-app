@@ -1,3 +1,7 @@
+/**
+ * Описание: регрессионные проверки самостоятельного предпросмотра файлов.
+ * Возможности: проверяет действия, плейлисты, имена, валидацию и освобождение медиаресурсов.
+ */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -47,6 +51,7 @@ Module._extensions['.js'] = (module, filename) => {
 const VGFilePreview = require('../app/modules/vgfilepreview/js/vgfilepreview').default;
 const VideoModal = require('../app/modules/vgfilepreview/js/renderers/video-modal').default;
 const VideoFilePreviewRenderer = require('../app/modules/vgfilepreview/js/renderers/video').default;
+const FilePreviewHelper = require('../app/utils/js/components/file-preview').default;
 Module._extensions['.js'] = originalJavaScriptLoader;
 
 test.beforeEach(() => {
@@ -148,4 +153,69 @@ test('collects the video playlist when opening after neighboring previews become
 
 	assert.equal(openedPayload.playlist.tracks.length, 2);
 	assert.equal(openedPayload.playlist.tracks[1].title, 'Фрагмент 2');
+});
+
+test('standalone previews retain their download control and support download routes', () => {
+	const element = document.createElement('div');
+	element.setAttribute('data-vg-filepreview', '/download/123');
+	element.setAttribute('data-original-name', 'report.pdf');
+	element.setAttribute('data-fields', 'name,download');
+	element.innerHTML = '<span class="name"></span><span class="download"></span>';
+	document.body.append(element);
+	const preview = new VGFilePreview(element, { ui: { nameOnly: true } });
+	assert.equal(preview.isValid, true);
+	assert.equal(preview.fileMeta.ext, '.pdf');
+	assert.ok(element.querySelector('[data-vg-filepreview-download-control]'));
+	preview.dispose();
+});
+
+test('URL validation still rejects unsupported protocols and paths without file metadata', () => {
+	const element = document.createElement('div');
+	element.setAttribute('data-original-name', 'report.pdf');
+	const helper = new FilePreviewHelper(element);
+	for (const path of ['javascript:alert(1)', 'file:///report.pdf', 'ftp://localhost/report.pdf', '#', '']) {
+		assert.equal(helper.validateFilePath(path).isValid, false, path);
+	}
+	element.removeAttribute('data-original-name');
+	assert.equal(helper.validateFilePath('/download/123').isValid, false);
+	assert.equal(helper.validateFilePath('/download/123?filename=report.pdf').isValid, true);
+});
+
+test('blob and download playlist metadata follows the original filename', () => {
+	const element = document.createElement('div');
+	element.setAttribute('data-original-name', 'video.mp4');
+	const helper = new FilePreviewHelper(element);
+	for (const path of ['blob:http://localhost/00000000-0000-4000-8000-000000000001', '/download/123', '/download/123.bin']) {
+		assert.equal(helper.getFileMeta(path).ext, '.mp4');
+	}
+	element.removeAttribute('data-original-name');
+	assert.doesNotThrow(() => helper.getFileMeta('http://[invalid'));
+});
+
+test('dispose releases active audio and cover URLs and cannot reactivate pending playback', async t => {
+	t.mock.method(global, 'fetch', async () => ({ ok: false }));
+	global.Audio = dom.window.Audio;
+	const revoked = [];
+	URL.revokeObjectURL = url => revoked.push(url);
+	const element = document.createElement('div');
+	element.setAttribute('data-vg-filepreview', '/files/track.mp3');
+	element.setAttribute('data-fields', 'name');
+	element.innerHTML = '<span class="name"></span>';
+	document.body.append(element);
+	const preview = new VGFilePreview(element, { ui: { nameOnly: true } });
+	let finishPlay;
+	t.mock.method(dom.window.HTMLMediaElement.prototype, 'play', () => new Promise(resolve => { finishPlay = resolve; }));
+	preview._toggleInlineAudio();
+	const audio = preview._inlineAudio;
+	VGFilePreview._activeAudioOwner = preview;
+	preview._audioCoverObjectUrl = 'blob:audio-cover';
+	preview._videoCoverObjectUrl = 'blob:video-cover';
+	preview.dispose();
+	finishPlay();
+	await Promise.resolve();
+	assert.equal(VGFilePreview.getInstance(element), null);
+	assert.equal(VGFilePreview._activeAudioOwner, null);
+	assert.equal(audio.hasAttribute('src'), false);
+	assert.deepEqual(revoked, ['blob:audio-cover', 'blob:video-cover']);
+	assert.doesNotThrow(() => preview.dispose());
 });
