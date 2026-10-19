@@ -1,6 +1,6 @@
 /**
  * Описание: модальные окна VGModal с декларативным и программным управлением.
- * Возможности: AJAX, backdrop, геометрия окна, сворачивание и синхронизация доступности.
+ * Возможности: AJAX, backdrop, геометрия окна, полноэкранный режим, сворачивание и доступность.
  */
 import BaseModule from "../../base-module";
 import ScrollBarHelper from "../../../utils/js/components/scrollbar";
@@ -12,6 +12,7 @@ import {execute, isDisabled, isRTL, mergeDeepObject, reflow} from "../../../util
 import {dismissTrigger} from "../../module-fn";
 import VGModalInteraction from "./vgmodal.interaction";
 import VGModalMinimized from "./vgmodal.minimized";
+import VGModalMaximized from "./vgmodal.maximized";
 
 /**
  * Constants
@@ -62,6 +63,7 @@ class VGModal extends BaseModule {
 			hash: false,
 			centered: false,
 			dismiss: true,
+			maximize: false,
 			minimize: {
 				enable: false,
 				title: '',
@@ -125,10 +127,12 @@ class VGModal extends BaseModule {
 		this._isBackdropOwner = false;
 		this._interaction = new VGModalInteraction(this._element, this._dialog, this._content, () => this._params);
 		this._minimized = new VGModalMinimized(this);
+		this._maximized = new VGModalMaximized(this);
 
 		this._addEventListeners();
 		this._dismissElement();
 		this._minimized.setup();
+		this._maximized.setup();
 
 		this._params.animation.delay = !this._params.animation.enable ? 0 : this._params.animation.delay;
 		this._animation(this._element, VGModal.NAME_KEY, this._params.animation);
@@ -326,6 +330,22 @@ class VGModal extends BaseModule {
 		return this._minimized.minimize(relatedTarget);
 	}
 
+	maximize(relatedTarget) {
+		return this._maximized.setMaximized(true, relatedTarget);
+	}
+
+	unmaximize(relatedTarget) {
+		return this._maximized.setMaximized(false, relatedTarget);
+	}
+
+	toggleMaximize(relatedTarget) {
+		return this._maximized.setMaximized(!this._maximized.isMaximized(), relatedTarget);
+	}
+
+	isMaximized() {
+		return this._maximized.isMaximized();
+	}
+
 	restore(relatedTarget) {
 		return this._minimized.restore(relatedTarget);
 	}
@@ -390,6 +410,7 @@ class VGModal extends BaseModule {
 	}
 
 	dispose() {
+		this._maximized.dispose();
 		this._minimized.dispose();
 		this._interaction.dispose();
 		super.dispose();
@@ -491,6 +512,7 @@ class VGModal extends BaseModule {
 	}
 
 	_toggleInteractionHandlers() {
+		if (this._maximized.isMaximized()) return;
 		this._interaction.toggleHandlers();
 	}
 
@@ -499,6 +521,7 @@ class VGModal extends BaseModule {
 	}
 
 	_syncInteractiveBounds() {
+		if (this._maximized.isMaximized()) return;
 		this._interaction.syncBounds();
 	}
 
@@ -592,6 +615,7 @@ class VGModal extends BaseModule {
 
 	_addFieldsInModal(relatedTarget) {
 		this._params = this._getParams(relatedTarget, this._params);
+		this._maximized.setup();
 
 		if (!this._params.fields.length) return;
 

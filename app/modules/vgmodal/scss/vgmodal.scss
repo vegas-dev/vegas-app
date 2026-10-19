@@ -93,7 +93,7 @@
 	}
 }
 
-.vg-btn-minimize {
+.vg-btn-minimize, .vg-btn-maximize {
 	position: absolute;
 	width: 30px;
 	height: 30px;
@@ -114,6 +114,53 @@
 		height: 2px;
 		background: currentColor;
 		display: block;
+	}
+}
+
+.vg-btn-maximize {
+	color: inherit;
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+.vg-modal-content:has(.vg-btn-maximize:not([hidden])) .vg-btn-minimize {
+	right: 95px;
+}
+
+// Приоритет над inline-геометрией drag/resize и размерами на контрольных точках.
+.vg-modal-dialog.vg-modal-fullscreen {
+	position: fixed !important;
+	left: 0 !important;
+	top: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	min-width: 0 !important;
+	min-height: 0 !important;
+	max-width: none !important;
+	max-height: none !important;
+	margin: 0 !important;
+	transform: none !important;
+	transition: none !important;
+	overflow: hidden !important;
+
+	.vg-modal-content {
+		height: 100% !important;
+		min-height: 0;
+		max-height: 100% !important;
+		overflow: hidden !important;
+		box-sizing: border-box;
+	}
+
+	.vg-modal-header, .vg-modal-footer {
+		flex-shrink: 0;
+	}
+
+	.vg-modal-body {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-y: auto;
 	}
 }
 

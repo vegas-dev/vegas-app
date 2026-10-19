@@ -149,3 +149,116 @@ test('closing an interactive modal stores its geometry under the configured key'
 
 	instance.dispose();
 });
+
+test('maximize is opt-in and can be enabled through the Data API trigger', async () => {
+	const {element, instance} = createModal();
+	assert.equal(element.querySelector('.vg-btn-maximize'), null);
+	const trigger = document.createElement('button');
+	trigger.setAttribute('data-maximize', 'true');
+	instance.show(trigger);
+	await waitForTimers();
+	assert.ok(element.querySelector('.vg-btn-maximize'));
+	instance.dispose();
+});
+
+test('maximize button toggles fullscreen, icon and accessibility without changing inline geometry', async () => {
+	const {element, instance} = createModal({maximize: true});
+	const dialog = element.querySelector('.vg-modal-dialog');
+	const button = element.querySelector('.vg-btn-maximize');
+	const close = element.querySelector('.vg-btn-close');
+	assert.equal(button.nextElementSibling, close);
+	dialog.style.cssText = 'width: 640px; height: 360px; left: 120px; top: 80px; position: fixed; transform: none;';
+	const geometry = dialog.style.cssText;
+	instance.show();
+	await waitForTimers();
+	const expandIcon = button.innerHTML;
+	button.click();
+	assert.equal(instance.isMaximized(), true);
+	assert.equal(dialog.classList.contains('vg-modal-fullscreen'), true);
+	assert.equal(button.getAttribute('aria-pressed'), 'true');
+	assert.equal(button.getAttribute('aria-label'), 'Уменьшить окно');
+	assert.notEqual(button.innerHTML, expandIcon);
+	assert.equal(dialog.style.cssText, geometry);
+	button.click();
+	assert.equal(instance.isMaximized(), false);
+	assert.equal(button.getAttribute('aria-pressed'), 'false');
+	assert.equal(button.innerHTML, expandIcon);
+	assert.equal(dialog.style.cssText, geometry);
+	instance.dispose();
+});
+
+test('fullscreen suspends interactions and saves normal geometry on close', async () => {
+	const {element, instance} = createModal({
+		maximize: {enable: true}, drag: true, resize: true,
+		state: {key: 'maximize.geometry'},
+	});
+	const dialog = element.querySelector('.vg-modal-dialog');
+	instance.show();
+	await waitForTimers();
+	dialog.style.cssText = 'position: fixed; transform: none; left: 120px; top: 80px; width: 640px; height: 360px;';
+	dialog.getBoundingClientRect = () => ({left: 120, top: 80, width: 640, height: 360});
+	instance.maximize();
+	assert.equal(instance._interaction._dragHandler._isEnabled, false);
+	assert.equal(instance._interaction._resizeHandler._isEnabled, false);
+	instance._syncInteractiveBounds();
+	assert.equal(dialog.style.width, '640px');
+	instance.hide();
+	await waitForTimers();
+	const state = JSON.parse(window.localStorage.getItem('maximize.geometry'));
+	assert.equal(state.dialog.width, '640px');
+	assert.equal(state.dialog.left, '120px');
+	instance.show();
+	await waitForTimers();
+	assert.equal(instance.isMaximized(), true);
+	instance.unmaximize();
+	assert.equal(instance._interaction._dragHandler._isEnabled, true);
+	assert.equal(instance._interaction._resizeHandler._isEnabled, true);
+	assert.equal(dialog.style.width, '640px');
+	assert.equal(dialog.style.left, '120px');
+	instance.dispose();
+});
+
+test('maximize lifecycle is cancellable and dispose removes the generated control', async () => {
+	const {element, instance} = createModal({maximize: true});
+	instance.show();
+	await waitForTimers();
+	const cancel = event => event.preventDefault();
+	element.addEventListener('vg.modal.maximize', cancel);
+	instance.maximize();
+	assert.equal(instance.isMaximized(), false);
+	element.removeEventListener('vg.modal.maximize', cancel);
+	let maximized = 0;
+	element.addEventListener('vg.modal.maximized', () => maximized++);
+	instance.maximize();
+	assert.equal(maximized, 1);
+	instance.dispose();
+	assert.equal(element.querySelector('.vg-btn-maximize'), null);
+	assert.equal(element.querySelector('.vg-modal-fullscreen'), null);
+});
+
+test('minimize and restore retain fullscreen and its shrink icon', async () => {
+	const {element, instance} = createModal({maximize: true, minimize: true});
+	instance.show();
+	await waitForTimers();
+	instance.maximize();
+	instance.minimize();
+	instance.restore();
+	assert.equal(instance.isMaximized(), true);
+	assert.equal(element.querySelector('.vg-btn-maximize').getAttribute('aria-pressed'), 'true');
+	instance.unmaximize();
+	assert.equal(instance.isMaximized(), false);
+	instance.dispose();
+});
+
+test('build supports maximize and an initially fullscreen dialog shows the shrink icon', async () => {
+	const built = VGModal.build('built-maximized', {maximize: true, title: 'Окно'});
+	assert.ok(built._element.querySelector('.vg-btn-maximize'));
+	built.dispose();
+	const {element, instance} = createModal();
+	instance.dispose();
+	element.querySelector('.vg-modal-dialog').classList.add('vg-modal-fullscreen');
+	const fullscreen = new VGModal(element, {maximize: true, backdrop: false});
+	assert.equal(element.querySelector('.vg-btn-maximize').getAttribute('aria-pressed'), 'true');
+	fullscreen.dispose();
+	assert.ok(element.querySelector('.vg-modal-fullscreen'));
+});
