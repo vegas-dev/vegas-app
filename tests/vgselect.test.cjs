@@ -1,3 +1,7 @@
+/**
+ * Описание: регрессионные проверки VGSelect в DOM.
+ * Возможности: поиск, сохранение выбора, AJAX-пагинация, теги, синхронизация и позиционирование.
+ */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -206,4 +210,109 @@ test('automatic placement only reduces the configured height to available space'
 	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), '356px');
 	instance.hide();
 	assert.equal(container.style.getPropertyValue('--vg-select-list-max-height'), '500px');
+});
+
+const createMultipleRemote = (options = '<option value="a" selected>Alpha</option>') => {
+	const fixture = create({search: {remote: true, route: '/projects', pagination: true}}, options);
+	VGSelect.destroy(fixture.select);
+	fixture.select.multiple = true;
+	VGSelect.init(fixture.select, {search: {remote: true, route: '/projects', pagination: true}});
+	const container = fixture.select.nextElementSibling;
+	return {select: fixture.select, container, instance: VGSelect.getInstance(container)};
+};
+const searchRemote = async (fixture, term, results) => {
+	global.fetch = async () => ({ok: true, json: async () => ({results})});
+	fixture.container.querySelector('.vg-select-search input').value = term;
+	fixture.instance._fetchRemoteData(term);
+	await tick();
+};
+const selectedValues = select => [...select.selectedOptions].map(option => option.value);
+
+test('multiple remote searches keep earlier selections and submit every selected value', async () => {
+	const fixture = createMultipleRemote();
+	await searchRemote(fixture, 'Beta', [{id: 'b', text: 'Beta'}]);
+	fixture.container.querySelector('.vg-select-list--option[data-value="b"]').click();
+	await searchRemote(fixture, 'Gamma', [{id: 'c', text: 'Gamma'}]);
+	fixture.container.querySelector('.vg-select-list--option[data-value="c"]').click();
+
+	assert.deepEqual(selectedValues(fixture.select), ['a', 'b', 'c']);
+	assert.equal(fixture.container.querySelectorAll('.vg-select-tag').length, 3);
+	const form = document.createElement('form');
+	fixture.select.name = 'projects[]';
+	document.body.append(form);
+	form.append(fixture.select, fixture.container);
+	assert.deepEqual(new window.FormData(form).getAll('projects[]'), ['a', 'b', 'c']);
+});
+
+test('empty remote results retain chosen options and discard unselected results', async () => {
+	const fixture = createMultipleRemote('<optgroup label="Projects"><option value="a" selected>Alpha</option><option value="b">Beta</option></optgroup>');
+	await searchRemote(fixture, 'missing', []);
+
+	assert.deepEqual(selectedValues(fixture.select), ['a']);
+	assert.equal(fixture.select.querySelector('option[value="b"]'), null);
+	assert.equal(fixture.container.querySelectorAll('.vg-select-tag').length, 1);
+});
+
+test('repeated remote results and pagination keep one option per value and preserve selection', async () => {
+	const fixture = createMultipleRemote();
+	await searchRemote(fixture, 'Alpha', [{id: 'a', text: 'Alpha'}, {id: 'b', text: 'Beta'}]);
+	global.fetch = async () => ({ok: true, json: async () => ({results: [{id: 'a', text: 'Alpha'}, {id: 'b', text: 'Beta'}, {id: 'c', text: 'Gamma'}]})});
+	await fixture.instance._loadNextPage();
+
+	assert.deepEqual([...fixture.select.options].map(option => option.value), ['a', 'b', 'c']);
+	assert.deepEqual(selectedValues(fixture.select), ['a']);
+	assert.equal(fixture.container.querySelectorAll('.vg-select-tag').length, 1);
+});
+
+test('removing a retained tag stays removed after subsequent searches', async () => {
+	const fixture = createMultipleRemote();
+	await searchRemote(fixture, 'Beta', [{id: 'b', text: 'Beta'}]);
+	fixture.container.querySelector('.vg-select-tag-remove[data-value="a"]').dispatchEvent(new MouseEvent('click', {bubbles: true}));
+	await searchRemote(fixture, 'Gamma', [{id: 'c', text: 'Gamma'}]);
+
+	assert.deepEqual(selectedValues(fixture.select), []);
+	assert.equal(fixture.select.querySelector('option[value="a"]'), null);
+	assert.equal(fixture.container.querySelectorAll('.vg-select-tag').length, 0);
+});
+
+test('single remote search keeps the current value until another option is chosen', async () => {
+	const fixture = create({search: {remote: true, route: '/projects'}}, '<option value="a" selected>Alpha</option>');
+	await searchRemote(fixture, 'Beta', [{id: 'b', text: 'Beta'}]);
+
+	assert.equal(fixture.select.value, 'a');
+	assert.equal(fixture.container.querySelector('.vg-select-current').textContent, 'Alpha');
+	fixture.container.querySelector('.vg-select-list--option[data-value="b"]').click();
+	assert.equal(fixture.select.value, 'b');
+});
+
+test('preserved additions deduplicate numeric ids including zero and honor explicit selection', () => {
+	const fixture = createMultipleRemote('<option value="0">Zero</option>');
+	VGSelect.addOptions(fixture.select, [{id: 0, text: 'Zero', selected: true}, {id: 1, text: 'One'}, {id: '1', text: 'One'}], {preserve: true});
+
+	assert.deepEqual([...fixture.select.options].map(option => option.value), ['0', '1']);
+	assert.deepEqual(selectedValues(fixture.select), ['0']);
+});
+
+test('remote response preserves the live selection changed while its request is pending', async () => {
+	const fixture = createMultipleRemote('<option value="a" selected>Alpha</option><option value="b">Beta</option>');
+	let resolveRequest;
+	global.fetch = () => new Promise(resolve => { resolveRequest = resolve; });
+	fixture.container.querySelector('.vg-select-search input').value = 'Gamma';
+	fixture.instance._fetchRemoteData('Gamma');
+	VGSelect.changeSelector(fixture.select, 'a', {selected: false});
+	VGSelect.changeSelector(fixture.select, 'b');
+	resolveRequest({ok: true, json: async () => ({results: [{id: 'c', text: 'Gamma'}]})});
+	await tick();
+
+	assert.deepEqual(selectedValues(fixture.select), ['b']);
+	assert.equal(fixture.select.querySelector('option[value="a"]'), null);
+});
+
+test('grouped remote results reuse retained options without creating empty duplicate groups', async () => {
+	const fixture = createMultipleRemote('<optgroup label="Projects"><option value="a" selected>Alpha</option></optgroup>');
+	await searchRemote(fixture, 'Alpha', [{text: 'Projects', children: [{id: 'a', text: 'Alpha'}]}]);
+
+	assert.deepEqual(selectedValues(fixture.select), ['a']);
+	assert.equal(fixture.select.options.length, 1);
+	assert.equal(fixture.select.querySelectorAll('optgroup').length, 1);
 });

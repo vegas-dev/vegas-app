@@ -1,6 +1,6 @@
 /**
  * Описание: кастомный select с синхронизацией исходного поля и выпадающего списка.
- * Возможности: поиск, группы, дерево, теги, ограничение высоты, AJAX-пагинация, события и освобождение ресурсов.
+ * Возможности: поиск с сохранением выбора, группы, дерево, теги, AJAX-пагинация без дублей, события и освобождение ресурсов.
  */
 import BaseModule from "../../base-module";
 import {
@@ -1212,6 +1212,8 @@ class VGSelect extends BaseModule {
 
 				// Очистка старых опций
 				[...select.querySelectorAll('option')].forEach(opt => {
+					if (opt.selected) return;
+
 					// Оставляем первый пустой скрытый placeholder:
 					// <option value="" selected hidden></option>
 					const isFirst = opt === select.options[0];
@@ -1308,11 +1310,22 @@ class VGSelect extends BaseModule {
 			});
 		}
 
+		const existingOptions = new Map(preserve
+			? [...select.options].filter(option => option.value !== '').map(option => [option.value, option])
+			: []);
+
 		const appendOption = (item, parent, level = null) => {
+			const value = String(item.id ?? '');
+			const existing = value !== '' ? existingOptions.get(value) : null;
+			if (existing) {
+				if (item.selected) existing.selected = true;
+				return;
+			}
+
 			const option = document.createElement('option');
 			const hasChildren = Array.isArray(item.children) && item.children.length > 0;
 
-			option.value = item.id || '';
+			option.value = value;
 			option.textContent = item.text || '';
 			if (item.selected) option.selected = true;
 			if (item.disabled) option.disabled = true;
@@ -1329,6 +1342,7 @@ class VGSelect extends BaseModule {
 			});
 
 			parent.appendChild(option);
+			if (preserve && value !== '') existingOptions.set(value, option);
 		};
 
 		const appendTreeOptions = (items, parent, level = 0) => {
@@ -1351,7 +1365,7 @@ class VGSelect extends BaseModule {
 
 					item.children.forEach(child => appendOption(child, optgroup));
 
-					select.appendChild(optgroup);
+					if (optgroup.children.length > 0) select.appendChild(optgroup);
 				} else {
 					appendOption(item, select);
 				}
