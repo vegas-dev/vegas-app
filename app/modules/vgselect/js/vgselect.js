@@ -1,6 +1,6 @@
 /**
  * Описание: кастомный select с синхронизацией исходного поля и выпадающего списка.
- * Возможности: поиск со скрытием выбранных элементов мультивыбора, группы, дерево, теги, AJAX-пагинация без дублей, события и освобождение ресурсов.
+ * Возможности: поиск со скрытием выбранных элементов мультивыбора, группы, дерево, теги, AJAX-пагинация без дублей, сброс remote-результатов и поиска при открытии, события и освобождение ресурсов.
  */
 import BaseModule from "../../base-module";
 import {
@@ -526,7 +526,28 @@ class VGSelect extends BaseModule {
 		toggle.setAttribute('aria-expanded', 'true');
 
 		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
-		if (searchInput) searchInput.focus();
+        if (searchInput) {
+            if (searchInput.value || this._params.search?.remote) {
+                searchInput.value = '';
+                clearTimeout(this._searchTimeout);
+                if (this._params.search?.remote) {
+                    this._remoteSearchAbortController?.abort();
+                    ++this._remoteSearchRequestId;
+                    this._loading = false;
+                    this._showLoading(false);
+                    this._hideLoadMoreButton(true);
+                    this._searchTerm = "";
+                    this._currentPage = 1;
+                    this._totalPages = null;
+                    // Сбрасываем результаты UI, сохраняя option для отправки формы.
+                    this._drop.querySelector(SELECTOR_LIST)?.replaceChildren();
+                } else {
+                    this._filterLocalOptions('');
+                }
+                this._drop.querySelector(`.${CLASS_NAME_LIST}`)?.scrollTo?.(0, 0);
+            }
+            searchInput.focus();
+        }
 
 		return this._queueCallback(() => {
 			if (this._disposed || transitionId !== this._visibilityTransitionId || !this._isShown()) return;
