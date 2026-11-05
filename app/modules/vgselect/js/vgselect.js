@@ -1,6 +1,6 @@
 /**
  * Описание: кастомный select с синхронизацией исходного поля и выпадающего списка.
- * Возможности: поиск с сохранением выбора, группы, дерево, теги, AJAX-пагинация без дублей, события и освобождение ресурсов.
+ * Возможности: поиск со скрытием выбранных элементов мультивыбора, группы, дерево, теги, AJAX-пагинация без дублей, события и освобождение ресурсов.
  */
 import BaseModule from "../../base-module";
 import {
@@ -249,7 +249,7 @@ class VGSelect extends BaseModule {
 				li.classList.add('disabled');
 			}
 
-			if (isEmptyOption) {
+			if (isEmptyOption || (selector.multiple && option.selected)) {
 				li.hidden = true;
 				li.style.display = 'none';
 			}
@@ -841,7 +841,13 @@ class VGSelect extends BaseModule {
 		const isMultiple = select.multiple;
 		const instance = VGSelect.getInstance(container);
 		container.querySelectorAll(`.${CLASS_NAME_OPTION}`).forEach(item => {
-			item.classList.toggle('selected', !!select.options[Number(item.dataset.index)]?.selected);
+			const option = select.options[Number(item.dataset.index)];
+            item.classList.toggle('selected', !!option?.selected);
+            if (isMultiple) {
+                const hidden = !!option?.selected || option?.hidden || (option?.value === '' && !item.textContent.trim());
+                item.hidden = hidden;
+                item.style.display = hidden ? 'none' : '';
+            }
 		});
 
 		if (isMultiple) {
@@ -1398,7 +1404,7 @@ class VGSelect extends BaseModule {
 			const text = el.textContent.toLowerCase();
 			const option = this._element.previousElementSibling.options[Number(el.dataset.index)];
 			const empty = option?.value === '' && text.trim() === '';
-			const visible = !empty && (!term || search.some(value => text.includes(value)));
+			const visible = !empty && !(this._element.previousElementSibling.multiple && option?.selected) && (!term || search.some(value => text.includes(value)));
 			el.hidden = !visible;
 			el.style.display = visible ? '' : 'none';
 			if (visible) results++;
