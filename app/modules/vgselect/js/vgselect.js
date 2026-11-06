@@ -1,6 +1,6 @@
 /**
  * Описание: кастомный select с синхронизацией исходного поля и выпадающего списка.
- * Возможности: поиск со скрытием выбранных элементов мультивыбора, группы, дерево, теги, AJAX-пагинация без дублей, сброс remote-результатов и поиска при открытии, события и освобождение ресурсов.
+ * Возможности: поиск со скрытием выбранных элементов мультивыбора, группы, дерево, теги, AJAX-пагинация без дублей и обновление результатов без повторного открытия списка.
  */
 import BaseModule from "../../base-module";
 import {
@@ -539,8 +539,10 @@ class VGSelect extends BaseModule {
                     this._searchTerm = "";
                     this._currentPage = 1;
                     this._totalPages = null;
-                    // Сбрасываем результаты UI, сохраняя option для отправки формы.
-                    this._drop.querySelector(SELECTOR_LIST)?.replaceChildren();
+                    // Убираем прошлые результаты, сохраняя выбранные option и кнопку пагинации.
+                    this._drop.querySelector(SELECTOR_LIST)
+                        ?.querySelectorAll(`:scope > :not(${SELECTOR_LOAD_MORE_BTN})`)
+                        .forEach(item => item.remove());
                 } else {
                     this._filterLocalOptions('');
                 }
@@ -628,19 +630,12 @@ class VGSelect extends BaseModule {
 
 			if (!shouldUpdate) return;
 
-			const wasShown = this._isShown();
-
 			clearTimeout(this._observerTimeout);
 			this._observerTimeout = setTimeout(() => {
 				if (this._element.previousElementSibling !== select || select.hasAttribute('data-updating')) return;
 
 				this._updateFromMutation();
-
-				if (wasShown) {
-					requestAnimationFrame(() => {
-						this.show();
-					});
-				}
+				this._updateDropdownPlacement();
 			}, 100);
 		});
 
@@ -1195,7 +1190,6 @@ class VGSelect extends BaseModule {
 		url.searchParams.set('per_page', perpage);
 
 		const searchInput = this._element.querySelector(SELECTOR_SEARCH_INPUT);
-		const wasOpen = this._isShown();
 
 		// Обновляем текущее "желательное" состояние
 		this._searchTerm = term;
@@ -1271,12 +1265,6 @@ class VGSelect extends BaseModule {
 				// Показать кнопку "Загрузить ещё", если есть следующая страница
 				if (this._totalPages === null || this._currentPage < this._totalPages) {
 					this._hideLoadMoreButton(false);
-				}
-
-				// Важно: НЕ перетираем searchInput.value "term"-ом — это и вызывает глюк при гонках.
-				if (wasOpen && searchInput) {
-					searchInput.focus();
-					this._element.classList.add(CLASS_NAME_SHOW, CLASS_NAME_ACTIVE);
 				}
 			})
 			.catch(err => {

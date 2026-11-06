@@ -228,6 +228,76 @@ const searchRemote = async (fixture, term, results) => {
 };
 const selectedValues = select => [...select.selectedOptions].map(option => option.value);
 
+test('open remote multiple keeps its query and results after DOM updates and can load more', async () => {
+	const {select, container} = createMultipleRemote();
+	const toggle = container.querySelector('.vg-select-current');
+	let opens = 0;
+	container.addEventListener('vg.select.show', () => opens++);
+	global.fetch = async url => {
+		const page = Number(new URL(url).searchParams.get('page'));
+		return {ok: true, json: async () => ({
+			results: [{id: `b${page}`, text: `Beta ${page}`}],
+			pagination: {current_page: page, total_pages: 2},
+		})};
+	};
+	toggle.click();
+	const input = container.querySelector('.vg-select-search input');
+	const rebuilt = new Promise(resolve => container.addEventListener('vg.select.rebuild', resolve, {once: true}));
+	input.value = 'Beta';
+	input.dispatchEvent(new Event('input', {bubbles: true}));
+	await rebuilt;
+	await tick(150);
+
+	assert.equal(input.value, 'Beta');
+	assert.equal(document.activeElement, input);
+	assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+	const firstResult = container.querySelector('.vg-select-list--option[data-value="b1"]');
+	assert.equal(firstResult?.hidden, false);
+	firstResult.click();
+	assert.deepEqual(selectedValues(select), ['a', 'b1']);
+	assert.equal(firstResult.hidden, true);
+
+	const more = container.querySelector('.vg-select-load-more');
+	assert.equal(more?.style.display, 'block');
+	more.click();
+	await tick(150);
+	assert.equal(container.querySelector('.vg-select-list--option[data-value="b2"]')?.hidden, false);
+	assert.equal(more.style.display, 'none');
+	assert.equal(opens, 1);
+
+	toggle.click();
+	await tick(75);
+	toggle.click();
+	assert.equal(input.value, '');
+	assert.equal(container.querySelectorAll('.vg-select-list--option').length, 0);
+	assert.deepEqual(selectedValues(select), ['a', 'b1']);
+});
+
+test('a remote response does not reopen a multiple select closed during loading', async () => {
+	const {container} = createMultipleRemote();
+	const toggle = container.querySelector('.vg-select-current');
+	let resolveRequest;
+	const requested = new Promise(resolve => {
+		global.fetch = () => new Promise(finish => {
+			resolveRequest = finish;
+			resolve();
+		});
+	});
+	toggle.click();
+	const input = container.querySelector('.vg-select-search input');
+	input.value = 'Beta';
+	input.dispatchEvent(new Event('input', {bubbles: true}));
+	await requested;
+	toggle.click();
+	await tick(75);
+	resolveRequest({ok: true, json: async () => ({results: [{id: 'b', text: 'Beta'}]})});
+	await tick(150);
+
+	assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+	assert.equal(container.classList.contains('show'), false);
+	assert.equal(container.classList.contains('active'), false);
+});
+
 test('multiple remote searches keep earlier selections and submit every selected value', async () => {
 	const fixture = createMultipleRemote();
 	await searchRemote(fixture, 'Beta', [{id: 'b', text: 'Beta'}]);
